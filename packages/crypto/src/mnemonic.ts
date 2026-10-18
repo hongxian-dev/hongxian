@@ -41,5 +41,5 @@ export function mnemonicToSeed(phrase: string): Uint8Array {
   if (!validateMnemonicZh(phrase)) {
     throw new Error('恢复短语无效：必须是 24 个中文词且校验和正确');
   }
-  return mnemonicToSeedSync(normalizeMnemonic(phrase), wordlist);
+  return mnemonicToSeedSync(normalizeMnemonic(phrase));
 }

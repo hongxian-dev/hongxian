@@ -8,14 +8,23 @@
 import { argon2id } from 'hash-wasm';
 
 /** Argon2id 参数（t=3, m=64MB, p=4）——OWASP 2023 推荐档，哈希前向兼容 */
-export const ARGON2_PARAMS = {
+export interface Argon2Params {
+  /** 时间成本（迭代次数） */
+  iterations: number;
+  /** 内存成本（KiB） */
+  memorySize: number;
+  /** 并行度 */
+  parallelism: number;
+  /** 输出长度（字节） */
+  hashLength: number;
+}
+
+export const ARGON2_PARAMS: Argon2Params = {
   iterations: 3,
   memorySize: 65536, // KiB = 64 MB
   parallelism: 4,
   hashLength: 32,
-} as const;
-
-export type Argon2Params = typeof ARGON2_PARAMS;
+};
 
 /** 从密码（BIP39 seed）与盐派生 32 字节密钥 */
 export async function deriveKey(
