@@ -1,0 +1,24 @@
+{
+  "name": "@hongxian/core",
+  "version": "0.1.0",
+  "description": "红线领域核心（纯函数，零 IO）：画像状态机、信封工厂、粗筛、轮次、手账、出站过滤、防注入",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hongxian/crypto": "0.1.0",
+    "@hongxian/schema": "0.1.0"
+  }
+}

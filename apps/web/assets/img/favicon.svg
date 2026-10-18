@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img">
+  <title>红线 favicon（48px 以下用，简化节点）</title>
+  <desc>小尺寸简化版：保留轮廓与四个关键节点，去掉次级加权边，保证 24-48px 清晰可辨。</desc>
+  <rect width="220" height="220" rx="44" fill="#FDFBF7"/>
+  <path d="M 55 105 L 85 78 L 110 105 L 135 78 L 165 105 L 158 118 L 110 168 L 62 118 Z" fill="none" stroke="#C8102E" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#1F2937">
+    <circle cx="85" cy="78" r="9"/><circle cx="135" cy="78" r="9"/><circle cx="110" cy="168" r="10"/>
+  </g>
+  <circle cx="110" cy="105" r="10" fill="#1F2937"/>
+  <circle cx="110" cy="105" r="4" fill="#F08200"/>
+</svg>

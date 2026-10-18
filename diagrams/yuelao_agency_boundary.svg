@@ -1,0 +1,38 @@
+<svg viewBox="0 0 680 235" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>代理边界：月老能代什么，不能代什么</title>
+  <desc>三段式代理边界：代筛（拉池本地粗筛全自动）、代访（授权范围内结构化代理访谈，回合制异步、出站过滤、全程留痕、可替主人问尴尬问题）、代见（见面锦囊与安排建议，但见面与心动永远归主人）。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <text class="th" x="40" y="34" dominant-baseline="central">代理边界：月老能代什么，不能代什么</text>
+  <g class="c-gray">
+    <rect x="45" y="80" width="190" height="110" rx="10" stroke-width="0.5"/>
+    <text class="th" x="58" y="104" dominant-baseline="central">代筛 · 全自动</text>
+    <text class="ts" x="58" y="128" dominant-baseline="central">拉卡片池 · 本地粗筛</text>
+    <text class="ts" x="58" y="146" dominant-baseline="central">算法初筛零 token</text>
+    <text class="ts" x="58" y="164" dominant-baseline="central">画像一次建立千次复用</text>
+    <text class="ts" x="58" y="182" dominant-baseline="central">并行评估多个候选</text>
+  </g>
+  <g class="c-red">
+    <rect x="245" y="70" width="190" height="130" rx="10" stroke-width="0.5"/>
+    <text class="th" x="258" y="94" dominant-baseline="central">代访 · 授权内</text>
+    <text class="ts" x="258" y="118" dominant-baseline="central">结构化代理访谈</text>
+    <text class="ts" x="258" y="136" dominant-baseline="central">回合制异步 · 全程留痕</text>
+    <text class="ts" x="258" y="154" dominant-baseline="central">出站逐条过授权过滤</text>
+    <text class="ts" x="258" y="172" dominant-baseline="central">替主人问尴尬的问题</text>
+    <text class="ts" x="258" y="190" dominant-baseline="central">token 设预算帽</text>
+  </g>
+  <g class="c-amber">
+    <rect x="445" y="80" width="190" height="110" rx="10" stroke-width="0.5"/>
+    <text class="th" x="458" y="104" dominant-baseline="central">见面 · 必须真人</text>
+    <text class="ts" x="458" y="128" dominant-baseline="central">见面锦囊 · 安排建议</text>
+    <text class="ts" x="458" y="146" dominant-baseline="central">对话热度不等于真人合适</text>
+    <text class="ts" x="458" y="164" dominant-baseline="central">心动不可代理</text>
+    <text class="ts" x="458" y="182" dominant-baseline="central">月老不做情感代餐</text>
+  </g>
+  <line x1="235" y1="135" x2="243" y2="135" stroke="#5F5E5A" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <line x1="435" y1="135" x2="443" y2="135" stroke="#5F5E5A" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text class="ts" x="340" y="215" text-anchor="middle" dominant-baseline="central">月老消除的是相亲的过程税：时间同步、重复介绍、情绪损耗、客套周折</text>
+</svg>

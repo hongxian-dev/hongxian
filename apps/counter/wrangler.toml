@@ -1,0 +1,15 @@
+name = "hongxian-counter"
+main = "src/index.js"
+compatibility_date = "2026-10-15"
+
+# KV 命名空间：wrangler kv:namespace create COUNTER 后把 id 填到这里
+[[kv_namespaces]]
+binding = "COUNTER"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+# 工作量证明难度：sha256 十六进制前导零个数（1-8）。4 ≈ 6.5 万次哈希，浏览器/Node 毫秒级
+POW_DIFFICULTY = "4"
+
+# 注意：RL_SALT（限速哈希盐）属于机密，勿写入本文件。
+# 部署前执行：npx wrangler secret put RL_SALT

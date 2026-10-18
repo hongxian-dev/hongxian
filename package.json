@@ -1,0 +1,29 @@
+{
+  "name": "hongxian",
+  "private": true,
+  "version": "0.1.0",
+  "description": "红线 Hongxian - open-source matchmaking infrastructure: protocol schema, crypto, core domain logic and the Yuelao MCP server",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "packages/schema",
+    "packages/crypto",
+    "packages/core",
+    "packages/mcp",
+    "apps/counter"
+  ],
+  "scripts": {
+    "build": "npm run build -w @hongxian/schema && npm run build -w @hongxian/crypto && npm run build -w @hongxian/core && npm run build -w @hongxian/mcp",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,37 @@
+<svg viewBox="0 0 680 360" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>第二次相亲的轮次结构与毕业机制</title>
+  <desc>一轮=出题、对等反问、回卷增量报告、主人决策；信息未饱和继续下一轮，饱和则毕业进入见面层</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <text x="340" y="34" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#1F2937" font-family="sans-serif">第二次相亲 · 一轮的结构（可多轮循环）</text>
+  <rect x="40" y="60" width="130" height="64" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="105" y="84" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">甲月老出题</text>
+  <text x="105" y="104" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">1 主题 + ≤2 追问</text>
+  <rect x="195" y="60" width="130" height="64" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="260" y="84" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">乙月老应答</text>
+  <text x="260" y="104" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">作答 + 对等反问</text>
+  <rect x="350" y="60" width="130" height="64" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="415" y="84" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">回卷比对</text>
+  <text x="415" y="104" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">双方出增量报告</text>
+  <rect x="505" y="60" width="135" height="64" rx="10" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+  <text x="572" y="84" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">主人决策</text>
+  <text x="572" y="104" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">继续 / 毕业 / 放下</text>
+  <path d="M170 92 L191 92" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M325 92 L346 92" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M480 92 L501 92" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M520 124 L520 160 L105 160 L105 128" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="312" y="148" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">信息未饱和 → 下一轮（可多轮）</text>
+  <rect x="450" y="200" width="190" height="64" rx="10" fill="#F7C1C1" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="545" y="224" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">毕业：最后一次相亲</text>
+  <text x="545" y="244" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">双方同意升级见面层</text>
+  <rect x="40" y="200" width="280" height="64" rx="10" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+  <text x="180" y="224" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">见面层解锁（三阶第三阶）</text>
+  <text x="180" y="244" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">交换联络 · 约线下时间 · 见面锦囊</text>
+  <path d="M572 124 L550 196" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M446 232 L324 232" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="340" y="310" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#A32D2D" font-family="sans-serif">毕业条件：信息饱和（问不出增量）+ 无硬伤 —— 月老诚实建议「见面或放下」，防无限网聊</text>
+  <text x="340" y="334" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">典型 3–8 轮 · 每轮一份增量小报告 · 任一轮对方静默即自然终止（与 D4 静默一致）</text>
+</svg>

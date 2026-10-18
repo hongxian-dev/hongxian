@@ -1,0 +1,51 @@
+<svg viewBox="0 0 680 560" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>第二次相亲：引导式代访循环</title>
+  <desc>月老题库生成考题包，对方月老三态应答，答不了的带回主人补全画像后再答，形成相亲驱动建画像的循环</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <text x="340" y="34" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#1F2937" font-family="sans-serif">第二次相亲 · 引导式代访循环</text>
+  <rect x="215" y="52" width="250" height="96" rx="10" fill="#F7C1C1" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="340" y="76" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">月老题库（代访引擎）</text>
+  <text x="340" y="97" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">心理学 × 婚姻学模板（精选）</text>
+  <text x="340" y="115" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">主人 dealbreakers 与关注点</text>
+  <text x="340" y="133" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">AI 情境追问 → 生成考题包</text>
+  <path d="M300 148 L160 206" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="70" y="210" width="170" height="64" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="155" y="234" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">甲的月老</text>
+  <text x="155" y="254" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">组考题包 · 出卷</text>
+  <rect x="440" y="210" width="170" height="64" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="525" y="234" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#791F1F" font-family="sans-serif">乙的月老</text>
+  <text x="525" y="254" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">收卷 · 答题或转问</text>
+  <path d="M240 226 L436 226" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="338" y="212" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">考题包（结构化问题卡）</text>
+  <path d="M440 258 L244 258" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="338" y="280" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">回卷：答案 / 待补 / 婉答</text>
+  <rect x="70" y="340" width="170" height="64" rx="10" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+  <text x="155" y="364" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">甲的主人</text>
+  <text x="155" y="384" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">深聊报告 · 升级决策</text>
+  <rect x="440" y="340" width="170" height="64" rx="10" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+  <text x="525" y="364" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">乙的主人</text>
+  <text x="525" y="384" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">补充信息 · 画像补全</text>
+  <path d="M115 274 L115 336" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="125" y="300" text-anchor="start" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">深聊报告（升级）</text>
+  <path d="M195 336 L195 278" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="205" y="322" text-anchor="start" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">决策 · 追加关注点</text>
+  <path d="M475 274 L475 336" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="465" y="300" text-anchor="end" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">答不了？带回去问主人</text>
+  <path d="M565 336 L565 278" fill="none" stroke="#A32D2D" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="575" y="322" text-anchor="start" dominant-baseline="central" font-size="12" fill="#791F1F" font-family="sans-serif">补全后再答</text>
+  <rect x="40" y="430" width="186" height="64" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="133" y="454" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">① 现场可答</text>
+  <text x="133" y="474" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">结构化答案直接回卷</text>
+  <rect x="247" y="430" width="186" height="64" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="340" y="454" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">② 超出画像</text>
+  <text x="340" y="474" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">转问主人 → 画像补全</text>
+  <rect x="454" y="430" width="186" height="64" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="547" y="454" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#444441" font-family="sans-serif">③ 婉答</text>
+  <text x="547" y="474" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">记暂不回应 · 降置信</text>
+  <text x="340" y="514" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#A32D2D" font-family="sans-serif">副产品：答不了的问题反过来补全画像 —— 相亲过程本身成为建画像的燃料</text>
+  <text x="340" y="538" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A" font-family="sans-serif">对称铁律：甲出的每道题，乙也获得同等出题权 —— 防单向审问</text>
+</svg>

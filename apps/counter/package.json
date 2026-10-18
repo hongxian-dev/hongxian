@@ -1,0 +1,16 @@
+{
+  "name": "@hongxian/counter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "红线项目匿名计数器（Cloudflare Worker + KV）——独立于月老与红线协议的纯计数器，法律性质约等于网站访问计数器",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "kv:create": "wrangler kv:namespace create COUNTER"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

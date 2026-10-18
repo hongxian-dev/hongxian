@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img">
+  <title>红线 favicon 深色版</title>
+  <desc>墨色圆角方底 + 提亮红轮廓 + 白节点，用于深色主题。</desc>
+  <rect width="220" height="220" rx="44" fill="#1F2937"/>
+  <path d="M 55 105 L 85 78 L 110 105 L 135 78 L 165 105 L 158 118 L 110 168 L 62 118 Z" fill="none" stroke="#E8556A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#F9FAFB">
+    <circle cx="85" cy="78" r="9"/><circle cx="135" cy="78" r="9"/><circle cx="110" cy="168" r="10"/>
+  </g>
+  <circle cx="110" cy="105" r="10" fill="#F9FAFB"/>
+  <circle cx="110" cy="105" r="4" fill="#F08200"/>
+</svg>
