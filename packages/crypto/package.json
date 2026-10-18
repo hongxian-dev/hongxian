@@ -23,5 +23,8 @@
     "@noble/hashes": "^1.8.0",
     "@scure/bip39": "^1.5.0",
     "hash-wasm": "^4.12.0"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }

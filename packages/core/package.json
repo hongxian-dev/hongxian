@@ -20,5 +20,8 @@
   "dependencies": {
     "@hongxian/crypto": "0.1.0",
     "@hongxian/schema": "0.1.0"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }

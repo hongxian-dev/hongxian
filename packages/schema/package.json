@@ -19,5 +19,8 @@
   },
   "dependencies": {
     "zod": "^3.24.1"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }
