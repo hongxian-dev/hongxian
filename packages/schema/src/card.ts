@@ -37,6 +37,13 @@ import { isBase64OfLength, isUuidV7 } from './canonical.js';
 
 export const SCHEMA_VERSION = 1;
 
+/** 算法声明常量（组装 meta 时使用；校验由字段级 AlgoDeclaration 完成） */
+export const ALGO_DECLARATION = {
+  sig: 'ed25519',
+  aead: 'aes-256-gcm',
+  kex: 'x25519',
+} as const;
+
 /** meta 字段（Schema §2 meta.algo）：算法声明固定，字段级锁定（比 z.literal(对象) 更精确） */
 export const AlgoDeclaration = z.object({
   sig: z.literal('ed25519'),
