@@ -153,7 +153,13 @@ describe('消息信封加封/拆封（九类信封的 payload 层）', () => {
   it('canonicalize 用于签名：键序不影响签名验证', () => {
     const { key, km } = makeTestKeyProvider();
     const card = signMatchCard({ depth, l1: sampleL1, l2: sampleL2 }, key);
-    const reordered = { signature: card.signature, payload_L2: card.payload_L2, payload_L1: card.payload_L1, meta: card.meta };
+    const reordered = {
+      signature: card.signature,
+      payload_L2: card.payload_L2,
+      key_l1: card.key_l1,
+      payload_L1: card.payload_L1,
+      meta: card.meta,
+    };
     // 重新序列化为规范化 JSON 应等价（canonicalize 排序键）
     expect(canonicalize(reordered)).toBe(canonicalize(card));
     expect(verifyCardSignature(card, km.identityPublic)).toBe(true);

@@ -52,10 +52,13 @@ export const AlgoDeclaration = z.object({
 });
 export type AlgoDeclaration = z.infer<typeof AlgoDeclaration>;
 
-/** 一个 AES-256-GCM 密文块。ct = ciphertext || tag(16B) 拼接后 base64 */
+/**
+ * 一个 AES-256-GCM 密文块。ct = ciphertext || tag(16B) 拼接后 base64。
+ * nonce 为空字符串 = sealed box 模式（定向消息：ephPub||nonce||ct 整体存于 ct，见 core sealMessageBody）。
+ */
 export const CipherBlock = z.object({
-  nonce: z.string().min(1), // 12 字节随机 nonce 的 base64
-  ct: z.string().min(1), // ciphertext||tag 的 base64
+  nonce: z.string(), // 12 字节随机 nonce 的 base64；空 = sealed box
+  ct: z.string().min(1), // ciphertext||tag（或整个 sealed box）的 base64
 });
 export type CipherBlock = z.infer<typeof CipherBlock>;
 
@@ -74,6 +77,19 @@ export const CardMeta = z.object({
   owner_key_id: z
     .string()
     .refine((s) => isBase64OfLength(s, 32), { message: 'owner_key_id 必须是 32 字节指纹的 base64' }),
+  /**
+   * Ed25519 签名公钥（32B base64）——验签必需。
+   * 工程补注：Schema v0.3 §2 字段表未列，但 §6/技术详设 §4 要求"公钥随 match_card
+   * 元数据交换"（换卡即换公钥）。公钥是公开密码学参数、非身份信息，
+   * 信任模型 = TOFU + 可选 introducer_sig 背书（D8 介绍人链）。
+   */
+  sig_public: z
+    .string()
+    .refine((s) => isBase64OfLength(s, 32), { message: 'sig_public 必须是 32 字节公钥的 base64' }),
+  /** X25519 协商公钥（32B base64）——grant 类信封的收件人密钥 */
+  kx_public: z
+    .string()
+    .refine((s) => isBase64OfLength(s, 32), { message: 'kx_public 必须是 32 字节公钥的 base64' }),
   version: z.number().int().min(1),
   created_at: z.string().datetime({ message: 'ISO 8601 时间戳' }),
   expires_at: z.string().datetime({ message: 'ISO 8601 时间戳' }),
@@ -175,22 +191,29 @@ export type PayloadL3 = z.infer<typeof PayloadL3>;
 
 export const MatchCardEnvelope = z.object({
   meta: CardMeta,
+  /**
+   * key_L1 明文携带（Schema §8 拍板①：L1 也加密——广场爬虫拿不到结构化明文，
+   * 格式三层统一，代价为零）。一阶名片即公开层：任何人拿到卡可解出 L1。
+   */
+  key_l1: z.string().optional(),
   payload_L1: CipherBlock,
   payload_L2: CipherBlock,
   payload_L3: CipherBlock.optional(), // 整体可缺省（未到见面层）
-  signature: z.string().min(1), // Ed25519 对 meta + 三个密文整体签名
+  signature: z.string().min(1), // Ed25519 对 meta + key_l1 + 三个密文整体签名
 });
 export type MatchCardEnvelope = z.infer<typeof MatchCardEnvelope>;
 
-/** 签名对象：canonical(meta || payload_L1_ct || payload_L2_ct || payload_L3_ct) */
+/** 签名对象：canonical(meta || key_l1 || 三个密文) */
 export function signatureObject(card: {
   meta: unknown;
+  key_l1?: string;
   payload_L1: CipherBlock;
   payload_L2: CipherBlock;
   payload_L3?: CipherBlock;
 }): unknown {
   return {
     meta: card.meta,
+    ...(card.key_l1 ? { key_l1: card.key_l1 } : {}),
     payload_L1: card.payload_L1,
     payload_L2: card.payload_L2,
     ...(card.payload_L3 ? { payload_L3: card.payload_L3 } : {}),
@@ -221,7 +244,7 @@ export function validateEnvelope(input: unknown): ValidationResult<MatchCardEnve
   const env = input as Record<string, unknown>;
 
   // 顶层未知键告警
-  const TOP_KEYS = new Set(['meta', 'payload_L1', 'payload_L2', 'payload_L3', 'signature']);
+  const TOP_KEYS = new Set(['meta', 'payload_L1', 'payload_L2', 'payload_L3', 'key_l1', 'signature']);
   for (const key of Object.keys(env)) {
     if (!TOP_KEYS.has(key)) warnings.push(`未知字段已忽略：${key}（协议向前兼容）`);
   }
@@ -249,6 +272,7 @@ export function validateEnvelope(input: unknown): ValidationResult<MatchCardEnve
     cleaned[part] = cleanPart;
   }
   if (env.signature !== undefined) cleaned.signature = env.signature;
+  if (env.key_l1 !== undefined) cleaned.key_l1 = env.key_l1;
 
   const result = MatchCardEnvelope.safeParse(cleaned);
   if (!result.success) {

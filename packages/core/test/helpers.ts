@@ -20,6 +20,7 @@ export function makeTestKeyProvider(): {
   const km = generateKeyMaterial();
   const key: KeyProvider = {
     sign: (bytes) => signDetached(bytes, km.identityPrivate),
+    identityPublic: () => km.identityPublic,
     keyId: () => keyIdFromPublicKey(km.identityPublic),
     layerKey: (layer) => km.layerKeys[layer],
     sealFor: (recipientPub, plaintext) => sealBox(plaintext, recipientPub),

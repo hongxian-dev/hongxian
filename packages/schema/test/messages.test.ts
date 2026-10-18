@@ -113,6 +113,8 @@ describe('消息信封整体', () => {
     schema_version: 1,
     card_id: from,
     owner_key_id: Buffer.alloc(32, 1).toString('base64'),
+    sig_public: Buffer.alloc(32, 2).toString('base64'),
+    kx_public: Buffer.alloc(32, 3).toString('base64'),
     version: 1,
     created_at: '2026-10-19T00:00:00.000Z',
     expires_at: '2026-11-18T00:00:00.000Z',

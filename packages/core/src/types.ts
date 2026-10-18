@@ -34,6 +34,8 @@ export interface Store {
 export interface KeyProvider {
   /** Ed25519 签名（对 canonical bytes） */
   sign(bytes: Uint8Array): Uint8Array;
+  /** Ed25519 公钥（随卡元数据交换，验签必需——换卡即换公钥） */
+  identityPublic(): Uint8Array;
   /** owner_key_id：签名公钥的 32 字节指纹 */
   keyId(): Uint8Array;
   /** 层密钥（L1/L2/L3 各自独立） */

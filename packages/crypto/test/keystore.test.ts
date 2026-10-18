@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateMnemonicZh, mnemonicToSeed } from '../src/mnemonic.js';
 import {
   createKeyFiles,
+  deriveKeyMaterial,
   generateKeyMaterial,
   keyMaterialId,
   lockKeyMaterial,
@@ -99,5 +100,40 @@ describe('KeyMaterial 生命周期（D15③ 备份恢复）', () => {
     expect(ARGON2_PARAMS.memorySize).toBe(65536);
     expect(ARGON2_PARAMS.parallelism).toBe(4);
     expect(ARGON2_PARAMS.hashLength).toBe(32);
+  });
+});
+
+describe('短语确定性派生（恢复短语即身份，D15③）', () => {
+  it('同短语 → 同身份（keyId 一致，换设备不掉线）', async () => {
+    const seed = mnemonicToSeed(generateMnemonicZh());
+    const km1 = await deriveKeyMaterial(seed, TEST_PARAMS);
+    const km2 = await deriveKeyMaterial(seed, TEST_PARAMS);
+    expect(bytesEqual(keyMaterialId(km1), keyMaterialId(km2))).toBe(true);
+    expect(bytesEqual(km1.identityPrivate, km2.identityPrivate)).toBe(true);
+    expect(bytesEqual(km1.layerKeys.L2, km2.layerKeys.L2)).toBe(true);
+    expect(bytesEqual(km1.kxPublic, km2.kxPublic)).toBe(true);
+  });
+
+  it('不同短语 → 不同身份', async () => {
+    const s1 = mnemonicToSeed(generateMnemonicZh());
+    const s2 = mnemonicToSeed(generateMnemonicZh());
+    const km1 = await deriveKeyMaterial(s1, TEST_PARAMS);
+    const km2 = await deriveKeyMaterial(s2, TEST_PARAMS);
+    expect(bytesEqual(keyMaterialId(km1), keyMaterialId(km2))).toBe(false);
+  });
+
+  it('派生身份与缓存文件恢复的身份一致（文件只是缓存）', async () => {
+    const seed = mnemonicToSeed(generateMnemonicZh());
+    const derived = await deriveKeyMaterial(seed, TEST_PARAMS);
+    const files = await createKeyFiles(seed, derived, TEST_PARAMS);
+    const restored = await restoreKeyFiles(files, seed);
+    expect(restored).not.toBeNull();
+    expect(bytesEqual(keyMaterialId(restored!), keyMaterialId(derived))).toBe(true);
+  });
+
+  it('随机 KeyMaterial 与派生身份不同（v0 行为已被派生取代）', async () => {
+    const random = generateKeyMaterial();
+    const derived = await deriveKeyMaterial(mnemonicToSeed(generateMnemonicZh()), TEST_PARAMS);
+    expect(bytesEqual(keyMaterialId(random), keyMaterialId(derived))).toBe(false);
   });
 });

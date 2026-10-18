@@ -53,6 +53,8 @@ export function signMatchCard(input: SignCardInput, key: KeyProvider): MatchCard
     schema_version: 1,
     card_id: uuidV7(),
     owner_key_id: toBase64(key.keyId()),
+    sig_public: toBase64(key.identityPublic()),
+    kx_public: toBase64(key.kexPublic()),
     version: input.version ?? 1,
     created_at: new Date(now).toISOString(),
     expires_at: new Date(now + ttlMs).toISOString(),
@@ -67,8 +69,8 @@ export function signMatchCard(input: SignCardInput, key: KeyProvider): MatchCard
   const l3Block = input.l3 ? encryptLayer(input.l3, key.layerKey('L3')) : undefined;
 
   const card = l3Block
-    ? { meta, payload_L1: l1Block, payload_L2: l2Block, payload_L3: l3Block }
-    : { meta, payload_L1: l1Block, payload_L2: l2Block };
+    ? { meta, key_l1: toBase64(key.layerKey('L1')), payload_L1: l1Block, payload_L2: l2Block, payload_L3: l3Block }
+    : { meta, key_l1: toBase64(key.layerKey('L1')), payload_L1: l1Block, payload_L2: l2Block };
 
   const signature = toBase64(key.sign(canonicalBytes(signatureObject(card))));
   return { ...card, signature };
@@ -88,7 +90,7 @@ export interface VerifyCardResult {
   card?: MatchCardEnvelope;
 }
 
-/** 验签 + 结构校验 + TTL 检查（import_card 的第一道关） */
+/** 验签 + 结构校验 + TTL 检查 + 卡自带公钥验签（import_card 的第一道关，§7.4） */
 export function verifyMatchCard(input: unknown): VerifyCardResult {
   const parsed = validateEnvelope(input);
   if (!parsed.ok || !parsed.data) {
@@ -96,9 +98,11 @@ export function verifyMatchCard(input: unknown): VerifyCardResult {
   }
   const card = parsed.data;
   const expired = isExpired(card.meta);
+  // 卡自带 Ed25519 公钥（TOFU 信任模型 + 可选 introducer_sig 背书）
+  const signatureValid = verifyCardSignature(card, fromBase64(card.meta.sig_public));
   return {
-    valid: true,
-    errors: [],
+    valid: signatureValid, // §7.4：签名验证失败 = 整卡作废，不降级处理
+    errors: signatureValid ? [] : ['签名无效，可能被伪造或篡改——整卡作废（Schema §7.4）'],
     warnings: [
       ...parsed.warnings,
       ...(expired ? ['卡片已过期（TTL），需签发方重签'] : []),

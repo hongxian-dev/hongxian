@@ -10,6 +10,8 @@
  */
 
 import { ARGON2_PARAMS, type Argon2Params, deriveKey, zeroize } from './kdf.js';
+import { hkdf } from '@noble/hashes/hkdf';
+import { sha256 } from '@noble/hashes/sha256';
 import {
   aesGcmDecrypt,
   aesGcmEncrypt,
@@ -56,6 +58,47 @@ export function generateKeyMaterial(): KeyMaterial {
     kxPublic: kx.publicKey,
     layerKeys: { L1: randomKey(32), L2: randomKey(32), L3: randomKey(32) },
   };
+}
+
+/**
+ * 协议固定盐（Argon2id 派生 MK 用）——公开常量。
+ * seed 本身是 256-bit BIP39 输出（高熵），固定盐无安全损失
+ * （盐的使命是防彩虹表与并行化，对单用户单口令场景不适用）。
+ */
+export const PROTOCOL_SALT = new TextEncoder().encode('hongxian/protocol-v0/mk-salt/v1');
+
+/** HKDF 域分离 info（各子密钥独立派生路径） */
+const INFO = {
+  identity: new TextEncoder().encode('hongxian/protocol-v0/identity-seed/v1'),
+  kx: new TextEncoder().encode('hongxian/protocol-v0/keyexchange-seed/v1'),
+  L1: new TextEncoder().encode('hongxian/protocol-v0/layer-key/L1/v1'),
+  L2: new TextEncoder().encode('hongxian/protocol-v0/layer-key/L2/v1'),
+  L3: new TextEncoder().encode('hongxian/protocol-v0/layer-key/L3/v1'),
+};
+
+/**
+ * 从恢复短语 seed 确定性派生 KeyMaterial（"恢复短语即身份"的工程实现）。
+ *
+ * 同短语 → 同 MK → 同 identity/kx/layer 密钥 → 同 owner_key_id：
+ * 换设备输入旧短语即重建同一身份，旧卡片签名可验、旧 grant 信封可解、
+ * 姻缘线关系不断（D15③ 的成立前提）。MK 仅存内存。
+ */
+export async function deriveKeyMaterial(seed: Uint8Array, params?: Argon2Params): Promise<KeyMaterial> {
+  const mk = await deriveKey(seed, PROTOCOL_SALT, params ?? ARGON2_PARAMS);
+  try {
+    const sub = (info: Uint8Array) => hkdf(sha256, mk, undefined, info, 32);
+    const identityPrivate = sub(INFO.identity);
+    const kxPrivate = sub(INFO.kx);
+    return {
+      identityPrivate,
+      identityPublic: identityPublicKeyFromSeed(identityPrivate),
+      kxPrivate,
+      kxPublic: getKexPublicKey(kxPrivate),
+      layerKeys: { L1: sub(INFO.L1), L2: sub(INFO.L2), L3: sub(INFO.L3) },
+    };
+  } finally {
+    zeroize(mk);
+  }
 }
 
 /** owner_key_id（32 字节指纹） */

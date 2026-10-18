@@ -23,11 +23,15 @@ import {
 import { canonicalize, isBase64OfLength, isUuidV7, uuidV7 } from '../src/canonical.js';
 
 const keyId = Buffer.alloc(32, 7).toString('base64');
+const sigPub = Buffer.alloc(32, 8).toString('base64');
+const kxPub = Buffer.alloc(32, 9).toString('base64');
 
 const validMeta = {
   schema_version: SCHEMA_VERSION,
   card_id: '019515f4-7d4e-7c3a-9b1d-2e8a6c0f1234',
   owner_key_id: keyId,
+  sig_public: sigPub,
+  kx_public: kxPub,
   version: 1,
   created_at: '2026-10-19T00:00:00.000Z',
   expires_at: '2026-11-18T00:00:00.000Z',
@@ -208,10 +212,12 @@ describe('信封校验与容错（Schema §7）', () => {
     expect(isExpired({ expires_at: '2099-01-01T00:00:00.000Z' })).toBe(false);
   });
 
-  it('签名对象含 meta + 三层密文整体（L3 缺省时不含）', () => {
+  it('签名对象含 meta + key_l1 + 三层密文整体（L3 缺省时不含）', () => {
     const obj = signatureObject(validEnvelope) as Record<string, unknown>;
     expect(Object.keys(obj)).toEqual(['meta', 'payload_L1', 'payload_L2']);
     const withL3 = signatureObject({ ...validEnvelope, payload_L3: { nonce: 'E', ct: 'F' } });
     expect(Object.keys(withL3 as Record<string, unknown>)).toContain('payload_L3');
+    const withKeyL1 = signatureObject({ ...validEnvelope, key_l1: 'a2V5' });
+    expect(Object.keys(withKeyL1 as Record<string, unknown>)).toContain('key_l1');
   });
 });
