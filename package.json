@@ -10,10 +10,11 @@
     "packages/crypto",
     "packages/core",
     "packages/mcp",
+    "packages/server",
     "apps/counter"
   ],
   "scripts": {
-    "build": "npm run build -w @hongxian/schema && npm run build -w @hongxian/crypto && npm run build -w @hongxian/core && npm run build -w @hongxian/mcp",
+    "build": "npm run build -w @hongxian/schema && npm run build -w @hongxian/crypto && npm run build -w @hongxian/core && npm run build -w @hongxian/mcp && npm run build -w @hongxian/server",
     "test": "vitest run",
     "test:watch": "vitest",
     "verify": "npm run build && npm test"

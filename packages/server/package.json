@@ -1,0 +1,31 @@
+{
+  "name": "@hongxian/server",
+  "version": "0.1.0",
+  "description": "红线平台服务参考实现：加密信箱 + 广场哑管道（Hono，零知识，AGPL-3.0，docker 一键自托管）",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "hongxian-server": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@hongxian/schema": "0.1.0",
+    "@hono/node-server": "^1.13.0",
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
+    "hono": "^4.6.0"
+  }
+}

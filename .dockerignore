@@ -1,0 +1,7 @@
+**/node_modules/
+**/dist/
+**/.verify/
+.git/
+**/*.log
+**/data/
+packages/server/data/
