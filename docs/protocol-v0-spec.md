@@ -1,7 +1,7 @@
 # Hongxian Protocol v0 (Draft Spec)
 
 > Machine-readable form: [`@hongxian/schema`](../packages/schema) (Zod).
-> Status: **v0 draft, public for review** (2026-10-19).
+> Status: **superseded by [protocol v1](protocol-v1-spec.md)** (2026-10-19). Kept as the historical public draft.
 > License: [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — the protocol itself must stay open; the code is Apache-2.0.
 
 ---

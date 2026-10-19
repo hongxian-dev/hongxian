@@ -87,7 +87,7 @@ Reports and cards prominently state "profile content is self-reported by the use
 
 ## Protocol & docs
 
-- [Protocol spec v0 (draft)](docs/protocol-v0-spec.md) — match card format, encrypted envelopes, nine message types (CC-BY-SA 4.0)
+- [Protocol spec v1](docs/protocol-v1-spec.md) — match card format, encrypted envelopes, message family, plaza flow, mailbox semantics, addressing (CC-BY-SA 4.0; [v0 draft](docs/protocol-v0-spec.md) is the historical version)
 - [Host compatibility matrix](docs/host-compatibility.md) — verified hosts
 - [Install & trust guide](docs/install-and-trust.md) — install troubleshooting, data directory, deletion & backup
 - [schema package](packages/schema) — the machine-readable form of protocol v0 (standalone npm: `@hongxian/schema`)

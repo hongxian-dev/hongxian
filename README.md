@@ -87,7 +87,7 @@ npx @hongxian/mcp
 
 ## 协议与文档
 
-- [协议规范 v0（草案）](docs/protocol-v0-spec.md) —— 匹配卡格式、加密信封、九类消息（CC-BY-SA 4.0）
+- [协议规范 v1](docs/protocol-v1-spec.md) —— 匹配卡格式、加密信封、消息家族、广场流、信箱语义、寻址（CC-BY-SA 4.0；[v0 草案](docs/protocol-v0-spec.md)为历史版本）
 - [宿主兼容性矩阵](docs/host-compatibility.md) —— 已验证宿主列表
 - [安装与信任指南](docs/install-and-trust.md) —— 安装排错、数据目录说明、删除与备份
 - [schema 包](packages/schema) —— 协议 v0 的机器可读形态（独立 npm：`@hongxian/schema`）
