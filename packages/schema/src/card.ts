@@ -1,10 +1,16 @@
 /**
- * 红线协议 v0 · 匹配卡信封（Schema 规范 §2/§3 的 Zod 实现）
+ * 红线协议 v0.4 · 匹配卡信封（Schema 规范 §2/§3 的 Zod 实现）
  *
  * 一张匹配卡 = 一个 JSON 文件：
  *   meta（明文）+ payload_L1/L2/L3（AES-256-GCM 密文）+ Ed25519 signature
  * 三层物理隔离于三个独立加密 payload——不存在"一张明文卡靠权限控制"的设计。
- * key_L1 随卡明文携带（Schema §8 拍板①：广场爬虫拿不到结构化明文，格式三层统一）。
+ *
+ * v0.4 关键修订（平台服务 V6，零知识军规）：key_l1 的携带规则按 card_type 分流——
+ *   match_card（文件直交，熟人链）：key_l1 随卡交付，导入方持卡即解 L1；
+ *   plaza_card（广场卡，经服务端存储转发）：**严禁携带 key_l1**——
+ *     钥匙随 blob 上传即使服务端可解密 L1，违反宪法§4"平台能接触到的最多只是
+ *     公钥 + 加密 blob，无法解密内容"。广场卡的 L1 经 grant_l1 信封密封交付
+ *     （见 messages.ts），"解锁一阶"成为显式授权动作。
  */
 
 import { z } from 'zod';
@@ -189,19 +195,39 @@ export type PayloadL3 = z.infer<typeof PayloadL3>;
 
 // ---------- 信封整体 ----------
 
-export const MatchCardEnvelope = z.object({
-  meta: CardMeta,
-  /**
-   * key_L1 明文携带（Schema §8 拍板①：L1 也加密——广场爬虫拿不到结构化明文，
-   * 格式三层统一，代价为零）。一阶名片即公开层：任何人拿到卡可解出 L1。
-   */
-  key_l1: z.string().optional(),
-  payload_L1: CipherBlock,
-  payload_L2: CipherBlock,
-  payload_L3: CipherBlock.optional(), // 整体可缺省（未到见面层）
-  signature: z.string().min(1), // Ed25519 对 meta + key_l1 + 三个密文整体签名
-});
+export const MatchCardEnvelope = z
+  .object({
+    meta: CardMeta,
+    /**
+     * key_L1 明文携带（Schema §8 拍板①：L1 也加密——广场爬虫拿不到结构化明文，
+     * 格式三层统一，代价为零）。一阶名片即公开层：任何人拿到卡可解出 L1。
+     * v0.4 起仅 match_card（文件直交）允许携带；plaza_card 严禁（见下方 superRefine）。
+     */
+    key_l1: z.string().optional(),
+    payload_L1: CipherBlock,
+    payload_L2: CipherBlock,
+    payload_L3: CipherBlock.optional(), // 整体可缺省（未到见面层）
+    signature: z.string().min(1), // Ed25519 对 meta + key_l1 + 三个密文整体签名
+  })
+  .superRefine((env, ctx) => {
+    // v0.4 零知识军规（平台服务工程设计 V6）：广场卡剥离 key_l1。
+    // 签名覆盖 meta（含 card_type），故"match_card 剥 key_l1 改标 plaza_card"会验签失败——
+    // 降级攻击在密码学层面即被阻止，此处是生产者侧的格式闸门。
+    if (env.meta.card_type === 'plaza_card' && env.key_l1 !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['key_l1'],
+        message:
+          '广场卡（plaza_card）不得携带 key_l1——服务端不得持有可解密 L1 的材料（零知识军规，Schema v0.4）',
+      });
+    }
+  });
 export type MatchCardEnvelope = z.infer<typeof MatchCardEnvelope>;
+
+/** 是否广场卡变体（经服务端存储转发、无 key_l1 的匹配卡） */
+export function isPlazaCard(card: { meta: { card_type: string } }): boolean {
+  return card.meta.card_type === 'plaza_card';
+}
 
 /** 签名对象：canonical(meta || key_l1 || 三个密文) */
 export function signatureObject(card: {

@@ -15,11 +15,19 @@ import { CardMeta } from '../src/card.js';
 const from = '019515f4-7d4e-7c3a-9b1d-2e8a6c0f1234';
 
 describe('九类信封消息体', () => {
-  it('upgrade_request：附本人名片引用', () => {
-    expect(UpgradeRequestBody.safeParse({ from_card_id: from, attach_card_ref: 'card.json' }).success).toBe(
-      true,
-    );
-    expect(UpgradeRequestBody.safeParse({ from_card_id: 'bad', attach_card_ref: 'x' }).success).toBe(false);
+  it('upgrade_request：附本人名片引用 + 请求方协商公钥（v0.4 起必填，广场流回送钥匙用）', () => {
+    expect(
+      UpgradeRequestBody.safeParse({
+        from_card_id: from,
+        attach_card_ref: 'card.json',
+        requester_kx_public: Buffer.alloc(32, 9).toString('base64'),
+      }).success,
+    ).toBe(true);
+    expect(
+      UpgradeRequestBody.safeParse({ from_card_id: 'bad', attach_card_ref: 'x', requester_kx_public: 'k' }).success,
+    ).toBe(false);
+    // v0.4 破坏性变更：缺 requester_kx_public 一律拒收（防卡主无法回送 grant_l1）
+    expect(UpgradeRequestBody.safeParse({ from_card_id: from, attach_card_ref: 'x' }).success).toBe(false);
   });
 
   it('grant_l2：携带用对方公钥加密的 key_L2', () => {

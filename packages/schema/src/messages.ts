@@ -1,11 +1,12 @@
 /**
- * 红线协议 v0 · 九类信封消息（Schema 规范 §4）
+ * 红线协议 v0.4 · 九类信封消息（Schema 规范 §4）
  *
  * 同一信封格式 + msg_type 区分，全部走 D3/D11/D13 的握手信道。
- * v1 实施：match_card / card_renewal / upgrade_request / grant_l2 /
- *          topic_pack / answer_card / graduation_invite / grant_l3
+ * v1 实施：match_card / card_renewal / upgrade_request / grant_l1 /
+ *          grant_l2 / topic_pack / answer_card / graduation_invite / grant_l3
  * v2 实施：plaza_card（广场贴卡）/ decline_silent（明确终止信号）
  * 铁律：对称互换（D5）、双盲静默（D4）、追问封顶（D11）、逐字段 opt-in（D13）。
+ * v0.4 新增 grant_l1：广场流的一阶解锁（key_l1 密封交付——平台服务 V6 零知识解法）。
  */
 
 import { z } from 'zod';
@@ -19,6 +20,7 @@ export const MsgMeta = CardMeta.extend({
     'match_card',
     'card_renewal',
     'upgrade_request',
+    'grant_l1',
     'grant_l2',
     'topic_pack',
     'answer_card',
@@ -45,13 +47,34 @@ export type MsgEnvelope = z.infer<typeof MsgEnvelope>;
 
 // ---------- 消息体（加密前的明文，core 层加密后入 envelope.payload） ----------
 
-/** upgrade_request · 升级请求封：申请解锁 L2，附本人 match_card（D5/D8） */
+/**
+ * upgrade_request · 升级请求封：申请解锁（v1=L2，广场流=L1），附本人 match_card（D5/D8）。
+ * v0.4：补 requester_kx_public——广场流中卡主需要它把 key_l1 密封回送（grant_l1）。
+ */
 export const UpgradeRequestBody = z.object({
   from_card_id: z.string().refine(isUuidV7),
   /** 附带的本人名片信封（JSON 序列化后由发送方加密存储引用） */
   attach_card_ref: z.string().min(1).max(200),
+  /** 请求方 X25519 协商公钥（32B base64）——卡主据此 sealed box 回送层密钥 */
+  requester_kx_public: z
+    .string()
+    .refine((s) => isBase64OfLength(s, 32), { message: 'requester_kx_public 必须是 32 字节公钥的 base64' }),
 });
 export type UpgradeRequestBody = z.infer<typeof UpgradeRequestBody>;
+
+/**
+ * grant_l1 · 一阶解锁授权（v0.4 新增，平台服务 V6）：
+ * 广场卡不带 key_l1；卡主应答升级请求时，把 key_l1 用请求方公钥密封回送。
+ * 请求方已持有广场卡密文（payload_L1），只缺钥匙——故无需重传 L1 密文。
+ */
+export const GrantL1Body = z.object({
+  from_card_id: z.string().refine(isUuidV7),
+  /** 被解锁的广场卡指纹（cardFingerprint：SHA-256(canonical(card)) 前 16 hex） */
+  card_fingerprint: z.string().regex(/^[0-9a-f]{16}$/, 'card_fingerprint 为 16 位十六进制'),
+  /** 用请求方 X25519 公钥封装的 key_L1（base64，sealed box） */
+  sealed_key_l1: z.string().min(1),
+});
+export type GrantL1Body = z.infer<typeof GrantL1Body>;
 
 /** grant_l2 · 解锁授权：携带用对方公钥加密的 key_L2（D5） */
 export const GrantL2Body = z.object({

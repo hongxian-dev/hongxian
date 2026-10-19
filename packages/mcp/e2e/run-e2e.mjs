@@ -227,10 +227,18 @@ async function main() {
 
     // ---- 升级握手：L2 ----
     console.log('\n■ D5 升级握手（L2）');
-    const upg = await a.callTool('send_envelope', {
+    // v0.4：缺 requester_kx_public 的升级请求应被拒（协议 schema 校验，不静默发畸形信封）
+    const upgBad = await a.callTool('send_envelope', {
       msg_type: 'upgrade_request',
       target_card_id: cardB.meta.card_id,
       body: { from_card_id: cardA.meta.card_id, attach_card_ref: 'card.json' },
+      my_card_id: cardA.meta.card_id,
+    });
+    check('畸形升级请求被拒（缺 requester_kx_public，v0.4）', upgBad.text.includes('消息体不合法'), upgBad.text.slice(0, 120));
+    const upg = await a.callTool('send_envelope', {
+      msg_type: 'upgrade_request',
+      target_card_id: cardB.meta.card_id,
+      body: { from_card_id: cardA.meta.card_id, attach_card_ref: 'card.json', requester_kx_public: cardA.meta.kx_public },
       my_card_id: cardA.meta.card_id,
     });
     const upgEnv = takeEnvelope(homeA, upg.text);

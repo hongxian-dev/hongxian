@@ -202,3 +202,12 @@ export const COMPLETENESS_LOW_THRESHOLD = 0.6;
 
 /** 默认 TTL：30 天（Schema §2，D8 广场贴卡防僵尸信息） */
 export const DEFAULT_TTL_DAYS = 30;
+
+// ---------- 平台服务常量（v0.4，工程设计 V1/V2/V7） ----------
+
+/** 信箱保留期默认 30 天（服务端少一分持有少一分责任；过期自动删） */
+export const MAILBOX_RETENTION_DAYS = 30;
+/** 单 opaque ID 每日定向投递上限（反滥用结构限制优于内容审查——v2 初稿 §6） */
+export const MAX_DAILY_DELIVERIES = 20;
+/** 广场卡池分页大小（哑管道：全量拉取 + cursor 分页，过滤 100% 在客户端） */
+export const PLAZA_PAGE_SIZE = 100;

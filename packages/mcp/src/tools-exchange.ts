@@ -29,8 +29,15 @@ import {
   type RoundState,
 } from '@hongxian/core';
 import {
+  AnswerCardBody,
+  DeclineSilentBody,
   ENV_FILE_EXT,
+  GraduationInviteBody,
+  GrantL2Body,
+  GrantL3Body,
   MsgEnvelope,
+  TopicPackBody,
+  UpgradeRequestBody,
   canonicalBytes,
   fromBase64,
   toBase64,
@@ -154,12 +161,35 @@ const ENVELOPE_TYPES = [
   'decline_silent',
 ] as const;
 
+/**
+ * 消息体按类型校验（v0.4：LLM 输出不合 schema → 明确报错重试，不静默发畸形信封）。
+ * 对应技术详设 §9 风险对策"Zod 校验 + 降级为字段补全追问"的第一半。
+ */
+const BODY_SCHEMAS: Partial<Record<(typeof ENVELOPE_TYPES)[number], z.ZodTypeAny>> = {
+  upgrade_request: UpgradeRequestBody,
+  grant_l2: GrantL2Body,
+  topic_pack: TopicPackBody,
+  answer_card: AnswerCardBody,
+  graduation_invite: GraduationInviteBody,
+  grant_l3: GrantL3Body,
+  decline_silent: DeclineSilentBody,
+};
+
+function validateBody(msgType: (typeof ENVELOPE_TYPES)[number], body: Record<string, unknown>): string | null {
+  const schema = BODY_SCHEMAS[msgType];
+  if (!schema) return null;
+  const r = schema.safeParse(body);
+  if (r.success) return null;
+  return r.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('；');
+}
+
 export const sendEnvelopeTool = {
   name: 'send_envelope',
   description:
     '发送一封结构化信封给对方（D3：月老间仅结构化握手，v1 禁自由聊天）。' +
     '类型：upgrade_request(申请解锁L2) / grant_l2(授权) / topic_pack(考题包) / answer_card(回卷) / ' +
-    'graduation_invite(毕业邀请) / grant_l3(见面层授权) / decline_silent(婉拒，v1建议不回复)。',
+    'graduation_invite(毕业邀请) / grant_l3(见面层授权) / decline_silent(婉拒，v1建议不回复)。' +
+    '消息体按类型经协议 schema 校验（v0.4），缺字段会明确报错并列出，不会静默发出畸形信封。',
   inputSchema: {
     msg_type: z.enum(ENVELOPE_TYPES),
     target_card_id: z.string().describe('对端卡片 ID'),
@@ -171,6 +201,14 @@ export const sendEnvelopeTool = {
     session: Session,
   ) => {
     const s = store();
+    // 消息体按类型校验（v0.4）：缺字段/畸形一律拒绝并说明，防 LLM 产出静默劣化
+    const bodyError = validateBody(args.msg_type, args.body);
+    if (bodyError) {
+      return text(
+        `消息体不合法（${args.msg_type}）：${bodyError}。\n\n` +
+          `请按协议 schema 修正后重发；不要删改协议字段。`,
+      );
+    }
     const mine = s.list('cards/mine').filter((f) => f.endsWith('.json'));
     if (mine.length === 0) return text('你还没有签发匹配卡。');
     const myCard = s.read<Record<string, unknown>>(
