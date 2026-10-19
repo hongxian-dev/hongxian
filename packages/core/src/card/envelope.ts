@@ -68,9 +68,16 @@ export function signMatchCard(input: SignCardInput, key: KeyProvider): MatchCard
   const l2Block = encryptLayer(input.l2, key.layerKey('L2'));
   const l3Block = input.l3 ? encryptLayer(input.l3, key.layerKey('L3')) : undefined;
 
-  const card = l3Block
-    ? { meta, key_l1: toBase64(key.layerKey('L1')), payload_L1: l1Block, payload_L2: l2Block, payload_L3: l3Block }
-    : { meta, key_l1: toBase64(key.layerKey('L1')), payload_L1: l1Block, payload_L2: l2Block };
+  // v0.4 零知识军规（平台服务工程设计 V6）：plaza_card 严禁携带 key_l1——
+  // 钥匙随 blob 上传即使服务端可解密 L1。签名对象随之调整（无 key_l1 分支），
+  // 签名仍覆盖 meta + 三密文（meta.card_type 在内，降级攻击密码学层面即被阻止）。
+  const withL3 = l3Block
+    ? { meta, payload_L1: l1Block, payload_L2: l2Block, payload_L3: l3Block }
+    : { meta, payload_L1: l1Block, payload_L2: l2Block };
+  const card =
+    input.cardType === 'plaza_card'
+      ? withL3
+      : { ...withL3, key_l1: toBase64(key.layerKey('L1')) };
 
   const signature = toBase64(key.sign(canonicalBytes(signatureObject(card))));
   return { ...card, signature };

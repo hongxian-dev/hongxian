@@ -8,6 +8,7 @@
 export * from './types.js';
 export * from './profile/interview.js';
 export * from './card/envelope.js';
+export * from './plaza.js';
 export * from './match/screen.js';
 export * from './rounds/machine.js';
 export * from './ledger/lines.js';

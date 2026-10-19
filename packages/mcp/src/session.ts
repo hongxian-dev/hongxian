@@ -32,6 +32,8 @@ export interface Settings {
   lock_timeout_minutes: number;
   /** 模型声明（D7：只声明级别不声明型号） */
   model_tier: 'local' | 'cloud';
+  /** 平台服务实例地址（M1.3：月老连哪个自托管/官方实例；显式传入即记住） */
+  plaza_instance?: string;
 }
 
 const DEFAULT_SETTINGS: Settings = {

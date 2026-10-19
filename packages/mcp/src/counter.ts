@@ -14,6 +14,7 @@ export const METRIC_WHITELIST = [
   'card_signed', // 签发名片（bucket = gender）
   'card_imported', // 导入名片（bucket = gender）
   'exchange_initiated', // 发起交换（bucket = none）
+  'plaza_published', // 贴上广场（bucket = none）——M1.3 平台接入
 ] as const;
 
 export type Metric = (typeof METRIC_WHITELIST)[number];

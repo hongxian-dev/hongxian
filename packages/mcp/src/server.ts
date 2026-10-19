@@ -17,6 +17,7 @@ import {
   coachTool,
 } from './tools-exchange.js';
 import { backupTool, restoreTool, wipeTool } from './tools-lifecycle.js';
+import { plazaBrowseTool, plazaPublishTool, sendViaServerTool, mailboxPullTool } from './tools-plaza.js';
 import { ALL_PROMPTS } from './prompts.js';
 
 const TOOLS = [
@@ -32,6 +33,11 @@ const TOOLS = [
   backupTool,
   restoreTool,
   wipeTool,
+  // M1.3 平台接入（哑管道广场 + 加密信箱；V9：无 presence/回执/推送）
+  plazaBrowseTool,
+  plazaPublishTool,
+  sendViaServerTool,
+  mailboxPullTool,
 ] as const;
 
 const PROMPT_DESCRIPTIONS: Record<string, string> = {
@@ -48,7 +54,10 @@ export function createServer(): McpServer {
       instructions:
         '你是月老——住在用户设备里的本地婚恋工具。先读取 yuelao_persona prompt 确认人格与禁令，' +
         '再按用户意图调用工具。建画像走 interview_flow，比对报告走 report_narrative，' +
-        '出题走 coach_ethics。一切数据只存用户本机；你与另一位月老之间只有结构化握手，没有自由聊天。',
+        '出题走 coach_ethics。一切明文数据只存用户本机（经服务端流转的只有密文）；' +
+        '你与另一位月老之间只有结构化握手，没有自由聊天。' +
+        '广场模式（M1.3）：plaza_browse 只看轮廓不见内容，send_via_server 敲门只确认"已入信箱"，' +
+        'mailbox_pull 拉取即删——无在线状态、无已读回执、无推送。',
     },
   );
   const session = new Session();

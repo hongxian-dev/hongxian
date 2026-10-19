@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * E2E：真实 STDIO 子进程跑月老 MCP 全流程（S1–S7）
+ * E2E：真实 STDIO 子进程跑月老 MCP 全流程（S1–S7 + M1.3 平台接入）
  *
- * 覆盖：initialize → tools/list(12) → prompts/list(4) →
+ * 覆盖：initialize → tools/list(16) → prompts/list(4) →
  *       知情同意 → 24 词身份 → 三阶段访谈 → 签卡 → 导出 →
  *       乙方导入 → 升级请求 → L2 授权 → compare → 考题 → 回卷 →
- *       毕业邀请 → L3 授权 → ledger → backup/restore → wipe 无残留
+ *       毕业邀请 → L3 授权 → ledger → backup/restore →
+ *       M1.3 广场流（真实服务端子进程：贴卡→浏览→敲门→grant_l1→拉取→比对→撤卡→零知识审计）→
+ *       wipe 无残留（含服务端身份级联注销）
  *
  * 运行：node packages/mcp/e2e/run-e2e.mjs
  */
@@ -172,14 +174,16 @@ async function main() {
   const a = new McpClient(homeA);
   const b = new McpClient(homeB);
 
+  let serverProc = null;
+  let serverHome = null;
   try {
     // ---- 协议握手 ----
     console.log('■ 协议握手');
     await bootstrap(a);
     const initRes = await a.request('tools/list');
     const tools = initRes.result.tools.map((t) => t.name);
-    check('tools/list 返回 12 件工具', tools.length === 12, `实际 ${tools.length}: ${tools.join(',')}`);
-    for (const t of ['interview', 'sign_card', 'export_card', 'import_card', 'compare', 'send_envelope', 'receive_envelope', 'ledger', 'coach', 'backup', 'restore', 'wipe']) {
+    check('tools/list 返回 16 件工具', tools.length === 16, `实际 ${tools.length}: ${tools.join(',')}`);
+    for (const t of ['interview', 'sign_card', 'export_card', 'import_card', 'compare', 'send_envelope', 'receive_envelope', 'ledger', 'coach', 'backup', 'restore', 'wipe', 'plaza_browse', 'plaza_publish', 'send_via_server', 'mailbox_pull']) {
       check(`工具存在: ${t}`, tools.includes(t));
     }
     const promptsRes = await a.request('prompts/list');
@@ -227,14 +231,22 @@ async function main() {
 
     // ---- 升级握手：L2 ----
     console.log('\n■ D5 升级握手（L2）');
-    // v0.4：缺 requester_kx_public 的升级请求应被拒（协议 schema 校验，不静默发畸形信封）
-    const upgBad = await a.callTool('send_envelope', {
+    // v0.4/M1.3：requester_kx_public 缺省时由工具自动派生（本方协商公钥——恒可导出）；
+    // 非法的值仍被协议 schema 拒绝（不静默发畸形信封）
+    const upgAuto = await a.callTool('send_envelope', {
       msg_type: 'upgrade_request',
       target_card_id: cardB.meta.card_id,
       body: { from_card_id: cardA.meta.card_id, attach_card_ref: 'card.json' },
       my_card_id: cardA.meta.card_id,
     });
-    check('畸形升级请求被拒（缺 requester_kx_public，v0.4）', upgBad.text.includes('消息体不合法'), upgBad.text.slice(0, 120));
+    check('升级请求缺 requester_kx_public 时自动派生', upgAuto.text.includes('信封已生成'), upgAuto.text.slice(0, 120));
+    const upgBad = await a.callTool('send_envelope', {
+      msg_type: 'upgrade_request',
+      target_card_id: cardB.meta.card_id,
+      body: { from_card_id: cardA.meta.card_id, attach_card_ref: 'card.json', requester_kx_public: '不是base64!!' },
+      my_card_id: cardA.meta.card_id,
+    });
+    check('畸形升级请求被拒（requester_kx_public 非法，v0.4）', upgBad.text.includes('消息体不合法'), upgBad.text.slice(0, 120));
     const upg = await a.callTool('send_envelope', {
       msg_type: 'upgrade_request',
       target_card_id: cardB.meta.card_id,
@@ -326,10 +338,144 @@ async function main() {
     c.close();
     rmSync(homeC, { recursive: true, force: true });
 
+    // ---- M1.3 平台接入：真实服务端子进程 + 双客户端广场流 ----
+    console.log('\n■ M1.3 平台接入（哑管道广场 + 加密信箱，V9）');
+    serverHome = mkdtempSync(join(tmpdir(), 'hx-srv-'));
+    const serverPort = 20000 + Math.floor(Math.random() * 20000);
+    const plazaUrl = `http://127.0.0.1:${serverPort}`;
+    serverProc = spawn(process.execPath, [join(__dirname, '..', '..', 'server', 'dist', 'index.js')], {
+      env: { ...process.env, HONGXIAN_SERVER_DATA: serverHome, PORT: String(serverPort), HONGXIAN_INSTANCE: 'localhost' },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let serverLog = '';
+    serverProc.stderr.on('data', (d) => {
+      serverLog += d.toString();
+    });
+    let healthy = false;
+    for (let i = 0; i < 60; i++) {
+      try {
+        const r = await fetch(`${plazaUrl}/healthz`);
+        if (r.ok) {
+          healthy = true;
+          break;
+        }
+      } catch {
+        /* 还没起 */
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    check('服务端子进程启动（healthz）', healthy, serverLog.slice(0, 200));
+
+    // A 贴广场卡（plaza_card 变体：无 key_l1——§10.5）
+    const pubA = await a.callTool('plaza_publish', { action: 'publish', server: plazaUrl });
+    check('甲方贴广场卡成功', pubA.text.includes('广场卡已贴上'), pubA.text.slice(0, 140));
+    const fpA = pubA.text.match(/指纹 ([0-9a-f]{16})/)?.[1];
+    check('贴卡返回 16 位指纹', typeof fpA === 'string' && fpA.length === 16);
+    const regAFile = join(homeA, 'server', 'registration.json');
+    check('甲方服务端注册记录落盘', existsSync(regAFile));
+    const opaqueA = existsSync(regAFile) ? JSON.parse(readFileSync(regAFile, 'utf8')).opaque_id : null;
+    // 服务端落盘的卡：结构无 key_l1（零知识硬规则的服务端落地）
+    const storedCardFiles = readdirSync(join(serverHome, 'cards')).filter((f) => f.endsWith('.json'));
+    check('服务端存有 1 张广场卡', storedCardFiles.length === 1);
+    const storedCard = JSON.parse(readFileSync(join(serverHome, 'cards', storedCardFiles[0]), 'utf8'));
+    check('服务端卡无 key_l1 字段（§10.5）', !('key_l1' in storedCard.envelope));
+    check('服务端卡为 plaza_card 变体', storedCard.envelope.meta.card_type === 'plaza_card');
+
+    // B 浏览：只见轮廓，不见内容
+    const browseB = await b.callTool('plaza_browse', { server: plazaUrl });
+    const browsePayload = extractJsonBlock(browseB.text);
+    check('乙方浏览返回结构化轮廓', browsePayload !== null && Array.isArray(browsePayload.outlines));
+    const outlineA = (browsePayload?.outlines ?? []).find((o) => o.fingerprint === fpA);
+    check('乙方看到甲方轮廓（指纹匹配）', !!outlineA);
+    check(
+      '轮廓不含任何内容字段（哑管道）',
+      outlineA !== undefined && !('nickname' in outlineA) && !('bio' in outlineA) && !('payload_L1' in outlineA) && !('key_l1' in outlineA),
+    );
+    check('轮廓含协商公钥（敲门寻址用）', typeof outlineA?.kx_public === 'string');
+
+    // B 敲门：经服务端投递 upgrade_request——确认只到"已入信箱"
+    const knock = await b.callTool('send_via_server', {
+      msg_type: 'upgrade_request',
+      target_card_id: outlineA.card_id,
+      body: { from_card_id: cardB.meta.card_id, attach_card_ref: 'plaza' },
+      server: plazaUrl,
+    });
+    check('乙方敲门只确认"已入信箱"', knock.text.includes('已入信箱'), knock.text.slice(0, 140));
+    check('敲门无已读/送达回执语义', !knock.text.includes('已读') && !knock.text.includes('对方已收到'));
+
+    // A 拉信箱：见到敲门 + 广场流指引（grant_l1）
+    const pullA = await a.callTool('mailbox_pull', { server: plazaUrl });
+    check('甲方拉到敲门信', pullA.text.includes('敲门请求解锁一阶名片'), pullA.text.slice(0, 160));
+    check('广场流指引建议 grant_l1', pullA.text.includes('grant_l1'));
+    const pullA2 = await a.callTool('mailbox_pull', { server: plazaUrl });
+    check('拉取即删（服务端不再持有）', pullA2.text.includes('信箱是空的'), pullA2.text.slice(0, 100));
+
+    // A 应答 grant_l1（密封钥匙由工具派生——LLM 不构造密文）
+    const regBFile = join(homeB, 'server', 'registration.json');
+    const regB = existsSync(regBFile) ? JSON.parse(readFileSync(regBFile, 'utf8')) : null;
+    check('乙方服务端注册记录存在', typeof regB?.opaque_id === 'string');
+    const grant1 = await a.callTool('send_via_server', {
+      msg_type: 'grant_l1',
+      target_address: regB.opaque_id,
+      body: { card_fingerprint: fpA, requester_kx_public: cardB.meta.kx_public },
+      server: plazaUrl,
+    });
+    check('甲方应答 grant_l1（已入信箱）', grant1.text.includes('已入信箱'), grant1.text.slice(0, 140));
+
+    // B 拉取授权：一阶解锁 → compare 可行
+    const pullB = await b.callTool('mailbox_pull', { server: plazaUrl });
+    check('乙方收到一阶授权（V6 显式解锁）', pullB.text.includes('一阶名片已解锁'), pullB.text.slice(0, 160));
+    const cmpPlaza = await b.callTool('compare', { card_id: outlineA.card_id });
+    check('广场流 compare 可行（L1 经 grant_l1 解锁）', cmpPlaza.text.includes('tier'), cmpPlaza.text.slice(0, 120));
+
+    // 错误路径：裸地址（无存证卡→无协商公钥，信封无法加封）/ 跨实例地址
+    const strangerId = Buffer.alloc(32, 7).toString('base64');
+    const knockStranger = await b.callTool('send_via_server', {
+      msg_type: 'upgrade_request',
+      target_address: strangerId,
+      body: { from_card_id: cardB.meta.card_id, attach_card_ref: 'plaza' },
+      server: plazaUrl,
+    });
+    check('裸地址投递被拒（无协商公钥——须先浏览存证）', knockStranger.text.includes('缺少收件人协商公钥'), knockStranger.text.slice(0, 140));
+    const knockCross = await b.callTool('send_via_server', {
+      msg_type: 'upgrade_request',
+      target_address: `${regB.opaque_id}@other.example`,
+      body: { from_card_id: cardB.meta.card_id, attach_card_ref: 'plaza' },
+      server: plazaUrl,
+    });
+    check('跨实例投递被拒（v2.1 前不开放）', knockCross.text.includes('跨实例投递未开放'), knockCross.text.slice(0, 140));
+
+    // A 撤卡：广场池清零（HTTP 直查——哑管道无单卡查询端点）
+    const wd = await a.callTool('plaza_publish', { action: 'withdraw', server: plazaUrl });
+    check('甲方撤卡成功', wd.text.includes('已撤回广场卡'), wd.text.slice(0, 120));
+    const poolAfter = await (await fetch(`${plazaUrl}/v2/cards`)).json();
+    check('撤卡后服务端广场池为空', poolAfter.items.length === 0);
+
+    // 服务端数据目录零知识审计：全目录 grep 不到 key_l1
+    let keyL1Leak = false;
+    const auditWalk = (dir) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, e.name);
+        if (e.isDirectory()) auditWalk(p);
+        else {
+          try {
+            if (readFileSync(p, 'utf8').includes('key_l1')) keyL1Leak = true;
+          } catch {
+            /* 非文本文件跳过 */
+          }
+        }
+      }
+    };
+    auditWalk(serverHome);
+    check('服务端数据目录零知识审计（无 key_l1）', !keyL1Leak);
+
     // ---- S3 一键删除 ----
-    console.log('\n■ S3 一键删除（无残留验收）');
+    console.log('\n■ S3 一键删除（无残留验收 + 服务端级联注销）');
     const wipeRes = await a.callTool('wipe', { confirm: true });
     check('wipe 执行', wipeRes.text.includes('已删除全部本地数据'));
+    check('wipe 级联注销服务端身份', wipeRes.text.includes('服务端身份已注销'), wipeRes.text.slice(0, 240));
+    const idAfterWipe = await fetch(`${plazaUrl}/v2/identity/${encodeURIComponent(opaqueA)}`);
+    check('注销后服务端身份 404', idAfterWipe.status === 404, `HTTP ${idAfterWipe.status}`);
     check('wipe 后磁盘零残留', !existsSync(homeA), `homeA 仍存在: ${existsSync(homeA) ? readdirSync(homeA).join(',') : ''}`);
     // wipe 后会话锁定：工具应提示解锁
     const afterWipe = await a.callTool('ledger', { action: 'list' });
@@ -338,7 +484,21 @@ async function main() {
     // ---- 外网审计 ----
     console.log('\n■ 零外链自证');
     const src = await import('node:fs').then((fs) =>
-      ['server.ts', 'session.ts', 'counter.ts', 'consent.ts', 'tools-profile.ts', 'tools-exchange.ts', 'tools-lifecycle.ts', 'store-fs.ts', 'prompts.ts', 'context.ts']
+      [
+        'server.ts',
+        'session.ts',
+        'counter.ts',
+        'consent.ts',
+        'tools-profile.ts',
+        'tools-exchange.ts',
+        'tools-lifecycle.ts',
+        'store-fs.ts',
+        'prompts.ts',
+        'context.ts',
+        'tools-plaza.ts',
+        'server-client.ts',
+        'plaza-store.ts',
+      ]
         .map((f) => {
           try {
             return fs.readFileSync(join(__dirname, '..', 'src', f), 'utf8');
@@ -349,12 +509,21 @@ async function main() {
         .join('\n'),
     );
     const urls = [...src.matchAll(/https?:\/\/[^\s'"`]+/g)].map((m) => m[0]);
-    check('源码外链仅计数器端点', urls.every((u) => u.startsWith('https://count.hongxian.dev')), urls.join(', '));
+    check(
+      '源码外链仅计数器端点（localhost 自托管除外）',
+      urls.every((u) => u.startsWith('https://count.hongxian.dev') || /^https?:\/\/(localhost|127\.0\.0\.1)/.test(u)),
+      urls.join(', '),
+    );
   } finally {
     a.close();
     b.close();
+    if (serverProc) {
+      serverProc.stderr?.destroy();
+      serverProc.kill();
+    }
     rmSync(homeA, { recursive: true, force: true });
     rmSync(homeB, { recursive: true, force: true });
+    if (serverHome) rmSync(serverHome, { recursive: true, force: true });
   }
 
   console.log(`\n===== E2E 完成：${passed}/${passed + failed} 通过 =====`);

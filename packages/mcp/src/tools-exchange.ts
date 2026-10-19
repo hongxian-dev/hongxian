@@ -4,11 +4,16 @@
  * compare：粗筛零 token（D7）+ 报告输入组装（叙事交宿主 LLM，report_narrative prompt 指引）。
  * send/receive_envelope：九类信封的出入口（D3 握手信道）。
  * ledger：姻缘线手账（D3②/D4/D15④⑥）。coach：选题教练（D12）。
+ *
+ * v0.4 / M1.3 重构：消息体补全（completeMessageBody）、信封构造（buildSignedEnvelope）、
+ * 信封路由（routeEnvelope）三个共享函数抽出——send_via_server（广场流）与
+ * receive_envelope（文件流）复用同一套信封逻辑，两条信道一个实现。
  */
 
 import { z } from 'zod';
 import {
   buildCompareResult,
+  cardFingerprint,
   createLine,
   enterRounds,
   filterOutboundTopic,
@@ -33,6 +38,7 @@ import {
   DeclineSilentBody,
   ENV_FILE_EXT,
   GraduationInviteBody,
+  GrantL1Body,
   GrantL2Body,
   GrantL3Body,
   MsgEnvelope,
@@ -44,9 +50,16 @@ import {
   uuidV7,
   type CipherBlock,
 } from '@hongxian/schema';
+import { verifyDetached } from '@hongxian/crypto';
 import { reportMetric } from './counter.js';
 import { store } from './context.js';
 import { dirNameFromKeyId } from './tools-profile.js';
+import {
+  findCachedPlazaCardByFingerprint,
+  findOwnPlazaCardById,
+  findOwnPlazaCardByFingerprint,
+  listOwnPlazaCards,
+} from './plaza-store.js';
 import type { Session } from './session.js';
 
 const CARDS_CONTACTS_DIR = 'cards/contacts';
@@ -79,7 +92,15 @@ export const compareTool = {
       }
     }
     if (!theirCard) return text(`找不到对方卡片 ${args.card_id}（需先 import_card）。`);
-    if (!theirCard.key_l1) return text('对方卡片未携带 key_L1，无法比对。');
+    // L1 钥匙解析：文件流随卡携带；广场流不在卡上（§10.5）——经 grant_l1 解锁后存于姻缘线层密钥
+    let l1KeyB64 = theirCard.key_l1 as string | undefined;
+    if (!l1KeyB64) {
+      const lineKeys = s.read<{ key_l1?: string }>(
+        `${LINES_DIR}/${dirNameFromKeyId((theirCard.meta as { owner_key_id: string }).owner_key_id)}/layer-keys.json`,
+      );
+      l1KeyB64 = lineKeys?.key_l1;
+    }
+    if (!l1KeyB64) return text('对方卡片未携带 key_L1，且尚未经 grant_l1 解锁——无法比对。');
 
     // 本方画像
     const myState = s.read<{ confirmed: Record<string, Record<string, unknown>> }>('profile/interview-state.json');
@@ -88,15 +109,16 @@ export const compareTool = {
     }
     const mine = flattenProfile(myState.confirmed);
 
-    // 对方 L1（key 随卡）
-    const openedL1 = decryptLayer(theirCard as never, 'L1', fromBase64(theirCard.key_l1 as string));
+    // 对方 L1（文件流 key 随卡；广场流经 grant_l1 解锁——见上方解析）
+    const openedL1 = decryptLayer(theirCard as never, 'L1', fromBase64(l1KeyB64));
     if (!openedL1.ok) return text('对方一阶解密失败。');
-    // 对方 L2：需已通过 grant_l2 获得层密钥（目录名 = hex(owner_key_id)）
+    // 对方 L2：需已通过 grant_l2 获得层密钥（目录名 = hex(owner_key_id)）。
+    // 注意按 key_l2 字段判定而非文件存在性——广场流下线层密钥文件可能只含 key_l1（V6）
     const lineDir = dirNameFromKeyId((theirCard.meta as { owner_key_id: string }).owner_key_id);
-    const l2Key = s.read<{ key_l2: string }>(`${LINES_DIR}/${lineDir}/layer-keys.json`);
+    const l2KeyB64 = s.read<{ key_l2?: string }>(`${LINES_DIR}/${lineDir}/layer-keys.json`)?.key_l2;
     let theirsL2: Record<string, unknown> = {};
-    if (l2Key) {
-      const openedL2 = decryptLayer(theirCard as never, 'L2', fromBase64(l2Key.key_l2));
+    if (l2KeyB64) {
+      const openedL2 = decryptLayer(theirCard as never, 'L2', fromBase64(l2KeyB64));
       if (openedL2.ok) theirsL2 = openedL2.payload as Record<string, unknown>;
     }
 
@@ -105,7 +127,7 @@ export const compareTool = {
     const completenessTheirs = (theirCard.meta as { depth: { completeness: number } }).depth.completeness;
 
     const result = buildCompareResult(mine, theirs, completenessMine, completenessTheirs);
-    const l2Missing = !l2Key;
+    const l2Missing = !l2KeyB64;
     return text(
       JSON.stringify(
         {
@@ -151,8 +173,9 @@ function flattenProfile(confirmed: Record<string, Record<string, unknown>>): Pro
 
 // ---------- send_envelope（九类信封出口） ----------
 
-const ENVELOPE_TYPES = [
+export const ENVELOPE_TYPES = [
   'upgrade_request',
+  'grant_l1',
   'grant_l2',
   'topic_pack',
   'answer_card',
@@ -161,12 +184,15 @@ const ENVELOPE_TYPES = [
   'decline_silent',
 ] as const;
 
+export type EnvelopeMsgType = (typeof ENVELOPE_TYPES)[number];
+
 /**
  * 消息体按类型校验（v0.4：LLM 输出不合 schema → 明确报错重试，不静默发畸形信封）。
  * 对应技术详设 §9 风险对策"Zod 校验 + 降级为字段补全追问"的第一半。
  */
-const BODY_SCHEMAS: Partial<Record<(typeof ENVELOPE_TYPES)[number], z.ZodTypeAny>> = {
+const BODY_SCHEMAS: Partial<Record<EnvelopeMsgType, z.ZodTypeAny>> = {
   upgrade_request: UpgradeRequestBody,
+  grant_l1: GrantL1Body,
   grant_l2: GrantL2Body,
   topic_pack: TopicPackBody,
   answer_card: AnswerCardBody,
@@ -175,7 +201,8 @@ const BODY_SCHEMAS: Partial<Record<(typeof ENVELOPE_TYPES)[number], z.ZodTypeAny
   decline_silent: DeclineSilentBody,
 };
 
-function validateBody(msgType: (typeof ENVELOPE_TYPES)[number], body: Record<string, unknown>): string | null {
+/** 消息体按类型校验（send_via_server 与 send_envelope 共用） */
+export function validateBody(msgType: EnvelopeMsgType, body: Record<string, unknown>): string | null {
   const schema = BODY_SCHEMAS[msgType];
   if (!schema) return null;
   const r = schema.safeParse(body);
@@ -183,13 +210,122 @@ function validateBody(msgType: (typeof ENVELOPE_TYPES)[number], body: Record<str
   return r.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('；');
 }
 
+// ---------- 共享：消息体补全（v0.4；send_envelope 与 send_via_server 共用） ----------
+
+export interface CompletedBody {
+  ok: true;
+  body: Record<string, unknown>;
+  /** 收件人协商公钥（grant_l1 由消息体派生；其余类型由调用方从卡片解析） */
+  recipientKx?: Uint8Array;
+}
+
+/**
+ * 消息体补全——两类 LLM 无法自行构造的字段在此派生：
+ * ① upgrade_request：缺省补 requester_kx_public（v0.4 必填）、from_card_id、attach_card_ref；
+ * ② grant_l1：由 card_fingerprint + requester_kx_public 派生 sealed_key_l1
+ *    （本方 L1 层密钥经请求方公钥密封——密文构造必须是工具职责，不是 LLM 职责）。
+ */
+export function completeMessageBody(
+  msgType: EnvelopeMsgType,
+  body: Record<string, unknown>,
+  session: Session,
+  s: ReturnType<typeof store>,
+): CompletedBody | { ok: false; error: string } {
+  if (msgType === 'upgrade_request') {
+    const key = session.keyProvider();
+    const mine = s.list('cards/mine').filter((f) => f.endsWith('.json'));
+    const myLatest = mine.length ? mine[mine.length - 1]!.replace(/\.json$/, '') : null;
+    const ownPlaza = listOwnPlazaCards(s);
+    const myPlazaId = ownPlaza.length ? ownPlaza[ownPlaza.length - 1]!.meta.card_id : null;
+    const fromCardId = (body.from_card_id as string | undefined) ?? myPlazaId ?? myLatest;
+    if (!fromCardId) return { ok: false, error: '你还没有签发任何卡片（sign_card），无法发起升级请求。' };
+    return {
+      ok: true,
+      body: {
+        ...body,
+        from_card_id: fromCardId,
+        attach_card_ref: (body.attach_card_ref as string | undefined) ?? (myPlazaId ? `plaza:${myPlazaId}` : `card:${fromCardId}`),
+        requester_kx_public: (body.requester_kx_public as string | undefined) ?? toBase64(key.kexPublic()),
+      },
+    };
+  }
+  if (msgType === 'grant_l1') {
+    const fingerprint = body.card_fingerprint as string | undefined;
+    const requesterKxB64 = body.requester_kx_public as string | undefined;
+    if (!fingerprint || !/^[0-9a-f]{16}$/.test(fingerprint)) {
+      return { ok: false, error: 'grant_l1 需要 card_fingerprint（16 位十六进制——对方所见广场卡的指纹）。' };
+    }
+    if (!requesterKxB64) {
+      return { ok: false, error: 'grant_l1 需要 requester_kx_public（请求方协商公钥，来自对方 upgrade_request 消息体）。' };
+    }
+    const own = findOwnPlazaCardByFingerprint(s, fingerprint);
+    if (!own) {
+      return { ok: false, error: `找不到指纹为 ${fingerprint} 的本方广场卡（可能已被撤下或从未贴卡——plaza_publish 先贴卡）。` };
+    }
+    const key = session.keyProvider();
+    let recipientKx: Uint8Array;
+    try {
+      recipientKx = fromBase64(requesterKxB64);
+      if (recipientKx.length !== 32) throw new Error('length');
+    } catch {
+      return { ok: false, error: 'requester_kx_public 不是合法的 32 字节 base64 公钥。' };
+    }
+    const sealed = key.sealFor(recipientKx, key.layerKey('L1'));
+    return {
+      ok: true,
+      recipientKx,
+      body: {
+        from_card_id: (body.from_card_id as string | undefined) ?? own.meta.card_id,
+        card_fingerprint: fingerprint,
+        sealed_key_l1: toBase64(sealed),
+      },
+    };
+  }
+  return { ok: true, body };
+}
+
+// ---------- 共享：信封构造与签名 ----------
+
+/** 构造并签名一封消息信封（meta + sealed 消息体 + Ed25519 整体签名） */
+export function buildSignedEnvelope(
+  msgType: EnvelopeMsgType,
+  body: Record<string, unknown>,
+  opts: { targetCardId?: string; depth: unknown; recipientKx: Uint8Array },
+  session: Session,
+): MsgEnvelope {
+  const key = session.keyProvider();
+  const block: CipherBlock = sealMessageBody(body, opts.recipientKx, key);
+  const now = Date.now();
+  const meta = {
+    schema_version: 1,
+    card_id: uuidV7(),
+    owner_key_id: toBase64(key.keyId()),
+    sig_public: toBase64(key.identityPublic()),
+    kx_public: toBase64(key.kexPublic()),
+    version: 1,
+    created_at: new Date(now).toISOString(),
+    expires_at: new Date(now + 7 * 86400_000).toISOString(), // 握手信封 TTL 7 天
+    card_type: 'match_card',
+    msg_type: msgType,
+    ...(opts.targetCardId ? { target_card_id: opts.targetCardId } : {}),
+    depth: opts.depth,
+    algo: { sig: 'ed25519', aead: 'aes-256-gcm', kex: 'x25519' },
+  };
+  return {
+    meta: meta as never,
+    payload: block,
+    signature: toBase64(key.sign(canonicalBytes({ meta, payload: block }))),
+  };
+}
+
 export const sendEnvelopeTool = {
   name: 'send_envelope',
   description:
     '发送一封结构化信封给对方（D3：月老间仅结构化握手，v1 禁自由聊天）。' +
-    '类型：upgrade_request(申请解锁L2) / grant_l2(授权) / topic_pack(考题包) / answer_card(回卷) / ' +
+    '类型：upgrade_request(申请解锁L2；广场流为解锁L1) / grant_l1(一阶解锁授权·广场流密封交付) / grant_l2(授权) / topic_pack(考题包) / answer_card(回卷) / ' +
     'graduation_invite(毕业邀请) / grant_l3(见面层授权) / decline_silent(婉拒，v1建议不回复)。' +
-    '消息体按类型经协议 schema 校验（v0.4），缺字段会明确报错并列出，不会静默发出畸形信封。',
+    '消息体按类型经协议 schema 校验（v0.4），缺字段会明确报错并列出，不会静默发出畸形信封；' +
+    'grant_l1 的密封钥匙由工具自动派生（传 card_fingerprint + requester_kx_public 即可）。',
   inputSchema: {
     msg_type: z.enum(ENVELOPE_TYPES),
     target_card_id: z.string().describe('对端卡片 ID'),
@@ -197,18 +333,10 @@ export const sendEnvelopeTool = {
     my_card_id: z.string().optional().describe('本方卡片 ID（缺省取最新一张）'),
   },
   handler: async (
-    args: { msg_type: (typeof ENVELOPE_TYPES)[number]; target_card_id: string; body: Record<string, unknown>; my_card_id?: string },
+    args: { msg_type: EnvelopeMsgType; target_card_id: string; body: Record<string, unknown>; my_card_id?: string },
     session: Session,
   ) => {
     const s = store();
-    // 消息体按类型校验（v0.4）：缺字段/畸形一律拒绝并说明，防 LLM 产出静默劣化
-    const bodyError = validateBody(args.msg_type, args.body);
-    if (bodyError) {
-      return text(
-        `消息体不合法（${args.msg_type}）：${bodyError}。\n\n` +
-          `请按协议 schema 修正后重发；不要删改协议字段。`,
-      );
-    }
     const mine = s.list('cards/mine').filter((f) => f.endsWith('.json'));
     if (mine.length === 0) return text('你还没有签发匹配卡。');
     const myCard = s.read<Record<string, unknown>>(
@@ -220,31 +348,29 @@ export const sendEnvelopeTool = {
     if (!theirCard) return text(`找不到对端卡片 ${args.target_card_id}（需先 import_card）。`);
     const theirKx = fromBase64((theirCard.meta as { kx_public: string }).kx_public);
 
-    const key = session.keyProvider();
-    const block: CipherBlock = sealMessageBody(args.body, theirKx, key);
-    const now = Date.now();
-    const meta = {
-      schema_version: 1,
-      card_id: uuidV7(),
-      owner_key_id: toBase64(key.keyId()),
-      sig_public: toBase64(key.identityPublic()),
-      kx_public: toBase64(key.kexPublic()),
-      version: 1,
-      created_at: new Date(now).toISOString(),
-      expires_at: new Date(now + 7 * 86400_000).toISOString(), // 握手信封 TTL 7 天
-      card_type: 'match_card',
-      msg_type: args.msg_type,
-      target_card_id: args.target_card_id,
-      depth: (myCard.meta as { depth: unknown }).depth,
-      algo: { sig: 'ed25519', aead: 'aes-256-gcm', kex: 'x25519' },
-    };
-    const env: MsgEnvelope = {
-      meta: meta as never,
-      payload: block,
-      signature: toBase64(key.sign(canonicalBytes({ meta, payload: block }))),
-    };
+    // 消息体补全（v0.4：grant_l1 的 sealed_key_l1 等密文字段由工具派生，LLM 不构造密文）
+    const completed = completeMessageBody(args.msg_type, args.body, session, s);
+    if (!completed.ok) return text(completed.error);
+    // 补全后按协议 schema 校验（缺字段/畸形一律拒绝并说明，防 LLM 产出静默劣化）
+    const bodyError = validateBody(args.msg_type, completed.body);
+    if (bodyError) {
+      return text(
+        `消息体不合法（${args.msg_type}）：${bodyError}。\n\n` +
+          `请按协议 schema 修正后重发；不要删改协议字段。`,
+      );
+    }
+    const env = buildSignedEnvelope(
+      args.msg_type,
+      completed.body,
+      {
+        targetCardId: args.target_card_id,
+        depth: (myCard.meta as { depth: unknown }).depth,
+        recipientKx: completed.recipientKx ?? theirKx,
+      },
+      session,
+    );
     const linePath = `${LINES_DIR}/${dirNameFromKeyId((theirCard.meta as { owner_key_id: string }).owner_key_id)}`;
-    const fileName = `${new Date(now).toISOString().replace(/[:.]/g, '')}-${args.msg_type}${ENV_FILE_EXT}`;
+    const fileName = `${new Date().toISOString().replace(/[:.]/g, '')}-${args.msg_type}${ENV_FILE_EXT}`;
     s.write(`${linePath}/envelopes/${fileName}`, env);
     // 手账：升级请求未回应计数（D15④）
     const line = s.read<FateLine>(`${linePath}/state.json`);
@@ -274,7 +400,142 @@ function findContactCard(s: ReturnType<typeof store>, cardId: string): Record<st
   return null;
 }
 
-// ---------- receive_envelope（九类信封入口） ----------
+// ---------- receive_envelope / mailbox_pull 共用：信封路由（验签后） ----------
+
+/**
+ * 路由一封已验证的消息信封：拉黑检查 → 建线 → 解封 → 按 msg_type 分流。
+ * receive_envelope（文件流）与 mailbox_pull（广场流）共用——两条信道一个实现（V9）。
+ * 返回 MCP 工具结果（月老口吻的指引文本，宿主 LLM 据此决定下一步）。
+ */
+export function routeEnvelope(env: MsgEnvelope, session: Session) {
+  const s = store();
+  const lineDir = dirNameFromKeyId(env.meta.owner_key_id);
+  const linePath = `${LINES_DIR}/${lineDir}`;
+  const line = s.read<FateLine>(`${linePath}/state.json`);
+  if (line?.blocked) {
+    return text('（该发件人已被拉黑，信封不再呈报。）');
+  }
+  if (!line) {
+    // 首封信 = 建线（match_card 换卡握手 / 广场敲门均适用）
+    s.write(`${linePath}/state.json`, createLine(env.meta.card_id, lineDir, 'card_received'));
+  }
+
+  // 解封消息体（本方 X25519 私钥）
+  const key = session.keyProvider();
+  const opened = openMessageBody(env.payload, key);
+  const body = opened.ok ? opened.body : null;
+
+  switch (env.meta.msg_type) {
+    case 'upgrade_request': {
+      // 广场流判别（V6）：target_card_id 命中本方已贴广场卡、且一阶未解锁 → 敲门请求解锁 L1；
+      // 否则为 L2 深聊请求（文件流，或一阶已解锁后的广场流续段）。
+      const targetPlaza = env.meta.target_card_id ? findOwnPlazaCardById(s, env.meta.target_card_id) : null;
+      const l1Granted = !!s.read<{ key_l1?: string }>(`${linePath}/layer-keys.json`)?.key_l1;
+      if (targetPlaza && !l1Granted) {
+        const fp = cardFingerprint(targetPlaza);
+        const reqKx = (body as { requester_kx_public?: string } | null)?.requester_kx_public ?? '';
+        return text(
+          `对方通过广场看到你的轮廓，敲门请求解锁一阶名片。\n\n` +
+            `对方地址：${env.meta.owner_key_id}\n附带信息：${JSON.stringify(body)}\n\n` +
+            `**你的选择**：\n` +
+            `同意 → send_via_server(msg_type="grant_l1", target_address="${env.meta.owner_key_id}", ` +
+            `body={ card_fingerprint: "${fp}", requester_kx_public: "${reqKx}" })\n` +
+            `不愿意 → 不回复即可（静默，对方收不到任何信号）。`,
+        );
+      }
+      if (line) s.write(`${linePath}/state.json`, noteResponseReceived(line));
+      return text(
+        `对方请求解锁匹配层（深聊层）。\n\n附带信息：${JSON.stringify(body)}\n\n` +
+          `**你的选择**：同意 → send_envelope(grant_l2，携带用对方公钥封装的 key_L2）；` +
+          `不愿意 → 不回复即可（静默，对方收不到任何信号）。`,
+      );
+    }
+    case 'grant_l1': {
+      // 广场流一阶解锁（V6）：请求方已持有广场卡密文，只缺钥匙——解封即得 L1
+      const b = body as GrantL1Body | null;
+      if (!b?.sealed_key_l1) return text('grant_l1 消息体缺失（解封失败或信封被裁剪）。');
+      const openedKey = key.openSealed(fromBase64(b.sealed_key_l1));
+      if (!openedKey) return text('grant_l1 解封失败（非本方密钥或已篡改）。');
+      const card = findCachedPlazaCardByFingerprint(s, b.card_fingerprint);
+      if (!card) {
+        return text('一阶钥匙已收到，但本地找不到对应的广场卡密文（浏览存证被清理了）——请重新 plaza_browse 后再 compare。');
+      }
+      // 层密钥落线（与 key_l2 合并——L1 先解锁、L2 后解锁的场景不能互相覆盖）
+      const lineKeyPath = `${linePath}/layer-keys.json`;
+      const existingKeys = s.read<Record<string, string>>(lineKeyPath) ?? {};
+      s.write(lineKeyPath, { ...existingKeys, key_l1: toBase64(openedKey) });
+      // 广场卡转为联系人卡（无 key_l1——compare 经层密钥兜底解密）
+      const ownerDir = dirNameFromKeyId(card.meta.owner_key_id);
+      s.write(`${CARDS_CONTACTS_DIR}/${ownerDir}/${card.meta.card_id}.json`, card);
+      return text(
+        `一阶名片已解锁——对方显式授权交付了钥匙（V6：广场流的"解锁一阶"是授权动作，不是文件易手）。\n\n` +
+          `现在可以 compare(card_id="${card.meta.card_id}") 做完整比对了。\n` +
+          `（对方看不到你读没读——拉取无回执，V9。）`,
+      );
+    }
+    case 'grant_l2': {
+      // 对方交付的 key_L2：用本方 kx 私钥解封
+      const wrapped = fromBase64((body as { wrapped_key_l2: string }).wrapped_key_l2);
+      const l2Key = key.openSealed(wrapped);
+      if (!l2Key) return text('grant_l2 解封失败（非本方密钥或已篡改）。');
+      const lineKeyPath = `${linePath}/layer-keys.json`;
+      const existingKeys = s.read<Record<string, string>>(lineKeyPath) ?? {};
+      s.write(lineKeyPath, { ...existingKeys, key_l2: toBase64(l2Key) }); // 合并：不清掉已解锁的 key_l1
+      const l = s.read<FateLine>(`${linePath}/state.json`);
+      if (l) s.write(`${linePath}/state.json`, enterRounds(noteResponseReceived(l)));
+      return text('匹配层已解锁——现在可以 compare 做完整比对了。');
+    }
+    case 'topic_pack': {
+      const l = s.read<FateLine>(`${linePath}/state.json`);
+      if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
+      return text(
+        `对方月老传来一道考题（第 ${(body as { round: number }).round} 轮）：\n\n` +
+          `主题：${(body as { topic: string }).topic}\n追问：${((body as { followups: string[] }).followups ?? []).join('；') || '无'}\n` +
+          `出题理由：${(body as { reason: string }).reason}\n通道：${(body as { channel: string }).channel === 'owner' ? '主人想问的' : '月老建议的'}\n\n` +
+          `请按三态应答：现场可答 → send_envelope(answer_card, status=answered)；` +
+          `超出画像 → status=ask_master（带回去问主人）；暂时不想答 → status=deferred（不判红旗）。\n` +
+          `你对本题有对等反问权（D11 对称出题权）。`,
+      );
+    }
+    case 'answer_card': {
+      const l = s.read<FateLine>(`${linePath}/state.json`);
+      if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
+      return text(
+        `对方已回答你出的题（第 ${(body as { round: number }).round} 轮，状态：${(body as { status: string }).status}）：\n\n` +
+          `${(body as { answer?: string }).answer ?? (body as { note?: string }).note ?? '（对方选择暂不回应——婉答也是信息，但不自动判为红旗）'}`,
+      );
+    }
+    case 'graduation_invite': {
+      const l = s.read<FateLine>(`${linePath}/state.json`);
+      if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
+      return text(
+        `**毕业邀请**——对方主人发来线下认识邀请。\n\n` +
+          `${(body as { letter?: string }).letter ? `亲笔短信：「${(body as { letter: string }).letter}」\n\n` : ''}` +
+          `申请解锁的见面层字段：${((body as { request_l3_fields: string[] }).request_l3_fields ?? []).join('、')}\n\n` +
+          `三态应答：同意（grant_l3 逐字段交付）/ 暂缓（无需理由，继续深聊——月老永不催促见面）/ 婉拒（不回复即静默）。`,
+      );
+    }
+    case 'grant_l3': {
+      const fields = (body as { fields: { field: string; wrapped_key: string }[] }).fields ?? [];
+      const lineKeyPath = `${linePath}/layer-keys.json`;
+      const existing = s.read<Record<string, string>>(lineKeyPath) ?? {};
+      for (const f of fields) {
+        const k = key.openSealed(fromBase64(f.wrapped_key));
+        if (k) existing[`l3_${f.field}`] = toBase64(k);
+      }
+      s.write(lineKeyPath, existing);
+      return text(
+        `见面层已按字段解锁：${fields.map((f) => f.field).join('、')}。\n\n` +
+          `**红线交到你们自己手里了**——此后月老只做见面复盘，不介入你们两人的对话。\n` +
+          `安全提示：任何涉及金钱的请求，立即警惕。`,
+      );
+    }
+    case 'decline_silent':
+      return text('（对方婉拒。静默处理，不向你的主人展示任何被拒信号——D4）');
+    default:
+      return text(`未支持的信封类型：${env.meta.msg_type}`);
+  }
+}
 
 export const receiveEnvelopeTool = {
   name: 'receive_envelope',
@@ -285,10 +546,9 @@ export const receiveEnvelopeTool = {
     file_content: z.string().describe('对方 .hongxian-env 文件 JSON 全文'),
   },
   handler: async (args: { file_content: string }, session: Session) => {
-    const s = store();
-    let parsed: MsgEnvelope;
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(args.file_content) as MsgEnvelope;
+      parsed = JSON.parse(args.file_content);
     } catch {
       return text('信封不是合法 JSON。');
     }
@@ -296,99 +556,13 @@ export const receiveEnvelopeTool = {
     if (!check.success) return text(`信封结构不合法：${check.error.issues.map((i) => i.path.join('.')).join(', ')}`);
     const env = check.data;
     // 验签（卡自带公钥）
-    const { verifyDetached } = await import('@hongxian/crypto');
     const sigOk = verifyDetached(
       fromBase64(env.signature),
       canonicalBytes({ meta: env.meta, payload: env.payload }),
       fromBase64(env.meta.sig_public),
     );
     if (!sigOk) return text('信封验签失败——可能被伪造或篡改，拒绝处理。');
-
-    const lineDir = dirNameFromKeyId(env.meta.owner_key_id);
-    const linePath = `${LINES_DIR}/${lineDir}`;
-    const line = s.read<FateLine>(`${linePath}/state.json`);
-    if (line?.blocked) {
-      return text('（该发件人已被拉黑，信封不再呈报。）');
-    }
-    if (!line) {
-      // 首封信 = match_card（换卡握手）
-      s.write(`${linePath}/state.json`, createLine(env.meta.card_id, lineDir, 'card_received'));
-    }
-
-    // 解封消息体（本方 X25519 私钥）
-    const key = session.keyProvider();
-    const opened = openMessageBody(env.payload, key);
-    const body = opened.ok ? opened.body : null;
-
-    switch (env.meta.msg_type) {
-      case 'upgrade_request': {
-        if (line) s.write(`${linePath}/state.json`, noteResponseReceived(line));
-        return text(
-          `对方请求解锁匹配层（深聊层）。\n\n附带信息：${JSON.stringify(body)}\n\n` +
-            `**你的选择**：同意 → send_envelope(grant_l2，携带用对方公钥封装的 key_L2)；` +
-            `不愿意 → 不回复即可（静默，对方收不到任何信号）。`,
-        );
-      }
-      case 'grant_l2': {
-        // 对方交付的 key_L2：用本方 kx 私钥解封
-        const wrapped = fromBase64((body as { wrapped_key_l2: string }).wrapped_key_l2);
-        const l2Key = key.openSealed(wrapped);
-        if (!l2Key) return text('grant_l2 解封失败（非本方密钥或已篡改）。');
-        s.write(`${linePath}/layer-keys.json`, { key_l2: toBase64(l2Key) });
-        const l = s.read<FateLine>(`${linePath}/state.json`);
-        if (l) s.write(`${linePath}/state.json`, enterRounds(noteResponseReceived(l)));
-        return text('匹配层已解锁——现在可以 compare 做完整比对了。');
-      }
-      case 'topic_pack': {
-        const l = s.read<FateLine>(`${linePath}/state.json`);
-        if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
-        return text(
-          `对方月老传来一道考题（第 ${(body as { round: number }).round} 轮）：\n\n` +
-            `主题：${(body as { topic: string }).topic}\n追问：${((body as { followups: string[] }).followups ?? []).join('；') || '无'}\n` +
-            `出题理由：${(body as { reason: string }).reason}\n通道：${(body as { channel: string }).channel === 'owner' ? '主人想问的' : '月老建议的'}\n\n` +
-            `请按三态应答：现场可答 → send_envelope(answer_card, status=answered)；` +
-            `超出画像 → status=ask_master（带回去问主人）；暂时不想答 → status=deferred（不判红旗）。\n` +
-            `你对本题有对等反问权（D11 对称出题权）。`,
-        );
-      }
-      case 'answer_card': {
-        const l = s.read<FateLine>(`${linePath}/state.json`);
-        if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
-        return text(
-          `对方已回答你出的题（第 ${(body as { round: number }).round} 轮，状态：${(body as { status: string }).status}）：\n\n` +
-            `${(body as { answer?: string }).answer ?? (body as { note?: string }).note ?? '（对方选择暂不回应——婉答也是信息，但不自动判为红旗）'}`,
-        );
-      }
-      case 'graduation_invite': {
-        const l = s.read<FateLine>(`${linePath}/state.json`);
-        if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
-        return text(
-          `**毕业邀请**——对方主人发来线下认识邀请。\n\n` +
-            `${(body as { letter?: string }).letter ? `亲笔短信：「${(body as { letter: string }).letter}」\n\n` : ''}` +
-            `申请解锁的见面层字段：${((body as { request_l3_fields: string[] }).request_l3_fields ?? []).join('、')}\n\n` +
-            `三态应答：同意（grant_l3 逐字段交付）/ 暂缓（无需理由，继续深聊——月老永不催促见面）/ 婉拒（不回复即静默）。`,
-        );
-      }
-      case 'grant_l3': {
-        const fields = (body as { fields: { field: string; wrapped_key: string }[] }).fields ?? [];
-        const lineKeyPath = `${linePath}/layer-keys.json`;
-        const existing = s.read<Record<string, string>>(lineKeyPath) ?? {};
-        for (const f of fields) {
-          const k = key.openSealed(fromBase64(f.wrapped_key));
-          if (k) existing[`l3_${f.field}`] = toBase64(k);
-        }
-        s.write(lineKeyPath, existing);
-        return text(
-          `见面层已按字段解锁：${fields.map((f) => f.field).join('、')}。\n\n` +
-            `**红线交到你们自己手里了**——此后月老只做见面复盘，不介入你们两人的对话。\n` +
-            `安全提示：任何涉及金钱的请求，立即警惕。`,
-        );
-      }
-      case 'decline_silent':
-        return text('（对方婉拒。静默处理，不向你的主人展示任何被拒信号——D4）');
-      default:
-        return text(`未支持的信封类型：${env.meta.msg_type}`);
-    }
+    return routeEnvelope(env, session);
   },
 };
 
