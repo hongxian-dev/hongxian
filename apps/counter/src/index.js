@@ -8,7 +8,9 @@
  * 端点：
  *   POST /bump   月老 Skill（opt-in）上报匿名计数
  *                 请求体：{ metric, bucket, salt, nonce }
- *                 - 指标白名单：cards/gender/age_band/exchanges
+ *                 - 指标词表：事件名（card_signed / card_imported / exchange_initiated /
+ *                   envelope_sent / plaza_published）经 EVENT_ALIASES 映射到计数家族；
+ *                   亦兼容旧口径（metric=家族名 + bucket）
  *                 - 工作量证明：sha256(salt|metric|bucket|nonce) 前 N 位为 0
  *                 - 限速：同一 IP 哈希每天 120 次（只存哈希，不存 IP）
  *                 - 无日志：不记录 IP、时间戳与任何请求内容
@@ -22,10 +24,26 @@
  */
 
 const FAMILIES = {
-  cards: ['total', 'active'],                       // cards_total / cards_active_30d
+  cards: ['total', 'active'],                       // 签发 / 30 天活跃
+  envelopes: ['total'],                             // 加密信封（握手发起）
+  plaza: ['total'],                                 // 红线广场贴卡
+  imports: ['total'],                               // 导入他人卡
+  exchanges: ['total'],                             // 兼容旧口径
   gender: ['female', 'male'],                       // gender_female / gender_male
-  age_band: ['18_25', '26_30', '31_35', '36_40', '40_plus'],
-  exchanges: ['total']                              // exchanges_total
+  age_band: ['18_25', '26_30', '31_35', '36_40', '40_plus']
+};
+
+/**
+ * 客户端事件名 → 计数家族。
+ * Skill 侧 reportMetric 上报的是事件名（packages/mcp/src/counter.ts），
+ * 这里做唯一映射，避免两端词表漂移导致上报被 400 拒收。
+ */
+const EVENT_ALIASES = {
+  card_signed: 'cards',
+  card_imported: 'imports',
+  envelope_sent: 'envelopes',
+  exchange_initiated: 'envelopes',
+  plaza_published: 'plaza'
 };
 
 const AGE_BANDS = FAMILIES.age_band;
@@ -65,12 +83,28 @@ async function sha256hex(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function resolveMetric(metric, bucket) {
+/**
+ * 解析一条上报 → 一个或多个计数键。
+ * 事件名走 EVENT_ALIASES；旧口径（metric=家族名, bucket）继续兼容。
+ * 返回 null = 越界词表，拒收。
+ */
+function resolveNames(metric, bucket) {
   if (typeof metric !== 'string' || typeof bucket !== 'string') return null;
+  if (!/^[a-z0-9_]{1,32}$/.test(metric) || !/^[a-z0-9_]{1,32}$/.test(bucket)) return null;
+
+  const family = EVENT_ALIASES[metric];
+  if (family) {
+    const names = [family + '_total'];
+    // 建卡同时按性别聚合（bucket ∈ female/male）——不含任何身份信息
+    if (metric === 'card_signed' && (bucket === 'female' || bucket === 'male')) {
+      names.push('gender_' + bucket);
+    }
+    return names;
+  }
+
   const allowed = FAMILIES[metric];
   if (!allowed || allowed.indexOf(bucket) === -1) return null;
-  if (!/^[a-z0-9_]{1,32}$/.test(metric) || !/^[a-z0-9_]{1,32}$/.test(bucket)) return null;
-  return metric + '_' + bucket; // 如 cards_total / gender_female / age_band_26_30
+  return [metric + '_' + bucket]; // 如 cards_total / gender_female
 }
 
 async function handleBump(request, env) {
@@ -82,8 +116,8 @@ async function handleBump(request, env) {
   }
 
   const { metric, bucket, salt, nonce } = body || {};
-  const name = resolveMetric(metric, bucket);
-  if (!name) return json({ error: 'unknown metric' }, 400);
+  const names = resolveNames(metric, bucket);
+  if (!names) return json({ error: 'unknown metric' }, 400);
 
   /* ---- 工作量证明：防刷数字（数字被刷爆会反噬信任） ---- */
   const difficulty = Math.min(8, Math.max(1, parseInt(env.POW_DIFFICULTY || '4', 10) || 4));
@@ -108,20 +142,25 @@ async function handleBump(request, env) {
   if (bucket === 'active') {
     const ddKey = 'dd:' + metric + ':' + bucket + ':' + date + ':' + ipHash;
     if (await env.COUNTER.get(ddKey)) {
-      return json({ ok: true, metric: name, deduped: true }, 202, CORS);
+      return json({ ok: true, metric: names[0], deduped: true }, 202, CORS);
     }
     await env.COUNTER.put(ddKey, '1', { expirationTtl: DAILY_TTL });
   }
 
-  /* ---- 计数：总计 + 日桶 ---- */
-  const tKey = 't:' + metric + ':' + bucket;
-  const dKey = 'd:' + metric + ':' + bucket + ':' + date;
-  const tVal = parseInt((await env.COUNTER.get(tKey)) || '0', 10);
-  const dVal = parseInt((await env.COUNTER.get(dKey)) || '0', 10);
-  await env.COUNTER.put(tKey, String(tVal + 1));
-  await env.COUNTER.put(dKey, String(dVal + 1), { expirationTtl: DAILY_TTL });
+  /* ---- 计数：总计 + 日桶（一次上报可命中多个聚合键，如建卡同时计入性别） ---- */
+  for (const name of names) {
+    const parts = name.split('_');
+    const family = parts.shift();
+    const bkt = parts.join('_');                       // age_band_26_30 → 26_30
+    const tKey = 't:' + family + ':' + bkt;
+    const dKey = 'd:' + family + ':' + bkt + ':' + date;
+    const tVal = parseInt((await env.COUNTER.get(tKey)) || '0', 10);
+    const dVal = parseInt((await env.COUNTER.get(dKey)) || '0', 10);
+    await env.COUNTER.put(tKey, String(tVal + 1));
+    await env.COUNTER.put(dKey, String(dVal + 1), { expirationTtl: DAILY_TTL });
+  }
 
-  return json({ ok: true, metric: name }, 200, CORS);
+  return json({ ok: true, metric: names }, 200, CORS);
 }
 
 async function handleStats(env) {
@@ -148,8 +187,17 @@ async function handleStats(env) {
     counters.cards_active_30d = active30;
   }
 
+  /* 站点友好块：网站透明数据区四个格子的稳定键名（与 index.html 的 data-k 一一对应） */
+  const site = {
+    cards: counters.cards_total || 0,
+    cards_active_30d: counters.cards_active_30d || 0,
+    envelopes: counters.envelopes_total || 0,
+    plaza: counters.plaza_total || 0
+  };
+
   return json({
     counters,
+    site,
     updated_at: new Date().toISOString(),
     notice: '匿名聚合数据 · opt-in 上报 · 无用户标识 · 无 IP 记录'
   }, 200, Object.assign({
