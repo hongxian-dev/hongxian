@@ -112,12 +112,12 @@ async function handleBump(request, env) {
   try {
     body = await request.json();
   } catch (e) {
-    return json({ error: 'invalid json' }, 400);
+    return json({ error: 'invalid json' }, 400, CORS);
   }
 
   const { metric, bucket, salt, nonce } = body || {};
   const names = resolveNames(metric, bucket);
-  if (!names) return json({ error: 'unknown metric' }, 400);
+  if (!names) return json({ error: 'unknown metric' }, 400, CORS);
 
   /* ---- 工作量证明：防刷数字（数字被刷爆会反噬信任） ---- */
   const difficulty = Math.min(8, Math.max(1, parseInt(env.POW_DIFFICULTY || '4', 10) || 4));

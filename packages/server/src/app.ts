@@ -61,6 +61,10 @@ export function createApp(store: ServerStore, config: ServerConfig): Hono {
     if (!opaque_id || !sig_public || !kx_public) {
       return c.json({ error: '缺少 opaque_id / sig_public / kx_public' }, 400);
     }
+    // 形状校验：三者都是 32 字节公钥材料的 base64——垃圾数据进不来，也就不会污染存档
+    if (!isB64OfLen(opaque_id, 32) || !isB64OfLen(sig_public, 32) || !isB64OfLen(kx_public, 32)) {
+      return c.json({ error: 'opaque_id / sig_public / kx_public 必须是 32 字节材料的 base64' }, 400);
+    }
     // 协议 §7：opaque_id = SHA-256(sig_public) 指纹——注册时绑定，防地址与钥匙错配
     if (opaque_id !== keyIdOf(sig_public)) {
       return c.json({ error: 'opaque_id 必须等于 sig_public 的 SHA-256 指纹（协议 §7）' }, 400);
@@ -120,11 +124,19 @@ export function createApp(store: ServerStore, config: ServerConfig): Hono {
     // 持钥证明：签名必须过卡自带公钥（上传即归属证明）
     const sigOk = verifyEnvelopeSignature(card);
     if (!sigOk) return c.json({ error: '卡片验签失败——拒绝上传' }, 400);
+    // 归属自证：owner_key_id 必须就是签名公钥的指纹（协议 §7）——
+    // 否则任何人可拿别人的（公开的）opaque_id 当 owner_key_id 贴卡，顶掉对方广场位
+    if (card.meta.owner_key_id !== keyIdOf(card.meta.sig_public)) {
+      return c.json({ error: 'owner_key_id 与签名公钥不匹配（协议 §7：opaque_id = SHA-256(sig_public)）' }, 400);
+    }
     const owner = card.meta.owner_key_id;
     if (!store.getIdentity(owner)) {
       return c.json({ error: '身份未注册（先 POST /v2/identity/register）' }, 409);
     }
     const ttlMs = Date.parse(card.meta.expires_at) - Date.now();
+    if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+      return c.json({ error: '卡片已过期（expires_at 必须晚于当前时间）' }, 400);
+    }
     if (ttlMs > MAX_CARD_TTL_DAYS * 86400_000) {
       return c.json({ error: `TTL 超过服务端上限（${MAX_CARD_TTL_DAYS} 天）` }, 400);
     }
@@ -184,6 +196,15 @@ export function createApp(store: ServerStore, config: ServerConfig): Hono {
     const env = v.data;
     const sigOk = verifyMsgSignature(env);
     if (!sigOk) return c.json({ error: '信封验签失败——拒绝投递' }, 400);
+    // 归属自证：发件人 ID 必须就是签名公钥指纹——否则可冒用他人 ID 记账（消耗对方
+    // 每日配额）或把信伪装成他人所发
+    if (env.meta.owner_key_id !== keyIdOf(env.meta.sig_public)) {
+      return c.json({ error: 'owner_key_id 与签名公钥不匹配（协议 §7）' }, 400);
+    }
+    // 收件箱条目不可被顶掉：同 card_id 的信已在信箱里则拒收（客户端用 uuid，正常不撞）
+    if (store.hasEnvelope(parsed.opaque_id, env.meta.card_id)) {
+      return c.json({ error: '信封 ID 冲突（重签换 card_id 后再投）' }, 409);
+    }
     // 限速：按发件人 opaque ID 计（结构限制优于内容审查）
     const day = new Date().toISOString().slice(0, 10);
     const count = store.bumpDeliveryCount(env.meta.owner_key_id, day);
@@ -242,6 +263,15 @@ export function createApp(store: ServerStore, config: ServerConfig): Hono {
 /** opaque_id = SHA-256(sig_public) 的 32 字节指纹（协议 §7；纯哈希无秘密材料） */
 function keyIdOf(sigPublicB64: string): string {
   return Buffer.from(sha256(fromBase64(sigPublicB64))).toString('base64');
+}
+
+/** base64 是否解出恰好 len 字节（形状校验；不做语义判断） */
+function isB64OfLen(b64: string, len: number): boolean {
+  try {
+    return fromBase64(b64).length === len;
+  } catch {
+    return false;
+  }
 }
 
 function verifyEnvelopeSignature(card: MatchCardEnvelope): boolean {

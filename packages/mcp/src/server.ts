@@ -18,6 +18,8 @@ import {
 } from './tools-exchange.js';
 import { backupTool, restoreTool, wipeTool } from './tools-lifecycle.js';
 import { plazaBrowseTool, plazaPublishTool, sendViaServerTool, mailboxPullTool } from './tools-plaza.js';
+import { roundTool } from './tools-round.js';
+import { meetingKitTool, debriefTool, viewL3Tool } from './tools-guide.js';
 import { ALL_PROMPTS } from './prompts.js';
 
 const TOOLS = [
@@ -30,6 +32,12 @@ const TOOLS = [
   receiveEnvelopeTool,
   ledgerTool,
   coachTool,
+  // D10/D11 轮次链路（v1.1 接入：此前只有纯函数，产品面不可达）
+  roundTool,
+  // D3③④ 见面与复盘 + D13 逐字段解锁的读取口
+  meetingKitTool,
+  debriefTool,
+  viewL3Tool,
   backupTool,
   restoreTool,
   wipeTool,
@@ -45,6 +53,10 @@ const PROMPT_DESCRIPTIONS: Record<string, string> = {
   interview_flow: '渐进式建画像指引（D1）：三次会话 + 复述确认 + 可见性提示',
   report_narrative: '匹配报告叙事规范（D6）：五档结论 + 三区叙事 + 三条兜底',
   coach_ethics: '选题教练伦理护栏（D12）：出题理由 + 双通道标记 + 反 PUA 红线',
+  round_flow: '轮次与毕业机制（D10/D11）：一轮结构、三态应答、增量小报告、防无限网聊',
+  debrief_guide: '见面复盘指引（D3③）：记录真实感受 → 校准画像，但决定权归主人',
+  safety_brief: '安全与反诈终检（D13）：公开场合、自己往返、金钱红线、对称性回顾',
+  plaza_flow: '广场流指引（D8/V6/V9）：见轮廓 → 敲门 → 等主人开门；无推送无回执',
 };
 
 export function createServer(): McpServer {
@@ -67,6 +79,17 @@ export function createServer(): McpServer {
       tool.name,
       { description: tool.description, inputSchema: tool.inputSchema },
       async (args: Record<string, unknown>) => {
+        // 空闲超时锁（settings.lock_timeout_minutes）：v1.0 只声明未执行，这里补上门闩
+        if (session.enforceIdleLockout() && tool.name !== 'interview') {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: '会话已按你的设置自动锁定（空闲超时）。请重新提供 24 词恢复短语解锁（interview，action="unlock"）。',
+              },
+            ],
+          };
+        }
         // 全局门闩：除 interview（自身管理同意/解锁流程）外，
         // 未完成知情同意或未解锁的工具一律不执行——wipe 后同样生效（S3 无残留的配套纪律）。
         if (tool.name !== 'interview') {

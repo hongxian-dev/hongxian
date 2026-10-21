@@ -148,7 +148,7 @@ describe('平台服务 API v1', () => {
           'content-type': 'application/json',
           [AUTH_HEADER]: buildAuthHeader(opaqueOf(key), 'POST /v2/identity/register', other.sign),
         },
-        body: JSON.stringify({ opaque_id: opaqueOf(key), sig_public: key.pubB64, kx_public: 'k' }),
+        body: JSON.stringify({ opaque_id: opaqueOf(key), sig_public: key.pubB64, kx_public: other.pubB64 }),
       });
       expect(bad.status).toBe(401);
     });
@@ -342,6 +342,70 @@ describe('平台服务 API v1', () => {
       expect((await res.json()).removed).toBe(2);
       const pool = await app.request('/v2/cards');
       expect(((await pool.json()) as { items: unknown[] }).items).toHaveLength(0);
+    });
+  });
+
+  // 2026-10-21 夜加固：契约级不变量（review 发现的三处可被滥用面）
+  describe('加固不变量', () => {
+    it('owner_key_id 冒充他人（用自己钥匙重签）→ 400，顶不掉对方广场位', async () => {
+      const victim = genKey();
+      const attacker = genKey();
+      await register(app, victim);
+      await register(app, attacker);
+      const base = signedCard(attacker);
+      const forgedMeta = { ...base.meta, owner_key_id: opaqueOf(victim) };
+      const { signature: _orig, ...rest } = { ...base, meta: forgedMeta };
+      const forged = { ...rest, signature: toBase64(attacker.sign(canonicalBytes(rest))) };
+      const res = await app.request('/v2/cards', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(forged),
+      });
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(await res.json())).toContain('owner_key_id');
+      const pool = await app.request('/v2/cards');
+      expect(((await pool.json()) as { items: unknown[] }).items).toHaveLength(0);
+    });
+
+    it('已过期卡 → 400（不让死卡进池）', async () => {
+      const key = genKey();
+      await register(app, key);
+      const stale = signedCard(key, { ttlDays: -1 });
+      const res = await app.request('/v2/cards', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(stale),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('同 card_id 二次投递 → 409（收件箱条目不可被顶掉）', async () => {
+      const alice = genKey();
+      const bob = genKey();
+      await register(app, alice);
+      await register(app, bob);
+      const env = signedMsg(alice, uuidV7());
+      const post = () =>
+        app.request(`/v2/mailbox/${enc(opaqueOf(bob))}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(env),
+        });
+      expect((await post()).status).toBe(201);
+      expect((await post()).status).toBe(409);
+    });
+
+    it('注册材料形状非法（长度不对）→ 400', async () => {
+      const key = genKey();
+      const res = await app.request('/v2/identity/register', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          [AUTH_HEADER]: buildAuthHeader(opaqueOf(key), 'POST /v2/identity/register', key.sign),
+        },
+        body: JSON.stringify({ opaque_id: opaqueOf(key), sig_public: key.pubB64, kx_public: 'short' }),
+      });
+      expect(res.status).toBe(400);
     });
   });
 });

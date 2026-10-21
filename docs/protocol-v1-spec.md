@@ -1,7 +1,10 @@
 # Hongxian Protocol v1 (Spec)
 
 > Machine-readable form: [`@hongxian/schema`](../packages/schema) (Zod).
-> Status: **v1, public for review** (2026-10-19). Supersedes [protocol v0 draft](protocol-v0-spec.md).
+> Status: **v1.1, public for review** (2026-10-21). Supersedes [protocol v0 draft](protocol-v0-spec.md).
+> v1.1 change (non-breaking): the meeting layer (`payload_L3`) is a *sealed container* with per-field
+> subkeys, and `grant_l3` may carry `container_key` — see §3.3. Readers must keep accepting the v1.0
+> whole-layer shape.
 > License: [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — the protocol itself must stay open; the code is Apache-2.0.
 
 ---
@@ -52,7 +55,7 @@ MatchCardEnvelope
 ├── key_l1       base64 — L1 layer key. DIRECT variant only (see §2.2)
 ├── payload_L1   AES-256-GCM ciphertext (key_L1)
 ├── payload_L2   AES-256-GCM ciphertext (key_L2)
-├── payload_L3   AES-256-GCM ciphertext (key_L3, optional as a whole)
+├── payload_L3   AES-256-GCM sealed container (containerKey, see §3.3; optional)
 └── signature    Ed25519 over canonical(meta ‖ [key_l1] ‖ payload_L1 ‖ payload_L2 ‖ [payload_L3])
 ```
 
@@ -110,9 +113,27 @@ All enum fields accept `unspecified` (unanswered is a legal value).
 
 `values_tags`(≤8, tag+weight) · `lifestyle`(sleep/smoking/drinking/exercise/social) · `family_view` · `money_view`(5 bands) · `assets_brief`(house/car) · `income_band`(optional, wide bands) · `dealbreakers`(≤5) · `values_qa`(3–5 Q&A ≤200 chars each — the quote evidence for reports) · `partner_pref`(≤150).
 
-### 3.3 L3 · Meeting layer (private, whole-layer optional)
+### 3.3 L3 · Meeting layer (private, per-field opt-in)
 
 `contact_wechat` · `contact_phone` · `real_name` · `employer_category` · `hangout_areas`(≤5) · `photo_refs` — **photos never enter the card**: only hash + decryption key of the local encrypted file; originals travel separately.
+
+**Per-field sealing (v1.1).** The meeting layer is not one opaque blob: it is a *sealed container* so
+that a grant can release one field without releasing the rest ("give WeChat, keep the phone number").
+
+```
+payload_L3 = Enc(containerKey, JSON{ v:1, fields:{ <field>: CipherBlock } })
+
+containerKey  = HKDF-SHA256(layerKey_L3, info="hongxian/protocol/v1/subkey/l3/container")
+fieldKey(f)   = HKDF-SHA256(layerKey_L3, info="hongxian/protocol/v1/subkey/l3/<field>")
+```
+
+- Each `CipherBlock` is AES-256-GCM under its own `fieldKey` — fields are independent.
+- `containerKey` opens the outer layer only: a holder gets the *set of field ciphertexts* and
+  nothing readable. Releasing `containerKey` therefore leaks **the list of field names, not values**.
+- `layerKey_L3` itself is `.gitignore`-level material: it never leaves the owner's device, except in
+  the v1.0 whole-layer grant path (`container_key` omitted ⇒ outer layer was sealed with it directly).
+- Unknown field names are rejected at seal time (whitelist above) — a card cannot smuggle extra keys.
+- Readers must tolerate both shapes: `{v,fields}` (v1.1) and a plain object (v1.0 bare text).
 
 ---
 
@@ -130,7 +151,7 @@ Same envelope format, distinguished by `msg_type`; all travel the handshake chan
 | `topic_pack` | one-way | exam pack: 1 topic + ≤2 follow-ups, with reason + channel | D10/D11 |
 | `answer_card` | one-way | structured answer / ask-master / deferred | D10 |
 | `graduation_invite` | one-way | optional handwritten letter + L3 field requests | D13 |
-| `grant_l3` | one-way | per-field opt-in key delivery | D13 |
+| `grant_l3` | one-way | per-field opt-in: `container_key` (outer layer only) + `fields:[{field, wrapped_key}]` | D13 |
 | `decline_silent` | one-way | fixed content only, zero side channel — v2 (v1 uses silence) | D4 |
 
 `upgrade_request` in the **plaza flow** requests tier-1 unlock (the requester holds the

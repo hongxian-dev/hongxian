@@ -150,4 +150,24 @@ describe('ServerStore', () => {
   it('hexOf 目录安全化', () => {
     expect(hexOf(Buffer.alloc(32, 1).toString('base64'))).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  // 回归：默认 DATA_DIR='./data' 这类相对路径曾让 resolve() 的越界判定恒为真
+  // （join('./data','x')='data/x' 不以 './data' 开头），所有写入都被误判为非法
+  it('相对路径数据目录可正常读写（默认 ./data 场景）', () => {
+    const rel = new ServerStore('data-rel-test');
+    try {
+      const opaque = Buffer.alloc(32, 9).toString('base64');
+      rel.putCard(opaque, { envelope: makeCard(), uploaded_at: new Date().toISOString() });
+      expect(rel.getCardByOwner(opaque)).not.toBeNull();
+      expect(rel.listCards(null, 10).items).toHaveLength(1);
+    } finally {
+      rmSync(rel.root, { recursive: true, force: true });
+    }
+  });
+
+  it('越界路径被拒（含 ../ 逃逸）', () => {
+    const opaque = Buffer.alloc(32, 7).toString('base64');
+    expect(store.deleteEnvelope(opaque, '../../secret')).toBe(false);
+    expect(store.hasEnvelope(opaque, '../x')).toBe(false);
+  });
 });

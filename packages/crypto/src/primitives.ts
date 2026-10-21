@@ -128,3 +128,23 @@ export function aesGcmDecrypt(key: Uint8Array, nonce: Uint8Array, ct: Uint8Array
 export function randomKey(n: number): Uint8Array {
   return randomBytes(n);
 }
+
+// ---------- 域分离子密钥（D13 见面层逐字段 opt-in） ----------
+
+/** 子密钥域分离前缀（改前缀 = 协议不兼容变更，不得随意改动） */
+const SUBKEY_INFO_PREFIX = 'hongxian/protocol/v1/subkey/';
+
+/**
+ * 由层密钥派生用途子密钥：HKDF-SHA256(master, info = prefix + label)。
+ *
+ * 见面层用它把单一的 L3 层密钥摊成「每字段一把」——
+ * 交付 contact_wechat 的子密钥不等于交付 contact_phone 的子密钥，
+ * D13「给微信号但不给手机号」由此在密码学层面成立，而不只是 UI 上的开关。
+ *
+ * 单向性：子密钥推不出主密钥，也无法推到别的字段（不同 info）。
+ */
+export function deriveSubkey(masterKey: Uint8Array, label: string): Uint8Array {
+  if (masterKey.length !== 32) throw new Error('主密钥必须是 32 字节');
+  const info = new TextEncoder().encode(SUBKEY_INFO_PREFIX + label);
+  return hkdf(sha256, masterKey, undefined, info, 32);
+}

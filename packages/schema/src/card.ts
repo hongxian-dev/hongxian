@@ -87,7 +87,7 @@ export const CardMeta = z.object({
    * Ed25519 签名公钥（32B base64）——验签必需。
    * 工程补注：Schema v0.3 §2 字段表未列，但 §6/技术详设 §4 要求"公钥随 match_card
    * 元数据交换"（换卡即换公钥）。公钥是公开密码学参数、非身份信息，
-   * 信任模型 = TOFU + 可选 introducer_sig 背书（D8 介绍人链）。
+   * 信任模型 = TOFU（introducer_sig 已 @deprecated，2026-10-20 D8 修订裁撤介绍人链）。
    */
   sig_public: z
     .string()
@@ -101,7 +101,7 @@ export const CardMeta = z.object({
   expires_at: z.string().datetime({ message: 'ISO 8601 时间戳' }),
   card_type: z.enum(CARD_TYPES),
   depth: CardDepth,
-  introducer_sig: z.string().optional(), // 介绍人签名（D8 介绍人链，信任加权）
+  introducer_sig: z.string().optional(), // @deprecated 2026-10-20 D8 修订：介绍人链裁撤（分发半径唯一模型=声明式圈层），编号保留不复用，v0.5 移除
   algo: AlgoDeclaration,
 });
 export type CardMeta = z.infer<typeof CardMeta>;
@@ -192,6 +192,49 @@ export const PayloadL3 = z.object({
   photo_refs: z.array(PhotoRef).max(3).optional(),
 });
 export type PayloadL3 = z.infer<typeof PayloadL3>;
+
+/** L3 字段名白名单（D13：见面层字段逐一 opt-in，支持"给微信号但不给手机号"） */
+export const L3_FIELD_NAMES = [
+  'contact_wechat',
+  'contact_phone',
+  'real_name',
+  'employer_category',
+  'hangout_areas',
+  'photo_refs',
+] as const;
+
+export type L3FieldName = (typeof L3_FIELD_NAMES)[number];
+
+/**
+ * L3 层的加密内层结构（v1.1，逐字段独立密文）：
+ * payload_L3 解封后的明文就是这个容器——`fields[name]` 各自用
+ * `HKDF(L3 层密钥, "l3/<name>")` 派生的子密钥加密。
+ *
+ * 为什么多加这一层：单块 L3 只能"整层交付"，交钥匙即交全部字段，
+ * 与 D13「每字段独立开关」直接冲突。加上内层容器后，grant_l3 只需
+ * 交付被授权字段的子密钥——其余字段的密文他拿到了也打不开。
+ *
+ * 向后兼容：v1.0 卡片的 payload_L3 解封后是裸 PayloadL3（无 v/fields），
+ * 读取方按"整体明文"处理即可（零迁移）。
+ */
+export const L3_FIELD_LABEL_PREFIX = 'l3/';
+
+export const L3SealedContainer = z.object({
+  v: z.literal(1),
+  fields: z.record(z.string(), CipherBlock),
+});
+export type L3SealedContainer = z.infer<typeof L3SealedContainer>;
+
+/** 判断 L3 明文是逐字段容器还是 v1.0 裸明文 */
+export function isL3SealedContainer(value: unknown): value is L3SealedContainer {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    (value as { v?: unknown }).v === 1 &&
+    typeof (value as { fields?: unknown }).fields === 'object' &&
+    (value as { fields?: unknown }).fields !== null
+  );
+}
 
 // ---------- 信封整体 ----------
 

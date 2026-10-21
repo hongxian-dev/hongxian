@@ -1,4 +1,24 @@
 <svg viewBox="0 0 680 290" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: -apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; }
+    text:not([fill]) { fill: #374151; }
+    .th { font-size: 13px; font-weight: bold; fill: #1F2937; }
+    .ts { font-size: 11px; fill: #374151; }
+    .c-gray rect:not([fill]) { fill: #F3F4F6; }
+    .c-red rect:not([fill]) { fill: #FBEAEC; }
+    .c-green rect:not([fill]) { fill: #EAF6EF; }
+    .c-amber rect:not([fill]) { fill: #FDF3E3; }
+    rect:not([stroke]):not([stroke-width]) { stroke: #C8102E; }
+    .c-gray rect:not([stroke]):not([stroke-width]) { stroke: #9CA3AF; }
+    .c-red rect:not([stroke]):not([stroke-width]) { stroke: #C8102E; }
+    .c-green rect:not([stroke]):not([stroke-width]) { stroke: #2E7D32; }
+    .c-amber rect:not([stroke]):not([stroke-width]) { stroke: #B45A00; }
+    .c-red .th:not([fill]) { fill: #C8102E; }
+    .c-green .th:not([fill]) { fill: #2E7D32; }
+    .c-amber .th:not([fill]) { fill: #B45A00; }
+  </style>
+
+
   <title>月老 Skill 用户旅程：从安装到解锁的六个阶段</title>
   <desc>安装与知情同意、对话建画像、签发三层匹配卡、名片互换（第一次握手）、本地比对与双盲决策，随后按双方意愿分支：双方都愿意则第二次握手解锁联系方式，一方婉拒则静默无痕。</desc>
   <defs>

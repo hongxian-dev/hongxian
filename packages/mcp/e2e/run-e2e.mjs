@@ -182,13 +182,16 @@ async function main() {
     await bootstrap(a);
     const initRes = await a.request('tools/list');
     const tools = initRes.result.tools.map((t) => t.name);
-    check('tools/list 返回 16 件工具', tools.length === 16, `实际 ${tools.length}: ${tools.join(',')}`);
-    for (const t of ['interview', 'sign_card', 'export_card', 'import_card', 'compare', 'send_envelope', 'receive_envelope', 'ledger', 'coach', 'backup', 'restore', 'wipe', 'plaza_browse', 'plaza_publish', 'send_via_server', 'mailbox_pull']) {
+    check('tools/list 返回 20 件工具', tools.length === 20, `实际 ${tools.length}: ${tools.join(',')}`);
+    for (const t of ['interview', 'sign_card', 'export_card', 'import_card', 'compare', 'send_envelope', 'receive_envelope', 'ledger', 'coach', 'round', 'meeting_kit', 'debrief', 'view_l3', 'backup', 'restore', 'wipe', 'plaza_browse', 'plaza_publish', 'send_via_server', 'mailbox_pull']) {
       check(`工具存在: ${t}`, tools.includes(t));
     }
     const promptsRes = await a.request('prompts/list');
     const prompts = promptsRes.result.prompts.map((p) => p.name);
-    check('prompts/list 返回 4 条', prompts.length === 4, prompts.join(','));
+    check('prompts/list 返回 8 条', prompts.length === 8, prompts.join(','));
+    for (const p of ['round_flow', 'debrief_guide', 'safety_brief', 'plaza_flow']) {
+      check(`prompt 存在: ${p}`, prompts.includes(p));
+    }
 
     // ---- S1 知情同意 + 身份 ----
     console.log('\n■ S1 知情同意与身份');
@@ -201,14 +204,18 @@ async function main() {
 
     // ---- S4 签卡 ----
     console.log('\n■ S4 签卡');
-    const signRes = await a.callTool('sign_card', {});
+    const signRes = await a.callTool('sign_card', { l3: { contact_wechat: 'aze_wx_2026' } });
     check('甲方签卡成功', signRes.text.includes('匹配卡已签发'), signRes.text.slice(0, 120));
+    check('见面层字段逐项列出', signRes.text.includes('contact_wechat'), signRes.text.slice(0, 200));
+    const badL3 = await a.callTool('sign_card', { l3: { id_card: '310xxx' } });
+    check('见面层字段名越界被拒（D13 白名单）', badL3.text.includes('不认识') || badL3.text.includes('不合法'), badL3.text.slice(0, 120));
     const exportRes = await a.callTool('export_card', {});
     const cardA = extractJsonBlock(exportRes.text);
     check('导出卡片文件内容', cardA !== null && cardA.meta?.card_id);
     check('交换确认码（QR）生成', /交换确认码（QR 内容[^）]*）：[0-9a-f]{16}/.test(exportRes.text));
     check('卡片带 key_l1（L1 随卡）', typeof cardA.key_l1 === 'string');
     check('卡片带 sig/kx 公钥', !!cardA.meta.sig_public && !!cardA.meta.kx_public);
+    check('卡片带 L3 密文层', !!cardA.payload_L3);
 
     // ---- S5 名片互换 ----
     console.log('\n■ S5 名片互换（乙方导入甲方卡）');
@@ -217,7 +224,7 @@ async function main() {
     check('乙方看到甲方一阶名片', importRes.text.includes('阿泽'));
 
     // 乙方也签卡导出，甲方导入
-    await b.callTool('sign_card', {});
+    await b.callTool('sign_card', { l3: { contact_wechat: 'yi_wx_2026', contact_phone: '13900000000' } });
     const exportB = await b.callTool('export_card', {});
     const cardB = extractJsonBlock(exportB.text);
     const importB2A = await a.callTool('import_card', { file_content: JSON.stringify(cardB) });
@@ -259,25 +266,51 @@ async function main() {
     check('乙方收到升级请求并呈报', recvUpg.text.includes('请求解锁匹配层'), recvUpg.text.slice(0, 120));
     // 乙方同意：grant_l2（用甲方 kx 公钥封装 key_L2——乙方本地生成封装材料）
     // v1 简化：grant_l2 的 wrapped_key_l2 由 core wrapLayerKey 生成，此处经 send_envelope 的 body 传入
+    // v1.1：层密钥封装由工具完成——LLM 只说"同意"，不再自己构造密文（此前 E2E 传假密钥，L2 从未真正解锁）
     const grant = await b.callTool('send_envelope', {
       msg_type: 'grant_l2',
       target_card_id: cardA.meta.card_id,
-      body: { from_card_id: cardB.meta.card_id, wrapped_key_l2: Buffer.alloc(32, 1).toString('base64') },
+      body: { from_card_id: cardB.meta.card_id },
       my_card_id: cardB.meta.card_id,
     });
+    check('grant_l2 自动派生 wrapped_key_l2', grant.text.includes('信封已生成'), grant.text.slice(0, 140));
     const grantEnv = takeEnvelope(homeB, grant.text);
     const recvGrant = await a.callTool('receive_envelope', { file_content: JSON.stringify(grantEnv) });
-    check('grant_l2 信封送达（甲方处理）', recvGrant.text.length > 0);
+    check('grant_l2 解封成功（匹配层真的解锁了）', recvGrant.text.includes('匹配层已解锁'), recvGrant.text.slice(0, 140));
 
     // ---- S6 比对 ----
     console.log('\n■ S6 本地比对');
     const cmp = await a.callTool('compare', { card_id: cardB.meta.card_id });
     check('compare 返回档位与叙事输入', cmp.text.includes('tier') && cmp.text.includes('narrative_input'), cmp.text.slice(0, 100));
+    check('compare 基于已解锁的匹配层（非"尚未解锁"）', cmp.text.includes('匹配层已解锁'), cmp.text.slice(0, 200));
+    check('报告留档在本机', cmp.text.includes('report_saved'));
 
     // ---- D10 考题/回卷 ----
     console.log('\n■ D10/D11 考题与回卷');
     const coachRes = await a.callTool('coach', { dimension: '价值观' });
     check('选题教练给候选题+理由', coachRes.text.includes('理由') && coachRes.text.includes('月老建议的'));
+    const roundOpen = await a.callTool('round', {
+      action: 'open',
+      card_id: cardB.meta.card_id,
+      topic: '你理想的一天是怎样的？',
+      followups: ['从早到晚说一遍', '最近一次说走就走是什么时候'],
+      reason: '日常节奏比宏大三观更能预测相处质量',
+      channel: 'yuelao',
+    });
+    check('D11 开轮次（1 主题 + 2 追问）', roundOpen.text.includes('轮已开'), roundOpen.text.slice(0, 120));
+    // 追问封顶在 schema 层就拦（core 里还有一道）——双层防御，符合 D11
+    const roundOver = await a.callTool('round', {
+      action: 'open',
+      card_id: cardB.meta.card_id,
+      topic: '再问一个',
+      followups: ['a', 'b', 'c'],
+      channel: 'yuelao',
+    });
+    check(
+      '追问 3 个被 schema 拦下（防审讯化 D11）',
+      roundOver.isError && roundOver.text.includes('at most 2'),
+      roundOver.text.slice(0, 140),
+    );
     const topic = await a.callTool('send_envelope', {
       msg_type: 'topic_pack',
       target_card_id: cardB.meta.card_id,
@@ -295,6 +328,24 @@ async function main() {
     check('追问 ≤2 封顶通过 schema', topicEnv.meta.msg_type === 'topic_pack');
     const recvTopic = await b.callTool('receive_envelope', { file_content: JSON.stringify(topicEnv) });
     check('乙方收到考题并呈报三态应答', recvTopic.text.includes('三态应答'));
+    const bStatus = await b.callTool('round', { action: 'status', card_id: cardA.meta.card_id });
+    check('乙方入站轮次自动记账', bStatus.text.includes('对方出的题：第 0 轮已收') && bStatus.text.includes('待收尾'), bStatus.text.slice(0, 200));
+    const bRespond = await b.callTool('round', {
+      action: 'respond',
+      direction: 'in',
+      card_id: cardA.meta.card_id,
+      status: 'answered',
+      answer: '先跑步再做饭，下午读书',
+    });
+    check('乙方三态应答（answered）记入轮次', bRespond.text.includes('答案已记'), bRespond.text.slice(0, 140));
+    const bClose = await b.callTool('round', {
+      action: 'close',
+      direction: 'in',
+      card_id: cardA.meta.card_id,
+      incremental: true,
+      dimensions: ['生活方式'],
+    });
+    check('乙方收尾本轮并给出增量素材', bClose.text.includes('已收尾') && bClose.text.includes('对方原话'), bClose.text.slice(0, 200));
     const answer = await b.callTool('send_envelope', {
       msg_type: 'answer_card',
       target_card_id: cardA.meta.card_id,
@@ -304,6 +355,15 @@ async function main() {
     const answerEnv = takeEnvelope(homeB, answer.text);
     const recvAnswer = await a.callTool('receive_envelope', { file_content: JSON.stringify(answerEnv) });
     check('回卷闭合送达甲方', recvAnswer.text.includes('已回答'), recvAnswer.text.slice(0, 200));
+    const aClose = await a.callTool('round', {
+      action: 'close',
+      card_id: cardB.meta.card_id,
+      incremental: true,
+      dimensions: ['生活方式'],
+    });
+    check('甲方收尾本轮（答案原话归档）', aClose.text.includes('先跑步再做饭'), aClose.text.slice(0, 300));
+    const aHistory = await a.callTool('round', { action: 'history', card_id: cardB.meta.card_id });
+    check('轮次历史含答案与增量标记', aHistory.text.includes('第 1 轮') && aHistory.text.includes('[有增量]'), aHistory.text.slice(0, 200));
 
     // ---- D13 毕业邀请 ----
     console.log('\n■ D13 毕业邀请');
@@ -316,11 +376,56 @@ async function main() {
     const inviteEnv = takeEnvelope(homeA, invite.text);
     const recvInvite = await b.callTool('receive_envelope', { file_content: JSON.stringify(inviteEnv) });
     check('毕业邀请含亲笔短信呈报', recvInvite.text.includes('亲笔短信') && recvInvite.text.includes('暂缓'));
+    const grantL3 = await b.callTool('send_envelope', {
+      msg_type: 'grant_l3',
+      target_card_id: cardA.meta.card_id,
+      body: { from_card_id: cardB.meta.card_id, fields: ['contact_wechat'] },
+      my_card_id: cardB.meta.card_id,
+    });
+    check('grant_l3 只给字段名，子密钥+容器钥匙由工具派生', grantL3.text.includes('信封已生成'), grantL3.text.slice(0, 160));
+    const grantL3Env = takeEnvelope(homeB, grantL3.text);
+    const recvL3 = await a.callTool('receive_envelope', { file_content: JSON.stringify(grantL3Env) });
+    check('见面层按字段解锁（只 contact_wechat）', recvL3.text.includes('微信号') && !recvL3.text.includes('手机号'), recvL3.text.slice(0, 240));
+    const viewL3 = await a.callTool('view_l3', { card_id: cardB.meta.card_id });
+    check('view_l3 读出已授权的微信号', viewL3.text.includes('yi_wx_2026'), viewL3.text.slice(0, 240));
+    check('未授权字段仍是密文（手机号读不到）', viewL3.text.includes('手机号：未授权'), viewL3.text.slice(0, 240));
+    check('view_l3 不泄露未授权明文', !viewL3.text.includes('13900000000'));
+    const ledgerGrad = await a.callTool('ledger', { action: 'list' });
+    check('手账状态变为已毕业', ledgerGrad.text.includes('graduated'), ledgerGrad.text.slice(0, 200));
 
     // ---- D3② 手账 ----
     console.log('\n■ D3② 红线手账');
     const ledgerRes = await a.callTool('ledger', { action: 'list' });
     check('手账列出姻缘线', ledgerRes.text.includes('姻缘线'));
+    const ledgerReports = await a.callTool('ledger', { action: 'reports', line_id: cardB.meta.card_id });
+    check('手账可查历次比对结论（档位变化）', ledgerReports.text.includes('比对记录'), ledgerReports.text.slice(0, 200));
+
+    // ---- D3④ 见面锦囊 + D3③ 复盘 ----
+    console.log('\n■ D3④ 见面锦囊 / D3③ 复盘');
+    const kit = await a.callTool('meeting_kit', { card_id: cardB.meta.card_id });
+    check('锦囊给话题（含共鸣或差异）', kit.text.includes('可以聊的'), kit.text.slice(0, 200));
+    check('锦囊含安全清单与反诈终检', kit.text.includes('安全（第一次见面必看）') && kit.text.includes('任何涉及金钱的请求'));
+    check('锦囊含对称性回顾', kit.text.includes('对称性回顾'));
+    const debrief = await a.callTool('debrief', {
+      card_id: cardB.meta.card_id,
+      feeling: 'again',
+      matches: ['记得我说过的展览'],
+      surprises: ['整场都在讲自己的项目'],
+      next_time: '下次约白天，两小时以内',
+    });
+    check('复盘记录并给校准点（不改画像）', debrief.text.includes('复盘已记下') && debrief.text.includes('我不替你改画像'), debrief.text.slice(0, 240));
+
+    // ---- D3① 画像续访 + 重签名片 ----
+    console.log('\n■ D3① 画像续访与重签');
+    const upd = await a.callTool('interview', {
+      action: 'update',
+      stage: 'facts',
+      answers: { bio: '写代码、爬山、做饭' },
+    });
+    check('续访走复述确认门闩', upd.text.includes('我理解的你是'), upd.text.slice(0, 160));
+    await a.callTool('interview', { action: 'confirm' });
+    const resign = await a.callTool('sign_card', { resign_of: cardA.meta.card_id });
+    check('重签名片 version+1（旧版自动作废）', resign.text.includes('version 1 → 2'), resign.text.slice(0, 240));
 
     // ---- D15③ 备份恢复 ----
     console.log('\n■ D15③ 备份与恢复');

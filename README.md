@@ -52,7 +52,7 @@ npx @hongxian/mcp
 
 | # | 怎么查 | 怎么做 |
 |---|---|---|
-| 1 | **读源码** | 全仓库开源：[schema 协议契约](../packages/schema)、[crypto 密钥体系](../packages/crypto)、[core 领域逻辑](../packages/core)、[mcp 月老本体](../packages/mcp)。无打包混淆，构建只有一步 tsc。 |
+| 1 | **读源码** | 全仓库开源：[schema 协议契约](packages/schema)、[crypto 密钥体系](packages/crypto)、[core 领域逻辑](packages/core)、[mcp 月老本体](packages/mcp)。无打包混淆，构建只有一步 tsc。 |
 | 2 | **抓包** | 运行全程出网流量仅有一条可选的匿名计数（默认关闭）。关闭后出网为零。断网状态下除计数外一切功能完整可用。 |
 | 3 | **核对哈希** | 每次 Release 附 `SHA256SUMS.txt`：`sha256sum -c SHA256SUMS.txt`。npm 包固定 provenance（构建出处可验证）。 |
 | 4 | **一键删除** | 对 Agent 说："月老，删除我的全部数据"（`wipe` 工具）。整个数据目录删净，磁盘无残留；若你连过自托管服务端（广场/信箱），会先尽力注销服务端身份（级联删服务端密文）再删本地。 |
@@ -91,7 +91,18 @@ npx @hongxian/mcp
 - [宿主兼容性矩阵](docs/host-compatibility.md) —— 已验证宿主列表
 - [安装与信任指南](docs/install-and-trust.md) —— 安装排错、数据目录说明、删除与备份
 - [schema 包](packages/schema) —— 协议 v0 的机器可读形态（独立 npm：`@hongxian/schema`）
-- 设计文档（中文）：[项目定位声明](../红线项目定位声明.md)、[交互设计方案](../月老Skill交互设计方案.md)、[技术详设](../技术详设.md)
+- 设计文档（中文）：[项目定位声明](docs/00-定位与PRD/红线项目定位声明.md) · [产品 PRD](docs/00-定位与PRD/红线开源工具PRD.md) · [交互设计方案](docs/10-产品设计/月老Skill交互设计方案.md) · [技术详设](docs/20-技术设计/技术详设.md) —— 完整索引见 [docs/README.md](docs/README.md)
+
+## 仓库结构
+
+```
+packages/        协议契约 schema · 密钥体系 crypto · 领域逻辑 core · 月老本体 mcp · 平台服务 server
+apps/            产品网站 web · 匿名计数器 counter
+docs/            全部文档（00-定位与PRD / 10-产品设计 / 20-技术设计 / 90-归档 + 对外规范）
+diagrams/        设计图（SVG，文档内引用）
+logo/            品牌资产（legacy-v1 旧「加权心络」/ concepts 概念稿；当前主标 M1 见下）
+hongxian-website/ 网站设计工作台（设计源 + M1 线球小月老规范 logo/mascot-guidelines.html）
+```
 
 ## License
 

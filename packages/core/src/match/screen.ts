@@ -44,26 +44,63 @@ export function screenCompatibility(mine: ProfileView, theirs: ProfileView): Scr
   }
 
   // 2. dealbreakers 与生活方式的结构性冲突（负面清单优先于偏好——D1"错配克星"）
-  //    语义：命中 = 一方的底线撞上另一方**实际的生活方式**；
+  //    语义：命中 = 一方的底线撞上另一方**实际的生活方式/意向**；
   //    双方都把同一维度当底线 = 共识，不算硬伤（甚至互相认可）。
   const myBreakers = (mine.l2.dealbreakers ?? []) as { dimension: string; note: string }[];
   const theirBreakers = (theirs.l2.dealbreakers ?? []) as { dimension: string; note: string }[];
+  const noteOf = (d: string, level: string) =>
+    `生活方式：${level === 'regularly' ? '经常' : level}${d === 'smoking' ? '吸烟' : d === 'drinking' ? '饮酒' : d}`;
+
+  /** 结构化维度冲突判定：只比有受控词表的维度，其余交给报告叙事（不猜） */
+  const structuredConflict = (
+    dimension: string,
+    mineView: Record<string, any>,
+    theirsView: Record<string, any>,
+    mineBreakers: readonly { dimension: string }[],
+  ): boolean => {
+    if (dimension === 'childbearing') {
+      // 一方明确「不想要」，另一方明确「想要」——这是硬冲突，不是可聊差异
+      const a = mineView.l2?.family_view?.childbearing;
+      const b = theirsView.l2?.family_view?.childbearing;
+      return (a === 'dont_want' && (b === 'want' || b === 'want_more')) ||
+        (b === 'dont_want' && (a === 'want' || a === 'want_more')) ||
+        false;
+    }
+    if (dimension === 'smoking' || dimension === 'drinking') {
+      // 底线方自己不沾，对方经常来——单向忍不了的现实冲突
+      const myLevel = mineView.l2?.lifestyle?.[dimension];
+      const theirLevel = theirsView.l2?.lifestyle?.[dimension];
+      const mineHasBreaker = mineBreakers.some((b) => b.dimension === dimension);
+      if (mineHasBreaker) return theirLevel === 'regularly' && myLevel !== 'regularly';
+      return myLevel === 'regularly' && theirLevel !== 'regularly';
+    }
+    return false;
+  };
+
   for (const mb of myBreakers) {
     const theirHabit = theirs.l2.lifestyle?.[mb.dimension];
-    if (theirHabit === 'regularly') {
+    const conflict = structuredConflict(mb.dimension, mine, theirs, myBreakers);
+    if (theirHabit === 'regularly' || conflict) {
       hits.push({
         dimension: mb.dimension,
         mine: mb.note,
-        theirs: `生活方式：经常${mb.dimension === 'smoking' ? '吸烟' : mb.dimension === 'drinking' ? '饮酒' : mb.dimension}`,
+        theirs:
+          typeof theirHabit === 'string'
+            ? noteOf(mb.dimension, theirHabit)
+            : `对方的${mb.dimension === 'childbearing' ? '生育意愿' : mb.dimension}与你的底线不一致`,
       });
     }
   }
   for (const tb of theirBreakers) {
     const myHabit = mine.l2.lifestyle?.[tb.dimension];
-    if (myHabit === 'regularly' && !hits.some((h) => h.dimension === tb.dimension)) {
+    const conflict = structuredConflict(tb.dimension, theirs, mine, theirBreakers);
+    if ((myHabit === 'regularly' || conflict) && !hits.some((h) => h.dimension === tb.dimension)) {
       hits.push({
         dimension: tb.dimension,
-        mine: `生活方式：经常${tb.dimension === 'smoking' ? '吸烟' : tb.dimension === 'drinking' ? '饮酒' : tb.dimension}`,
+        mine:
+          typeof myHabit === 'string'
+            ? noteOf(tb.dimension, myHabit)
+            : `你的${tb.dimension === 'childbearing' ? '生育意愿' : tb.dimension}与对方的底线不一致`,
         theirs: tb.note,
       });
     }
@@ -94,18 +131,44 @@ export function findResonance(mine: ProfileView, theirs: ProfileView): ReportNar
       theirs_quote: `对方的兴趣：${[...theirInterests].join('、')}`,
     });
   }
-  // 价值观标签重叠
+  // 价值观标签重叠（引用双方价值观问答的原话——D6 要求"每个结论有原话依据"，
+  // 只有标签名称不算原话，故附上各自最接近的一段回答作为引文）
   const myValues = new Map((mine.l2.values_tags ?? []).map((t: any) => [t.tag, t.weight]));
   const theirValues = (theirs.l2.values_tags ?? []) as { tag: string; weight: number }[];
   const sharedValues = theirValues.filter((t) => myValues.has(t.tag));
   if (sharedValues.length > 0) {
     out.push({
       point: `价值观共鸣：${sharedValues.map((t) => t.tag).join('、')}`,
-      mine_quote: `我的价值观权重：${sharedValues.map((t) => `${t.tag}×${myValues.get(t.tag)}`).join('、')}`,
-      theirs_quote: `对方的价值观权重：${sharedValues.map((t) => `${t.tag}×${t.weight}`).join('、')}`,
+      mine_quote: firstQuote(mine, sharedValues[0]!.tag) ?? `我的价值观权重：${sharedValues.map((t) => `${t.tag}×${myValues.get(t.tag)}`).join('、')}`,
+      theirs_quote: firstQuote(theirs, sharedValues[0]!.tag) ?? `对方的价值观权重：${sharedValues.map((t) => `${t.tag}×${t.weight}`).join('、')}`,
+    });
+  }
+  // 目标一致（都以婚姻为导向 / 都只是认真交往）——推进节奏的共识，避免"一方想快一方想慢"的错配
+  if (mine.l1.goal && theirs.l1.goal && mine.l1.goal === theirs.l1.goal) {
+    out.push({
+      point: `目标一致：${mine.l1.goal === 'marriage_oriented' ? '都以婚姻为导向' : '都在认真交往阶段'}`,
+      mine_quote: `我的目标：${mine.l1.goal}`,
+      theirs_quote: `对方的目标：${theirs.l1.goal}`,
+    });
+  }
+  // 同城（城市级，不收精确位置）——见面的现实可行性
+  const myCity = mine.l1.city as { name?: string } | undefined;
+  const theirCity = theirs.l1.city as { name?: string } | undefined;
+  if (myCity?.name && theirCity?.name && myCity.name === theirCity.name) {
+    out.push({
+      point: `同在${myCity.name}`,
+      mine_quote: `我的城市：${myCity.name}`,
+      theirs_quote: `对方的城市：${theirCity.name}`,
     });
   }
   return out;
+}
+
+/** 取与该价值观标签最相关的一段问答原话（简单包含匹配，不做语义推断） */
+function firstQuote(view: ProfileView, tag: string): string | null {
+  const qa = (view.l2.values_qa ?? []) as { question: string; answer: string }[];
+  const hit = qa.find((x) => `${x.question}${x.answer}`.includes(tag));
+  return hit ? `「${hit.answer}」` : null;
 }
 
 /** 可聊差异 = 破冰话题建议（D6 三区之二） */
@@ -158,9 +221,11 @@ export function computeTier(
     // 兜底①：硬伤命中 → 档位封顶"可以聊聊"并说明（不是未至——人值得认识，是条件不合）
     tier = 'can_chat';
   } else {
-    // 基础档位：共鸣与可聊差异的结构化计数（叙事深度由 LLM 补充）
+    // 基础档位：共鸣与可聊差异的结构化计数（叙事深度由 LLM 补充）。
+    // 权重刻意保守：破冰话题（差异）只算 1，共鸣算 2——差异是话题，不是加分项。
     const score = resonanceCount * 2 + talkableCount;
-    if (score >= 6) tier = 'worth_meeting';
+    if (score >= 10) tier = 'dont_miss'; // 五档必须都可达：此前 dont_miss 是死档
+    else if (score >= 6) tier = 'worth_meeting';
     else if (score >= 3) tier = 'worth_knowing';
     else tier = 'can_chat';
   }

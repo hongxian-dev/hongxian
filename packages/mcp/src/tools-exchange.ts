@@ -23,8 +23,13 @@ import {
   neutralizeTopic,
   blockLine,
   unblockLine,
+  graduate,
+  markNoFollowUp,
   openMessageBody,
   sealMessageBody,
+  l3FieldKey,
+  l3ContainerKey,
+  detectLeakRisk,
   signMatchCard,
   decryptLayer,
   verifyMatchCard,
@@ -41,6 +46,7 @@ import {
   GrantL1Body,
   GrantL2Body,
   GrantL3Body,
+  L3_FIELD_NAMES,
   MsgEnvelope,
   TopicPackBody,
   UpgradeRequestBody,
@@ -60,6 +66,8 @@ import {
   findOwnPlazaCardByFingerprint,
   listOwnPlazaCards,
 } from './plaza-store.js';
+import { applyAnswer, applyOpenTopic, loadLineRounds, saveLineRounds } from './rounds-store.js';
+import { findContactCard, flattenProfile } from './profile-view.js';
 import type { Session } from './session.js';
 
 const CARDS_CONTACTS_DIR = 'cards/contacts';
@@ -128,6 +136,17 @@ export const compareTool = {
 
     const result = buildCompareResult(mine, theirs, completenessMine, completenessTheirs);
     const l2Missing = !l2KeyB64;
+    // 报告留档（只存本机）：同一对象的历次比对按时间排列，供自己回看档位怎么变
+    const reportAt = new Date().toISOString();
+    const reportName = `${reportAt.replace(/[:.]/g, '')}.json`;
+    s.write(`${LINES_DIR}/${lineDir}/reports/${reportName}`, {
+      at: reportAt,
+      card_id: args.card_id,
+      tier: result.tier,
+      confidence_low: result.confidence_low,
+      l2_unlocked: !l2Missing,
+      result,
+    });
     return text(
       JSON.stringify(
         {
@@ -135,9 +154,11 @@ export const compareTool = {
           note: l2Missing
             ? '对方匹配层尚未解锁（未经过双方同意的升级握手）——当前仅基于一阶名片层比对，结论置信度有限。'
             : '匹配层已解锁，比对基于一阶 + 匹配层。',
+          report_saved: `${LINES_DIR}/${lineDir}/reports/${reportName}`,
           report_instruction:
             '请按 report_narrative prompt 生成报告：五档结论 + 三区叙事（共鸣点/可聊差异/硬伤预警），' +
-            '每个结论必须有 narrative_input 中的原话依据；硬伤命中不得掩盖；信息不足须降档并说明。',
+            '每个结论必须有 narrative_input 中的原话依据；硬伤命中不得掩盖；信息不足须降档并说明。' +
+            '报告只在本机呈现，绝不自动发给对方。',
         },
         null,
         2,
@@ -146,30 +167,6 @@ export const compareTool = {
   },
 };
 
-function flattenProfile(confirmed: Record<string, Record<string, unknown>>): ProfileView {
-  const facts = confirmed.facts ?? {};
-  const prefs = confirmed.preferences ?? {};
-  const values = confirmed.values ?? {};
-  return {
-    l1: {
-      nickname: facts.nickname,
-      gender: facts.gender,
-      seeking: facts.seeking,
-      interests: facts.interests ?? [],
-      age_band: facts.age_band,
-      marital_status: facts.marital_status,
-      bio: facts.bio,
-    },
-    l2: {
-      values_tags: prefs.values_tags ?? [],
-      money_view: prefs.money_view,
-      lifestyle: prefs.lifestyle ?? {},
-      family_view: prefs.family_view ?? {},
-      dealbreakers: prefs.dealbreakers ?? [],
-      values_qa: values.values_qa ?? [],
-    },
-  };
-}
 
 // ---------- send_envelope（九类信封出口） ----------
 
@@ -210,6 +207,43 @@ export function validateBody(msgType: EnvelopeMsgType, body: Record<string, unkn
   return r.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('；');
 }
 
+/**
+ * 出站泄露面审查（D15⑦）：考题本身会泄露主人在意什么。
+ * 触发条件：题目/追问/理由里出现主人 dealbreaker 的原话关键词。
+ * 处理：不静默改写，也不放行——把中性化版本交回给月老，由它重发（留痕可查）。
+ */
+export function checkOutboundLeak(
+  msgType: EnvelopeMsgType,
+  body: Record<string, unknown>,
+  s: ReturnType<typeof store>,
+): string | null {
+  if (msgType !== 'topic_pack') return null;
+  const state = s.read<{ confirmed?: { preferences?: { dealbreakers?: { dimension: string; note: string }[] } } }>(
+    'profile/interview-state.json',
+  );
+  const breakers = state?.confirmed?.preferences?.dealbreakers ?? [];
+  if (breakers.length === 0) return null;
+  const text = [
+    body.topic as string,
+    ...((body.followups as string[]) ?? []),
+    body.reason as string,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const risky = breakers.filter((b) => b.note && b.note.length >= 2 && text.includes(b.note));
+  if (risky.length === 0) return null;
+
+  const dim = risky[0]!.dimension;
+  return (
+    `这道题会把你的底牌露给对方：题目里出现了你自己写在底线清单里的原话「${risky[0]!.note}」。\n\n` +
+    `对方会读出来"这个人在意${dim}"——而你只是不想被这件事筛掉。\n\n` +
+    `改法：用中性化措辞代问（D9④）：\n` +
+    `  topic: "${neutralizeTopic(dim)}"\n` +
+    `  reason: 保持你原来的理由，但不要引用底线原话\n\n` +
+    `改好后重发。这不是文字洁癖——出站过滤是代访机制的安全边界。`
+  );
+}
+
 // ---------- 共享：消息体补全（v0.4；send_envelope 与 send_via_server 共用） ----------
 
 export interface CompletedBody {
@@ -230,6 +264,7 @@ export function completeMessageBody(
   body: Record<string, unknown>,
   session: Session,
   s: ReturnType<typeof store>,
+  opts: { recipientKx?: Uint8Array } = {},
 ): CompletedBody | { ok: false; error: string } {
   if (msgType === 'upgrade_request') {
     const key = session.keyProvider();
@@ -279,6 +314,59 @@ export function completeMessageBody(
         card_fingerprint: fingerprint,
         sealed_key_l1: toBase64(sealed),
       },
+    };
+  }
+  if (msgType === 'grant_l2') {
+    // 同一原则：层密钥的封装是工具职责。LLM 只需说"同意解锁"，不必自己构造密文。
+    const recipientKx = opts.recipientKx;
+    if (!recipientKx) {
+      return { ok: false, error: 'grant_l2 缺少收件人协商公钥（请用 target_card_id 指定收件人）。' };
+    }
+    const mine = s.list('cards/mine').filter((f) => f.endsWith('.json'));
+    const myLatest = mine.length ? mine[mine.length - 1]!.replace(/\.json$/, '') : null;
+    const fromCardId = (body.from_card_id as string | undefined) ?? myLatest;
+    if (!fromCardId) return { ok: false, error: '你还没有签发任何卡片（sign_card），无法授权匹配层。' };
+    const key = session.keyProvider();
+    const wrapped = key.sealFor(recipientKx, key.layerKey('L2'));
+    return {
+      ok: true,
+      recipientKx,
+      body: { from_card_id: fromCardId, wrapped_key_l2: toBase64(wrapped) },
+    };
+  }
+  if (msgType === 'grant_l3') {
+    // D13 逐字段 opt-in：LLM 只需给字段名数组，子密钥封装由工具完成
+    // （密文构造必须是工具职责——与 grant_l1 同一原则，v1.0 曾让 LLM 自己 wrap，实际不可行）
+    const rawFields = body.fields;
+    const names: string[] = Array.isArray(rawFields)
+      ? rawFields.map((f) => (typeof f === 'string' ? f : String((f as { field?: unknown })?.field ?? '')))
+      : [];
+    if (names.length === 0) {
+      return { ok: false, error: 'grant_l3 需要 fields：要交付的见面层字段名数组（如 ["contact_wechat"]）。' };
+    }
+    if (names.length > 6) return { ok: false, error: 'grant_l3 一次最多交付 6 个字段。' };
+    const bad = names.filter((n) => !(L3_FIELD_NAMES as readonly string[]).includes(n));
+    if (bad.length) return { ok: false, error: `见面层字段名不认识：${bad.join('、')}。可用：${L3_FIELD_NAMES.join(' / ')}` };
+    const recipientKx = opts.recipientKx;
+    if (!recipientKx) {
+      return { ok: false, error: 'grant_l3 缺少收件人协商公钥（请用 target_card_id 指定收件人）。' };
+    }
+    const key = session.keyProvider();
+    const l3Key = key.layerKey('L3');
+    const fields = names.map((name) => ({
+      field: name,
+      wrapped_key: toBase64(key.sealFor(recipientKx, l3FieldKey(l3Key, name))),
+    }));
+    const mine = s.list('cards/mine').filter((f) => f.endsWith('.json'));
+    const myLatest = mine.length ? mine[mine.length - 1]!.replace(/\.json$/, '') : null;
+    const fromCardId = (body.from_card_id as string | undefined) ?? myLatest;
+    if (!fromCardId) return { ok: false, error: '你还没有签发任何卡片（sign_card），无法交付见面层。' };
+    // 容器密钥随字段一起交付：它只能解出各字段密文，解不出未授权字段的明文
+    const containerKey = toBase64(key.sealFor(recipientKx, l3ContainerKey(l3Key)));
+    return {
+      ok: true,
+      recipientKx,
+      body: { from_card_id: fromCardId, container_key: containerKey, fields },
     };
   }
   return { ok: true, body };
@@ -349,7 +437,7 @@ export const sendEnvelopeTool = {
     const theirKx = fromBase64((theirCard.meta as { kx_public: string }).kx_public);
 
     // 消息体补全（v0.4：grant_l1 的 sealed_key_l1 等密文字段由工具派生，LLM 不构造密文）
-    const completed = completeMessageBody(args.msg_type, args.body, session, s);
+    const completed = completeMessageBody(args.msg_type, args.body, session, s, { recipientKx: theirKx });
     if (!completed.ok) return text(completed.error);
     // 补全后按协议 schema 校验（缺字段/畸形一律拒绝并说明，防 LLM 产出静默劣化）
     const bodyError = validateBody(args.msg_type, completed.body);
@@ -359,6 +447,9 @@ export const sendEnvelopeTool = {
           `请按协议 schema 修正后重发；不要删改协议字段。`,
       );
     }
+    // 出站泄露面审查（D15⑦）：考题会暴露主人自己在意的维度
+    const leakWarning = checkOutboundLeak(args.msg_type, completed.body, s);
+    if (leakWarning) return text(leakWarning);
     const env = buildSignedEnvelope(
       args.msg_type,
       completed.body,
@@ -392,13 +483,6 @@ export const sendEnvelopeTool = {
   },
 };
 
-function findContactCard(s: ReturnType<typeof store>, cardId: string): Record<string, unknown> | null {
-  for (const owner of s.list(CARDS_CONTACTS_DIR)) {
-    const c = s.read<Record<string, unknown>>(`${CARDS_CONTACTS_DIR}/${owner}/${cardId}.json`);
-    if (c) return c;
-  }
-  return null;
-}
 
 // ---------- receive_envelope / mailbox_pull 共用：信封路由（验签后） ----------
 
@@ -419,6 +503,8 @@ export function routeEnvelope(env: MsgEnvelope, session: Session) {
     // 首封信 = 建线（match_card 换卡握手 / 广场敲门均适用）
     s.write(`${linePath}/state.json`, createLine(env.meta.card_id, lineDir, 'card_received'));
   }
+  const lineNow = s.read<FateLine>(`${linePath}/state.json`)!;
+  const lineId = lineNow.line_id;
 
   // 解封消息体（本方 X25519 私钥）
   const key = session.keyProvider();
@@ -488,21 +574,64 @@ export function routeEnvelope(env: MsgEnvelope, session: Session) {
     case 'topic_pack': {
       const l = s.read<FateLine>(`${linePath}/state.json`);
       if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
+      // 入站轮次记账（D11）：对方出题 → 我的 in 方向开一轮
+      const rounds = loadLineRounds(s, lineDir, lineId);
+      if (!rounds.in.current_topic) {
+        const tb = body as {
+          topic: string;
+          followups?: string[];
+          reason?: string;
+          channel: 'owner' | 'yuelao';
+        } | null;
+        if (tb) {
+          rounds.in = applyOpenTopic(rounds.in, {
+            topic: tb.topic,
+            followups: tb.followups ?? [],
+            reason: tb.reason ?? '',
+            channel: tb.channel,
+          });
+          saveLineRounds(s, lineDir, rounds);
+        }
+      }
       return text(
         `对方月老传来一道考题（第 ${(body as { round: number }).round} 轮）：\n\n` +
           `主题：${(body as { topic: string }).topic}\n追问：${((body as { followups: string[] }).followups ?? []).join('；') || '无'}\n` +
           `出题理由：${(body as { reason: string }).reason}\n通道：${(body as { channel: string }).channel === 'owner' ? '主人想问的' : '月老建议的'}\n\n` +
-          `请按三态应答：现场可答 → send_envelope(answer_card, status=answered)；` +
-          `超出画像 → status=ask_master（带回去问主人）；暂时不想答 → status=deferred（不判红旗）。\n` +
+          `请按三态应答（round(action="respond", direction="in", card_id="${lineId}", status=... ) 记账）：` +
+          `现场可答 → status=answered；超出画像 → status=ask_master（带回去问主人）；暂时不想答 → status=deferred（不判红旗）。\n` +
           `你对本题有对等反问权（D11 对称出题权）。`,
       );
     }
     case 'answer_card': {
       const l = s.read<FateLine>(`${linePath}/state.json`);
       if (l) s.write(`${linePath}/state.json`, noteResponseReceived(l));
+      // 出站轮次记账：对方回卷 → 记进我的 out 方向（轮次号不匹配则不动，交 round 工具处理）
+      const rounds = loadLineRounds(s, lineDir, lineId);
+      const ab = body as {
+        round: number;
+        topic_ref: string;
+        status: 'answered' | 'ask_master' | 'deferred';
+        answer?: string;
+        note?: string;
+      } | null;
+      if (rounds.out.current_topic && ab && ab.round === rounds.out.round_no) {
+        try {
+          rounds.out = applyAnswer(rounds.out, {
+            round: ab.round,
+            topic_ref: ab.topic_ref,
+            status: ab.status,
+            answer: ab.answer,
+            note: ab.note,
+          });
+          saveLineRounds(s, lineDir, rounds);
+        } catch {
+          /* 主题不符等：保持原状，由主人用 round 工具处理 */
+        }
+      }
       return text(
         `对方已回答你出的题（第 ${(body as { round: number }).round} 轮，状态：${(body as { status: string }).status}）：\n\n` +
-          `${(body as { answer?: string }).answer ?? (body as { note?: string }).note ?? '（对方选择暂不回应——婉答也是信息，但不自动判为红旗）'}`,
+          `${(body as { answer?: string }).answer ?? (body as { note?: string }).note ?? '（对方选择暂不回应——婉答也是信息，但不自动判为红旗）'}\n\n` +
+          `按 D11 收尾这一轮：round(action="close", card_id="${lineId}", incremental=<本轮是否有新信息>, dimensions=[...])。`,
       );
     }
     case 'graduation_invite': {
@@ -516,18 +645,47 @@ export function routeEnvelope(env: MsgEnvelope, session: Session) {
       );
     }
     case 'grant_l3': {
-      const fields = (body as { fields: { field: string; wrapped_key: string }[] }).fields ?? [];
+      const b = body as GrantL3Body | null;
+      const fields = b?.fields ?? [];
+      if (fields.length === 0) return text('grant_l3 消息体缺失（解封失败或信封被裁剪）。');
       const lineKeyPath = `${linePath}/layer-keys.json`;
       const existing = s.read<Record<string, string>>(lineKeyPath) ?? {};
+      const granted: string[] = [];
+      const failed: string[] = [];
+      // 容器密钥（v1.1）：只能解出各字段密文，解不出未授权字段的明文
+      if (b?.container_key) {
+        const ck = key.openSealed(fromBase64(b.container_key));
+        if (ck) existing.l3_container = toBase64(ck);
+      }
       for (const f of fields) {
         const k = key.openSealed(fromBase64(f.wrapped_key));
-        if (k) existing[`l3_${f.field}`] = toBase64(k);
+        if (k) {
+          existing[`l3_${f.field}`] = toBase64(k);
+          granted.push(f.field);
+        } else {
+          failed.push(f.field);
+        }
       }
       s.write(lineKeyPath, existing);
+      // 手账：见面层解锁 = 毕业
+      const l = s.read<FateLine>(`${linePath}/state.json`);
+      if (l) s.write(`${linePath}/state.json`, graduate(l));
+
+      const fieldLabel: Record<string, string> = {
+        contact_wechat: '微信号',
+        contact_phone: '手机号',
+        real_name: '真实姓名',
+        employer_category: '工作单位大类',
+        hangout_areas: '常去区域',
+        photo_refs: '照片引用',
+      };
       return text(
-        `见面层已按字段解锁：${fields.map((f) => f.field).join('、')}。\n\n` +
-          `**红线交到你们自己手里了**——此后月老只做见面复盘，不介入你们两人的对话。\n` +
-          `安全提示：任何涉及金钱的请求，立即警惕。`,
+        `**见面层已按字段解锁**：${granted.map((f) => fieldLabel[f] ?? f).join('、') || '（无）'}\n` +
+          (failed.length ? `未能解封：${failed.join('、')}（密钥不匹配或信封被裁剪）\n` : '') +
+          `未授权的字段仍是他拿到的密文——解不开（逐字段密钥，D13）。\n\n` +
+          `**红线交到你们自己手里了**——此后月老只做见面复盘，不介入你们两人的对话。\n\n` +
+          `看对方给的联系方式：view_l3(card_id="<对方卡片 ID>")。\n` +
+          `安全提示：任何涉及金钱的请求，立即警惕；第一次见面选公共场所、自己往返。`,
       );
     }
     case 'decline_silent':
@@ -570,10 +728,12 @@ export const receiveEnvelopeTool = {
 
 export const ledgerTool = {
   name: 'ledger',
-  description: '红线手账：姻缘线列表（已递出/已回音/未通过/深聊中/已毕业/已拉黑）、拉黑建议（3 次未回应）、备注。',
+  description:
+    '红线手账：姻缘线列表（已递出/已回音/深聊中/已毕业/未通过/已拉黑）、拉黑建议（3 次未回应）、备注、' +
+    '状态标记（no_follow_up=本地记"未通过"，graduate=见面层已解锁）、历次报告（reports）。',
   inputSchema: {
-    action: z.enum(['list', 'block', 'unblock', 'note']).default('list'),
-    line_id: z.string().optional().describe('姻缘线 ID（block/unblock/note 时）'),
+    action: z.enum(['list', 'block', 'unblock', 'note', 'no_follow_up', 'graduate', 'reports']).default('list'),
+    line_id: z.string().optional().describe('姻缘线 ID（block/unblock/note/状态标记/reports 时）'),
     note: z.string().optional().describe('备注内容（见面复盘等，只存本地）'),
   },
   handler: async (args: { action: string; line_id?: string; note?: string }, _session: Session) => {
@@ -586,11 +746,14 @@ export const ledgerTool = {
     if (args.action === 'list') {
       const view = ledgerView(lines);
       const detail = lines
-        .map(
-          (l) =>
+        .map((l) => {
+          const lastReport = latestReportTier(s, l.owner_dir);
+          return (
             `- ${l.line_id.slice(0, 8)}… [${l.status}]${l.blocked ? '（已拉黑）' : ''}` +
-            ` 轮次${l.rounds_total}${l.unresponded_upgrades ? ` 未回应${l.unresponded_upgrades}` : ''}`,
-        )
+            ` 轮次${l.rounds_total}${l.unresponded_upgrades ? ` 未回应${l.unresponded_upgrades}` : ''}` +
+            `${lastReport ? ` 最近结论：${lastReport}` : ''}`
+          );
+        })
         .join('\n');
       const suggestions = view.block_suggestions.length
         ? `\n\n**拉黑建议**（连续 ${view.block_suggestions[0]!.unresponded} 次未回应）：${view.block_suggestions.map((b) => b.line_id.slice(0, 8)).join('、')}——拉黑后其一切信封不再呈报，且不通知对方。`
@@ -598,7 +761,8 @@ export const ledgerTool = {
       return text(`姻缘线 ${view.total} 条：\n${detail || '（还没有线）'}${suggestions}`);
     }
     if (!args.line_id) return text('请提供 line_id。');
-    const line = lines.find((l) => l.line_id === args.line_id);
+    const lineIdArg = args.line_id;
+    const line = lines.find((l) => l.line_id === lineIdArg || l.line_id.startsWith(lineIdArg));
     if (!line) return text('找不到该姻缘线。');
     const path = `${LINES_DIR}/${line.owner_dir}/state.json`;
     if (args.action === 'block') {
@@ -609,6 +773,27 @@ export const ledgerTool = {
       s.write(path, unblockLine(line));
       return text('已解除拉黑。');
     }
+    if (args.action === 'no_follow_up') {
+      // 本地认知"未通过"——对方永远收不到任何信号（D4 静默）
+      s.write(path, markNoFollowUp(line));
+      return text('已标记为「暂时没有下文」（只存本机，对方收不到任何信号——他要等到自然淡去）。');
+    }
+    if (args.action === 'graduate') {
+      s.write(path, graduate(line));
+      return text('已标记为「已毕业」：见面层已解锁，此后月老只做复盘，不介入你们两人的对话。');
+    }
+    if (args.action === 'reports') {
+      const list = listReports(s, line.owner_dir);
+      if (list.length === 0) return text('这条线还没有比对记录（compare 一次就会留档）。');
+      return text(
+        `这条线的比对记录（${list.length} 次，最新在前）：\n\n` +
+          list
+            .slice(0, 10)
+            .map((r) => `- ${r.at.slice(0, 16).replace('T', ' ')} → ${r.tier}${r.l2_unlocked ? '' : '（仅一阶）'}`)
+            .join('\n') +
+          `\n\n档位变化本身就是信息：解锁更多层后结论通常会变，别用旧报告下新判断。`,
+      );
+    }
     if (args.action === 'note') {
       if (!args.note) return text('请提供备注内容。');
       s.write(path, { ...line, notes: [...line.notes, `${new Date().toISOString().slice(0, 10)} ${args.note}`] });
@@ -617,6 +802,27 @@ export const ledgerTool = {
     return text('未知 action。');
   },
 };
+
+interface ReportEntry {
+  at: string;
+  tier: string;
+  l2_unlocked: boolean;
+}
+
+function listReports(s: ReturnType<typeof store>, ownerDir: string): ReportEntry[] {
+  const dir = `${LINES_DIR}/${ownerDir}/reports`;
+  const out: ReportEntry[] = [];
+  for (const f of s.list(dir)) {
+    if (!f.endsWith('.json')) continue;
+    const r = s.read<ReportEntry>(`${dir}/${f}`);
+    if (r?.at) out.push(r);
+  }
+  return out.sort((a, b) => b.at.localeCompare(a.at));
+}
+
+function latestReportTier(s: ReturnType<typeof store>, ownerDir: string): string | null {
+  return listReports(s, ownerDir)[0]?.tier ?? null;
+}
 
 // ---------- coach（选题教练 D12） ----------
 

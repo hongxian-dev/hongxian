@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_FOLLOWUPS,
+  MAX_ROUNDS_BEFORE_GRADUATION,
   STAGNATION_THRESHOLD,
   closeRound,
   closeRoundWithAnswer,
@@ -10,6 +11,7 @@ import {
   roundSummary,
   saturationRatio,
   shouldSuggestGraduation,
+  latestRoundEvidence,
 } from '../src/rounds/machine.js';
 
 describe('轮次状态机（D11）', () => {
@@ -94,5 +96,42 @@ describe('轮次状态机（D11）', () => {
   it('没有进行中的轮次时闭合拒绝', () => {
     const s = createRoundState('l');
     expect(() => closeRound(s, true)).toThrow(/进行中/);
+  });
+
+  it('答案归档：v1.1 修复——闭合后 answer 不再是 null（增量小报告需要原话）', () => {
+    let s = createRoundState('l');
+    s = openTopic(s, topic());
+    s = recordAnswer(s, { round: 1, topic_ref: '周末怎么过', status: 'answered', answer: '去徒步，走了 20 公里' });
+    s = closeRound(s, true);
+    expect(s.history[0]!.answer).not.toBeNull();
+    expect(s.history[0]!.answer!.answer).toContain('20 公里');
+    const evidence = latestRoundEvidence(s);
+    expect(evidence?.answer).toContain('20 公里');
+    expect(evidence?.topic).toBe('周末怎么过');
+  });
+
+  it('回卷主题与当前考题不符 → 拒绝（防止串线污染多线并行）', () => {
+    let s = createRoundState('l');
+    s = openTopic(s, topic());
+    expect(() => recordAnswer(s, { round: 1, topic_ref: '别的题', status: 'answered' })).toThrow(/主题/);
+  });
+
+  it('婉答（deferred）也进记录，不判红旗', () => {
+    let s = createRoundState('l');
+    s = openTopic(s, topic());
+    s = closeRoundWithAnswer(s, { round: 1, topic_ref: '周末怎么过', status: 'deferred' }, false);
+    expect(s.history[0]!.answer!.status).toBe('deferred');
+    expect(s.stagnant_rounds).toBe(1);
+  });
+
+  it('硬上限：超过 8 轮无论增量都建议毕业（防无限网聊）', () => {
+    let s = createRoundState('l');
+    for (let i = 1; i <= MAX_ROUNDS_BEFORE_GRADUATION; i++) {
+      s = openTopic(s, topic({ topic: `题 ${i}` }));
+      s = closeRoundWithAnswer(s, { round: i, topic_ref: `题 ${i}`, status: 'answered', answer: '有内容' }, true);
+    }
+    expect(s.stagnant_rounds).toBe(0);
+    expect(shouldSuggestGraduation(s)).toBe(true);
+    expect(roundSummary(s).total_rounds).toBe(MAX_ROUNDS_BEFORE_GRADUATION);
   });
 });

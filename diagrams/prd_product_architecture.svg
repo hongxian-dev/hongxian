@@ -1,0 +1,55 @@
+<svg viewBox="0 0 680 430" width="100%" role="img" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <title>红线开源工具总体产品架构</title>
+  <desc>项目总称=红线开源工具，三件套：客户端月老Skill（运行在用户Agent宿主内）、服务端红线平台（加密信箱基础设施）、桥梁红线协议（九类加密信封）。旁挂产品网站与匿名计数器。</desc>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#C8102E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="680" height="430" fill="#FDFBF7"/>
+  <text x="340" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#B02E35">红线开源工具 · 总体产品架构</text>
+
+  <!-- 用户层 -->
+  <rect x="40" y="48" width="600" height="118" rx="10" fill="none" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="56" y="68" font-size="12" fill="#1F2937" font-weight="bold">客户端层（用户设备，数据主权领地）</text>
+  <rect x="56" y="80" width="150" height="70" rx="8" fill="#FFFFFF" stroke="#C8102E" stroke-width="1.5"/>
+  <text x="131" y="102" text-anchor="middle" font-size="13" font-weight="bold" fill="#C8102E">主人</text>
+  <text x="131" y="122" text-anchor="middle" font-size="11" fill="#1F2937">真实的人</text>
+  <text x="131" y="138" text-anchor="middle" font-size="11" fill="#1F2937">一切决策权</text>
+  <rect x="240" y="80" width="180" height="70" rx="8" fill="#FFFFFF" stroke="#1F2937" stroke-width="1.5"/>
+  <text x="330" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#1F2937">Agent 宿主</text>
+  <text x="330" y="118" text-anchor="middle" font-size="11" fill="#1F2937">WorkBuddy / Claude / Codex 等</text>
+  <text x="330" y="134" text-anchor="middle" font-size="11" fill="#1F2937">承担全部 LLM 推理（自付 token）</text>
+  <rect x="454" y="80" width="170" height="70" rx="8" fill="#FBEAEC" stroke="#C8102E" stroke-width="2"/>
+  <text x="539" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#C8102E">月老 Skill</text>
+  <text x="539" y="118" text-anchor="middle" font-size="11" fill="#1F2937">MCP 工具包 + 人格模板</text>
+  <text x="539" y="134" text-anchor="middle" font-size="11" fill="#1F2937">画像/密钥/手账全存本地 ~/.hongxian</text>
+  <line x1="206" y1="115" x2="238" y2="115" stroke="#C8102E" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="420" y1="115" x2="452" y2="115" stroke="#C8102E" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- 协议层 -->
+  <rect x="40" y="190" width="600" height="52" rx="8" fill="#1F2937"/>
+  <text x="340" y="212" text-anchor="middle" font-size="13" font-weight="bold" fill="#FDFBF7">红线协议 HONGXIAN PROTOCOL</text>
+  <text x="340" y="230" text-anchor="middle" font-size="11" fill="#F9FAFB">九类加密信封 · 三层 payload · Ed25519 签名 · 零迁移设计（schema 独立 npm 包）</text>
+  <line x1="539" y1="150" x2="539" y2="188" stroke="#C8102E" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="141" y1="188" x2="141" y2="150" stroke="#C8102E" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- 平台层 -->
+  <rect x="40" y="266" width="600" height="118" rx="10" fill="none" stroke="#C8102E" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="56" y="286" font-size="12" fill="#C8102E" font-weight="bold">服务端层：红线平台（v2，加密信箱基础设施，AGPL 开源可自托管）</text>
+  <rect x="56" y="298" width="176" height="70" rx="8" fill="#FFFFFF" stroke="#C8102E" stroke-width="1.5"/>
+  <text x="144" y="318" text-anchor="middle" font-size="12" font-weight="bold" fill="#C8102E">信箱 Mailbox</text>
+  <text x="144" y="336" text-anchor="middle" font-size="11" fill="#1F2937">按 opaque ID 投递/拉取</text>
+  <text x="144" y="352" text-anchor="middle" font-size="11" fill="#1F2937">异步如邮件，无在线状态</text>
+  <rect x="252" y="298" width="176" height="70" rx="8" fill="#FFFFFF" stroke="#C8102E" stroke-width="1.5"/>
+  <text x="340" y="318" text-anchor="middle" font-size="12" font-weight="bold" fill="#C8102E">红线广场 Plaza</text>
+  <text x="340" y="336" text-anchor="middle" font-size="11" fill="#1F2937">贴卡/拉取，零筛选零排序</text>
+  <text x="340" y="352" text-anchor="middle" font-size="11" fill="#1F2937">服务端只见密文 + 声明</text>
+  <rect x="448" y="298" width="176" height="70" rx="8" fill="#FFFFFF" stroke="#F08200" stroke-width="1.5"/>
+  <text x="536" y="318" text-anchor="middle" font-size="12" font-weight="bold" fill="#B45A00">运营统计（三环制）</text>
+  <text x="536" y="336" text-anchor="middle" font-size="11" fill="#1F2937">聚合指标 → 透明页</text>
+  <text x="536" y="352" text-anchor="middle" font-size="11" fill="#1F2937">行为分析绑密钥假名</text>
+
+  <text x="340" y="408" text-anchor="middle" font-size="11" fill="#1F2937">邮局四军规：不匹配 · 不排序 · 不评估 · 不推荐 —— 服务端只递信，永不拆信</text>
+  <text x="340" y="424" text-anchor="middle" font-size="10" fill="#6B7280">旁挂：产品网站 hongxian.dev（GitHub Pages）+ 匿名计数器 count.hongxian.dev（Cloudflare Worker）</text>
+</svg>

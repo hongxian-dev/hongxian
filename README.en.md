@@ -52,7 +52,7 @@ Say to your Agent: "sign a match card". Yuelao assembles a three-layer encrypted
 
 | # | What to check | How |
 |---|---|---|
-| 1 | **Read the source** | Fully open source: [schema](../packages/schema), [crypto](../packages/crypto), [core](../packages/core), [mcp](../packages/mcp). No bundling obfuscation; the build is a single `tsc` step. |
+| 1 | **Read the source** | Fully open source: [schema](packages/schema), [crypto](packages/crypto), [core](packages/core), [mcp](packages/mcp). No bundling obfuscation; the build is a single `tsc` step. |
 | 2 | **Sniff the traffic** | The only possible outbound call is the optional anonymous counter (off by default). With it off, outbound traffic is zero. Offline, everything except the counter works fully. |
 | 3 | **Verify hashes** | Every Release ships `SHA256SUMS.txt`: `sha256sum -c SHA256SUMS.txt`. npm packages carry fixed provenance (build origin is verifiable). |
 | 4 | **One-command deletion** | Say to your Agent: "Yuelao, delete all my data" (the `wipe` tool). The entire data directory is erased with no disk residue — uninstall equals erase, because there is no server. |
@@ -91,7 +91,7 @@ Reports and cards prominently state "profile content is self-reported by the use
 - [Host compatibility matrix](docs/host-compatibility.md) — verified hosts
 - [Install & trust guide](docs/install-and-trust.md) — install troubleshooting, data directory, deletion & backup
 - [schema package](packages/schema) — the machine-readable form of protocol v0 (standalone npm: `@hongxian/schema`)
-- Design docs (Chinese): [positioning statement](../红线项目定位声明.md), [interaction design](../月老Skill交互设计方案.md), [technical design](../技术详设.md)
+- Design docs (Chinese): [positioning statement](docs/00-定位与PRD/红线项目定位声明.md), [product PRD](docs/00-定位与PRD/红线开源工具PRD.md), [interaction design](docs/10-产品设计/月老Skill交互设计方案.md), [technical design](docs/20-技术设计/技术详设.md) — full index in [docs/README.md](docs/README.md)
 
 ## License
 

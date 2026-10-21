@@ -18,12 +18,14 @@ import {
   validateDealbreakers,
   validateVocabFields,
   assertSignable,
+  assertL3Signable,
+  resignCard,
   decryptLayer,
   signMatchCard,
   verifyMatchCard,
   type InterviewState,
 } from '@hongxian/core';
-import { CARD_FILE_EXT, fromBase64, toBase64 } from '@hongxian/schema';
+import { CARD_FILE_EXT, L3_FIELD_NAMES, fromBase64, toBase64 } from '@hongxian/schema';
 import type { Session } from './session.js';
 import { CONSENT_TEXT, needsConsent, readConsent, writeConsent } from './consent.js';
 import { reportMetric } from './counter.js';
@@ -33,6 +35,8 @@ import { LockedError, ConsentError } from './errors.js';
 const PROFILE_DIR = 'profile';
 const CARDS_MINE_DIR = 'cards/mine';
 const CARDS_CONTACTS_DIR = 'cards/contacts';
+/** 见面层字段值（本人所有，签发/重签时复用；只存本机） */
+const L3_VALUES_PATH = 'profile/l3-values.json';
 
 /**
  * owner_key_id（base64）→ 目录名（hex）。
@@ -49,15 +53,20 @@ export const interviewTool = {
   name: 'interview',
   description:
     '渐进式建画像（三次会话：硬事实→偏好生活方式→价值观故事）。每次会话结束必须复述确认，' +
-    '用户确认后才写入。首次调用返回知情同意书（含 ≥18 周岁声明）。',
+    '用户确认后才写入。首次调用返回知情同意书（含 ≥18 周岁声明）。' +
+    '画像修订走 action="update"（D3① 续访）：同样要复述确认，确认后可重签名片（sign_card resign_of）。',
   inputSchema: {
     action: z
-      .enum(['start', 'consent', 'confirm_mnemonic', 'unlock', 'submit', 'confirm', 'reject', 'status'])
-      .describe('start=开始/查看当前状态；consent=确认知情同意与年龄；confirm_mnemonic=确认已抄写恢复短语；unlock=用恢复短语解锁；submit=提交本次会话答案；confirm=确认复述稿；reject=否决复述稿重聊'),
+      .enum(['start', 'consent', 'confirm_mnemonic', 'unlock', 'submit', 'update', 'confirm', 'reject', 'status'])
+      .describe(
+        'start=开始/查看当前状态；consent=确认知情同意与年龄；confirm_mnemonic=确认已抄写恢复短语；' +
+          'unlock=用恢复短语解锁；submit=提交本次会话答案；update=修订已确认阶段的画像（续访）；' +
+          'confirm=确认复述稿；reject=否决复述稿重聊',
+      ),
     age_attested: z.boolean().optional().describe('consent 时必填：确认已年满 18 周岁'),
     mnemonic: z.string().optional().describe('24 词中文恢复短语（confirm_mnemonic/unlock 时）'),
-    stage: z.enum(['facts', 'preferences', 'values']).optional().describe('submit 时：本次会话阶段'),
-    answers: z.record(z.unknown()).optional().describe('submit 时：本阶段结构化答案'),
+    stage: z.enum(['facts', 'preferences', 'values']).optional().describe('submit/update 时：本次会话阶段'),
+    answers: z.record(z.unknown()).optional().describe('submit/update 时：本阶段结构化答案'),
   },
   handler: async (args: {
     action: string;
@@ -111,11 +120,18 @@ export const interviewTool = {
         return ok ? text('解锁成功。' + statusLine(loadState(s))) : text('短语不正确，解锁失败。');
       }
 
-      case 'submit': {
+      case 'submit':
+      case 'update': {
         requireUnlocked(session);
         requireConsent(s);
         if (!args.stage || !args.answers) return text('请提供 stage 与 answers。');
         const state = loadState(s);
+        if (args.action === 'update') {
+          // 续访（D3①）：只允许修订已确认过的阶段，避免"跳过访谈直接改画像"
+          if (!state.confirmed_stages.includes(args.stage)) {
+            return text(`「${args.stage}」阶段还没完成过，先走正常的 submit 流程。`);
+          }
+        }
         // 负面清单与受控词表的前置校验（防弱模型产出劣质数据）
         if (args.stage === 'preferences' && Array.isArray(args.answers.dealbreakers)) {
           const v = validateDealbreakers(args.answers.dealbreakers as never);
@@ -123,6 +139,14 @@ export const interviewTool = {
         }
         if (args.stage === 'facts' && Array.isArray(args.answers.interests)) {
           const v = validateVocabFields({ interests: args.answers.interests as never });
+          if (!v.valid) return text(`答案需要修正：\n${v.errors.join('\n')}`);
+        }
+        if (args.stage === 'preferences' && Array.isArray(args.answers.values_tags)) {
+          const v = validateVocabFields({ values_tags: args.answers.values_tags as never });
+          if (!v.valid) return text(`答案需要修正：\n${v.errors.join('\n')}`);
+        }
+        if (args.stage === 'values' && Array.isArray(args.answers.values_qa)) {
+          const v = validateVocabFields({ values_qa: args.answers.values_qa });
           if (!v.valid) return text(`答案需要修正：\n${v.errors.join('\n')}`);
         }
         const recap = buildRecap(args.stage, args.answers as never);
@@ -138,9 +162,18 @@ export const interviewTool = {
         requireUnlocked(session);
         const state = loadState(s);
         if (!state.pending_recap) return text('当前没有待确认的复述稿。');
+        const updatedStage = state.pending_recap.stage;
+        const wasConfirmed = state.confirmed_stages.includes(updatedStage);
         const next = confirmRecap(state);
         saveState(s, next);
         const done = next.confirmed_stages.length;
+        if (wasConfirmed) {
+          return text(
+            `画像已更新（${updatedStage} 阶段）。\n\n` +
+              `已经发出去的旧卡片仍是旧内容——如果你想让今后的交换用上新画像，` +
+              `调用 sign_card(resign_of="<旧卡 ID>") 重签一版（version+1，旧版本自动作废）。`,
+          );
+        }
         const msg =
           done === 3
             ? '三个阶段全部完成，画像已锁定。现在可以签发你的匹配卡了（sign_card）。'
@@ -169,17 +202,25 @@ export const interviewTool = {
 
 export const signCardTool = {
   name: 'sign_card',
-  description: '用已确认的画像签发加密匹配卡（三层：公开/匹配/私密，各自独立密钥 + Ed25519 签名）。签发前展示"对方将看到什么"。',
+  description:
+    '用已确认的画像签发加密匹配卡（三层：公开/匹配/私密，各自独立密钥 + Ed25519 签名）。签发前展示"对方将看到什么"。' +
+    '见面层（L3）字段逐字段独立加密：只给 contact_wechat 时，对方拿到的子密钥解不开 contact_phone（D13）。' +
+    '画像更新后可 resign_of=<旧卡 ID> 重签，version+1 且旧版本自动作废。',
   inputSchema: {
-    l3_fields: z
-      .array(z.enum(['contact_wechat', 'contact_phone', 'real_name', 'employer_category', 'hangout_areas', 'photo_refs']))
+    l3: z
+      .record(z.unknown())
       .optional()
-      .describe('可选：见面层字段（D13 逐字段 opt-in）。默认不带 L3'),
+      .describe(
+        '见面层字段（可选，逐字段）：contact_wechat / contact_phone / real_name / ' +
+          'employer_category / hangout_areas（数组）/ photo_refs（数组）。不传即不带见面层。',
+      ),
+    resign_of: z.string().optional().describe('重签的旧卡 ID（画像更新后用；version 自动 +1）'),
   },
-  handler: async (args: { l3_fields?: string[] }, session: Session) => {
+  handler: async (args: { l3?: Record<string, unknown>; resign_of?: string }, session: Session) => {
     requireUnlocked(session);
     requireConsent(store());
-    const state = loadState(store());
+    const s = store();
+    const state = loadState(s);
     if (state.confirmed_stages.length < 3) {
       return text(`画像尚未完成（已完成 ${state.confirmed_stages.join('、') || '无'} / 共三阶段）。完成后再签卡。`);
     }
@@ -195,23 +236,51 @@ export const signCardTool = {
     } catch (e) {
       return text(`画像还不能签卡：${(e as Error).message}`);
     }
+    // 见面层：本次显式传入优先，否则沿用上次存下的字段（续签不必重填）
+    const storedL3 = s.read<Record<string, unknown>>(L3_VALUES_PATH);
+    const l3 = args.l3 && Object.keys(args.l3).length ? args.l3 : storedL3 ?? undefined;
+    if (l3) {
+      const unknown = Object.keys(l3).filter((k) => !(L3_FIELD_NAMES as readonly string[]).includes(k));
+      if (unknown.length) {
+        return text(`见面层字段名不认识：${unknown.join('、')}。可用字段：${L3_FIELD_NAMES.join(' / ')}`);
+      }
+      try {
+        assertL3Signable(l3);
+      } catch (e) {
+        return text(`见面层字段不合法：${(e as Error).message}`);
+      }
+      s.write(L3_VALUES_PATH, l3);
+    }
     const completeness = computeCompleteness({ l1, l2 });
     const settings = session.settings();
     const depth = buildDepth(state.confirmed_stages.length * 3, completeness, settings.model_tier);
-    const l3 = args.l3_fields?.length ? { } : undefined;
-    const card = signMatchCard({ depth, l1: l1 as never, l2: l2 as never, l3: l3 as never }, session.keyProvider());
+    const input = { depth, l1: l1 as never, l2: l2 as never, l3: l3 as never };
+
+    let card;
+    let resignNote = '';
+    if (args.resign_of) {
+      const old = s.read<{ meta: { version: number; card_id: string } }>(`${CARDS_MINE_DIR}/${args.resign_of}.json`);
+      if (!old) return text(`找不到要重签的旧卡 ${args.resign_of}。`);
+      card = resignCard(old as never, input, session.keyProvider());
+      resignNote = `\n\n（重签自 ${args.resign_of.slice(0, 8)}…，version ${old.meta.version} → ${card.meta.version}：旧版本自动作废，请把新卡重新交给对方。）`;
+    } else {
+      card = signMatchCard(input, session.keyProvider());
+    }
     const path = `${CARDS_MINE_DIR}/${card.meta.card_id}.json`;
-    store().write(path, card);
+    s.write(path, card);
 
     // opt-in 计数（E7：默认关闭=零出网）
     void reportMetric(settings.opt_in_counter, 'card_signed', String(l1.gender));
 
+    const l3Note = l3
+      ? `\n见面层字段（逐字段独立加密，对方需被逐项授权）：${Object.keys(l3).join('、')}`
+      : '\n见面层：本次未携带（到毕业轮再签也不迟）';
     return text(
       `匹配卡已签发并存入本机：${path}\n\n` +
         `**对方将看到的名片区（一阶）**：\n` +
         `昵称 ${l1.nickname} · ${l1.age_band} 岁段 · ${(l1.city as { name: string }).name} · ${l1.job_category} · ${l1.marital_status}\n` +
-        `兴趣：${(l1.interests as string[]).join('、')}\n一句话：${l1.bio}\n\n` +
-        `匹配层与见面层已加密随卡携带，未经授权对方解不开。\n` +
+        `兴趣：${(l1.interests as string[]).join('、')}\n一句话：${l1.bio}\n` +
+        `匹配层已加密随卡携带，未经双方同意对方解不开。${l3Note}${resignNote}\n\n` +
         `（导出给对方：export_card）`,
     );
   },

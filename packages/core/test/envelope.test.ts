@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalize, fromBase64 } from '@hongxian/schema';
 import {
+  assertL3Signable,
   assertSignable,
   cardFingerprint,
   decryptLayer,
@@ -13,6 +14,7 @@ import {
   verifyMatchCard,
   wrapLayerKey,
 } from '../src/card/envelope.js';
+import { l3ContainerKey, l3FieldKey, l3FieldNamesIn, openL3Field } from '../src/card/l3.js';
 import { makeTestKeyProvider, sampleL1, sampleL2 } from './helpers.js';
 
 const depth = { interview_rounds: 3, completeness: 0.8, model_tier: 'local' as const };
@@ -93,16 +95,32 @@ describe('信封工厂（S4：卡能签出来、能验、能互传）', () => {
     expect(v2.signature).not.toBe(v1.signature);
   });
 
-  it('L3 见面层：整体携带 + 逐层独立密钥', () => {
+  it('L3 见面层：逐字段独立密钥（D13）——只交容器钥匙 + 单字段子密钥，读不到其他字段', () => {
     const { key, km } = makeTestKeyProvider();
     const card = signMatchCard(
-      { depth, l1: sampleL1, l2: sampleL2, l3: { contact_wechat: 'yuelao2026' } },
+      { depth, l1: sampleL1, l2: sampleL2, l3: { contact_wechat: 'yuelao2026', contact_phone: '13800000000' } },
       key,
     );
     expect(card.payload_L3).toBeDefined();
-    const opened = decryptLayer(card, 'L3', km.layerKeys.L3);
-    expect(opened.ok).toBe(true);
-    expect((opened as { payload: { contact_wechat: string } }).payload.contact_wechat).toBe('yuelao2026');
+
+    // 用 L3 层密钥解不开外层——外层用的是容器子密钥（否则交层密钥等于交全部字段）
+    expect(decryptLayer(card, 'L3', km.layerKeys.L3).ok).toBe(false);
+
+    const container = decryptLayer(card, 'L3', l3ContainerKey(km.layerKeys.L3));
+    expect(container.ok).toBe(true);
+    const payload = (container as { payload: unknown }).payload;
+    expect(l3FieldNamesIn(payload).sort()).toEqual(['contact_phone', 'contact_wechat']);
+
+    // 只授予 contact_wechat：拿得到微信号，拿不到手机号
+    const wx = openL3Field(payload, 'contact_wechat', l3FieldKey(km.layerKeys.L3, 'contact_wechat'));
+    expect(wx.ok && wx.value).toBe('yuelao2026');
+    const phoneWithWxKey = openL3Field(payload, 'contact_phone', l3FieldKey(km.layerKeys.L3, 'contact_wechat'));
+    expect(phoneWithWxKey.ok).toBe(false); // 子密钥不通用
+
+    // 字段名不在白名单：拒绝签发
+    expect(() =>
+      signMatchCard({ depth, l1: sampleL1, l2: sampleL2, l3: { id_card: 'x' } as never }, key),
+    ).toThrow(/白名单/);
   });
 
   it('签发前置校验：缺 age_attested / 非受控词表拒绝', () => {
@@ -110,6 +128,7 @@ describe('信封工厂（S4：卡能签出来、能验、能互传）', () => {
     expect(() => assertSignable({ ...sampleL1, age_attested: false }, sampleL2)).toThrow(/公开层/);
     expect(() => assertSignable({ ...sampleL1, interests: ['不存在的兴趣'] }, sampleL2)).toThrow(/公开层/);
     expect(() => assertSignable(sampleL1, { ...sampleL2, money_view: '随便花' })).toThrow(/匹配层/);
+    expect(() => assertL3Signable({})).toThrow(/至少要有一个字段/);
   });
 });
 

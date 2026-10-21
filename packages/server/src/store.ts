@@ -24,7 +24,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve as resolvePath, sep } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import {
   MAILBOX_RETENTION_DAYS,
@@ -65,20 +65,25 @@ export class ServerStore {
   readonly root: string;
 
   constructor(root: string) {
-    this.root = root;
+    // 归一化为绝对路径：否则默认的 './data' 会让 resolve() 的越界判定恒为真
+    // （join('./data', 'x') = 'data/x'，不以 './data' 开头 → 全部写入被误判为越界）
+    this.root = resolvePath(root);
     for (const dir of ['identities', 'cards', 'mailboxes', 'limits']) {
-      mkdirSync(join(root, dir), { recursive: true });
+      mkdirSync(join(this.root, dir), { recursive: true });
     }
-    if (!existsSync(join(root, 'secret'))) {
-      writeFileSync(join(root, 'secret'), randomBytes(32).toString('hex'));
+    if (!existsSync(join(this.root, 'secret'))) {
+      writeFileSync(join(this.root, 'secret'), randomBytes(32).toString('hex'));
     }
   }
 
   // ---------- 基础文件操作（原子写 + 防逃逸） ----------
 
   private resolve(rel: string): string {
-    const full = join(this.root, rel);
-    if (!full.startsWith(this.root)) throw new Error(`非法路径（越出数据目录）：${rel}`);
+    const full = resolvePath(this.root, rel);
+    const inside = relative(this.root, full);
+    if (!inside || inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
+      throw new Error(`非法路径（越出数据目录）：${rel}`);
+    }
     return full;
   }
 
@@ -199,10 +204,24 @@ export class ServerStore {
   }
 
   deleteEnvelope(opaqueId: string, envelopeId: string): boolean {
-    const path = this.resolve(`mailboxes/${hexOf(opaqueId)}/${envelopeId}.json`);
+    let path: string;
+    try {
+      path = this.resolve(`mailboxes/${hexOf(opaqueId)}/${envelopeId}.json`);
+    } catch {
+      return false; // 畸形 ID（含路径分隔/逃逸）按"不存在"处理，不抛 500
+    }
     if (!existsSync(path)) return false;
     rmSync(path, { force: true });
     return true;
+  }
+
+  /** 信箱内是否已有该 ID 的信（防同 card_id 覆盖投递——收件箱条目不可被第三方顶掉） */
+  hasEnvelope(opaqueId: string, envelopeId: string): boolean {
+    try {
+      return existsSync(this.resolve(`mailboxes/${hexOf(opaqueId)}/${envelopeId}.json`));
+    } catch {
+      return false;
+    }
   }
 
   // ---------- 限速（每日投递计数） ----------

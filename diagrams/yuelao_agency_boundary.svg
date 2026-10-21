@@ -1,4 +1,24 @@
 <svg viewBox="0 0 680 235" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: -apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; }
+    text:not([fill]) { fill: #374151; }
+    .th { font-size: 13px; font-weight: bold; fill: #1F2937; }
+    .ts { font-size: 11px; fill: #374151; }
+    .c-gray rect:not([fill]) { fill: #F3F4F6; }
+    .c-red rect:not([fill]) { fill: #FBEAEC; }
+    .c-green rect:not([fill]) { fill: #EAF6EF; }
+    .c-amber rect:not([fill]) { fill: #FDF3E3; }
+    rect:not([stroke]):not([stroke-width]) { stroke: #C8102E; }
+    .c-gray rect:not([stroke]):not([stroke-width]) { stroke: #9CA3AF; }
+    .c-red rect:not([stroke]):not([stroke-width]) { stroke: #C8102E; }
+    .c-green rect:not([stroke]):not([stroke-width]) { stroke: #2E7D32; }
+    .c-amber rect:not([stroke]):not([stroke-width]) { stroke: #B45A00; }
+    .c-red .th:not([fill]) { fill: #C8102E; }
+    .c-green .th:not([fill]) { fill: #2E7D32; }
+    .c-amber .th:not([fill]) { fill: #B45A00; }
+  </style>
+
+
   <title>代理边界：月老能代什么，不能代什么</title>
   <desc>三段式代理边界：代筛（拉池本地粗筛全自动）、代访（授权范围内结构化代理访谈，回合制异步、出站过滤、全程留痕、可替主人问尴尬问题）、代见（见面锦囊与安排建议，但见面与心动永远归主人）。</desc>
   <defs>

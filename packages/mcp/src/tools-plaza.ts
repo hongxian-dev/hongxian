@@ -37,6 +37,7 @@ import {
 import {
   ENVELOPE_TYPES,
   buildSignedEnvelope,
+  checkOutboundLeak,
   completeMessageBody,
   routeEnvelope,
   validateBody,
@@ -300,13 +301,16 @@ export const sendViaServerTool = {
       address = parsed.opaque_id;
     }
 
-    // 消息体补全 + 校验（与 send_envelope 同一套实现）
-    const completed = completeMessageBody(args.msg_type, args.body, session, s);
+    // 消息体补全 + 校验（与 send_envelope 同一套实现；层密钥封装由工具完成）
+    const completed = completeMessageBody(args.msg_type, args.body, session, s, { recipientKx: theirKx });
     if (!completed.ok) return text(completed.error);
     const bodyError = validateBody(args.msg_type, completed.body);
     if (bodyError) {
       return text(`消息体不合法（${args.msg_type}）：${bodyError}。\n\n请按协议 schema 修正后重发；不要删改协议字段。`);
     }
+    // 出站泄露面审查（D15⑦）：与服务端流同一口径
+    const leakWarning = checkOutboundLeak(args.msg_type, completed.body, s);
+    if (leakWarning) return text(leakWarning);
     const recipientKx = completed.recipientKx ?? theirKx;
     if (!recipientKx) {
       return text('缺少收件人协商公钥：请改用 target_card_id 指定收件人（广场卡自带公钥）。');
@@ -389,6 +393,8 @@ export const mailboxPullTool = {
       const env = check.data;
       if (seen.has(env.meta.card_id)) {
         results.push(`（重复的信 ${env.meta.card_id.slice(0, 8)}…——本地已处理过，跳过）`);
+        // 已处理过的信也要删：否则它每轮都回来、直到服务端 30 天 TTL 清扫才消失
+        if (!args.keep_on_server) await deleteMailboxItem(instance, address, env.meta.card_id, session);
         continue;
       }
       const sigOk = verifyDetached(

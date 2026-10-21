@@ -13,6 +13,7 @@ import {
   MatchCardEnvelope,
   PayloadL1 as PayloadL1Check,
   PayloadL2 as PayloadL2Check,
+  PayloadL3 as PayloadL3Check,
   type CardMeta,
   type PayloadL1,
   type PayloadL2,
@@ -30,6 +31,7 @@ import { aesGcmDecrypt, aesGcmEncrypt, sealBox, verifyDetached } from '@hongxian
 import { createHash } from 'node:crypto';
 import type { KeyProvider, Layer } from '../types.js';
 import { DomainError } from '../types.js';
+import { l3ContainerKey, sealL3Fields } from './l3.js';
 
 export { signatureObject };
 
@@ -39,6 +41,7 @@ export interface SignCardInput {
   version?: number;
   ttlDays?: number;
   depth: CardMeta['depth'];
+  /** @deprecated 2026-10-20 D8 修订：介绍人链裁撤（分发半径唯一模型=声明式圈层），v0.5 移除 */
   introducerSig?: string;
   l1: PayloadL1;
   l2: PayloadL2;
@@ -66,7 +69,12 @@ export function signMatchCard(input: SignCardInput, key: KeyProvider): MatchCard
 
   const l1Block = encryptLayer(input.l1, key.layerKey('L1'));
   const l2Block = encryptLayer(input.l2, key.layerKey('L2'));
-  const l3Block = input.l3 ? encryptLayer(input.l3, key.layerKey('L3')) : undefined;
+  // L3 走逐字段加密容器（D13）：外层用「容器密钥」加密（只解得出各字段密文），
+  // 内层每字段一把子密钥。grant_l3 交付 容器密钥 + 被授权字段的子密钥，
+  // 恰好只看得见被授权的字段——"给微信号不给手机号"在密码学上成立。
+  const l3Block = input.l3
+    ? encryptLayer(sealL3Fields(input.l3, key.layerKey('L3')), l3ContainerKey(key.layerKey('L3')))
+    : undefined;
 
   // v0.4 零知识军规（平台服务工程设计 V6）：plaza_card 严禁携带 key_l1——
   // 钥匙随 blob 上传即使服务端可解密 L1。签名对象随之调整（无 key_l1 分支），
@@ -105,7 +113,7 @@ export function verifyMatchCard(input: unknown): VerifyCardResult {
   }
   const card = parsed.data;
   const expired = isExpired(card.meta);
-  // 卡自带 Ed25519 公钥（TOFU 信任模型 + 可选 introducer_sig 背书）
+  // 卡自带 Ed25519 公钥（TOFU 信任模型；introducer_sig 已废弃——2026-10-20 D8 修订裁撤介绍人链）
   const signatureValid = verifyCardSignature(card, fromBase64(card.meta.sig_public));
   return {
     valid: signatureValid, // §7.4：签名验证失败 = 整卡作废，不降级处理
@@ -225,5 +233,16 @@ export function assertSignable(l1: unknown, l2: unknown): void {
   const r2 = PayloadL2Check.safeParse(l2);
   if (!r2.success) {
     throw new DomainError('INVALID_L2', `匹配层字段不合法：${r2.error.issues.map((i) => i.path.join('.')).join(', ')}`);
+  }
+}
+
+/** 见面层字段校验（D13：字段名白名单 + 类型/长度受控，空对象视为未提供） */
+export function assertL3Signable(l3: unknown): void {
+  const r = PayloadL3Check.safeParse(l3);
+  if (!r.success) {
+    throw new DomainError('INVALID_L3', `见面层字段不合法：${r.error.issues.map((i) => i.path.join('.')).join(', ')}`);
+  }
+  if (Object.keys(r.data).length === 0) {
+    throw new DomainError('INVALID_L3', '见面层至少要有一个字段（否则不要签发 L3 层）');
   }
 }

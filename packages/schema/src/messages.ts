@@ -120,7 +120,12 @@ export type GraduationInviteBody = z.infer<typeof GraduationInviteBody>;
 /** grant_l3 · 见面层解锁：逐字段 opt-in 的密钥交付（D13） */
 export const GrantL3Body = z.object({
   from_card_id: z.string().refine(isUuidV7),
-  /** 字段名 → 用对端公钥封装的该字段密钥 */
+  /**
+   * 容器密钥（v1.1）：解 payload_L3 外层用，只能解出各字段密文、解不出明文。
+   * 缺省时按 v1.0 语义处理（外层 = L3 层密钥，即整层交付）。
+   */
+  container_key: z.string().min(1).optional(),
+  /** 字段名 → 用对端公钥封装的该字段子密钥 */
   fields: z.array(
     z.object({
       field: z.string().min(1).max(40),
@@ -136,17 +141,9 @@ export const DeclineSilentBody = z.object({
 });
 export type DeclineSilentBody = z.infer<typeof DeclineSilentBody>;
 
-/** L3 字段名白名单（D13：见面层字段逐一 opt-in，支持"给微信号但不给手机号"） */
-export const L3_FIELD_NAMES = [
-  'contact_wechat',
-  'contact_phone',
-  'real_name',
-  'employer_category',
-  'hangout_areas',
-  'photo_refs',
-] as const;
-
-export type L3FieldName = (typeof L3_FIELD_NAMES)[number];
+/** L3 字段名白名单（D13：见面层字段逐一 opt-in，支持"给微信号但不给手机号"）。
+ *  定义在 card.ts（L3 加密容器需要），此处再导出保持既有引用路径不变。 */
+export { L3_FIELD_NAMES, type L3FieldName } from './card.js';
 
 // ---------- 匹配报告契约（D6：五档 + 三区；compare 工具的输出结构） ----------
 

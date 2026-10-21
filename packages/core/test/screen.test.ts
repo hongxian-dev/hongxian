@@ -172,3 +172,51 @@ describe('buildCompareResult（compare 工具输出契约）', () => {
     expect(r.narrative_input.dealbreaker_hits[0]!.dimension).toBe('smoking');
   });
 });
+
+describe('五档可达性与结构化硬伤（v1.1）', () => {
+  it('five tiers 全部可达：dont_miss 不再是死档', () => {
+    const screen = { passed: true, reasons: [], dealbreaker_hits: [], direction_ok: true };
+    // score = 共鸣×2 + 差异：4×2+3 = 11 ≥ 10
+    expect(computeTier(screen, 4, 3, 0.9, 0.9).tier).toBe('dont_miss');
+    expect(computeTier(screen, 3, 2, 0.9, 0.9).tier).toBe('worth_meeting');
+  });
+
+  it('生育意愿硬冲突：把「生育」列为底线 + 对方明确想要 → 命中硬伤（不是可聊差异）', () => {
+    const noKid: ProfileView = {
+      ...mine,
+      l2: {
+        ...mine.l2,
+        family_view: { ...mine.l2.family_view, childbearing: 'dont_want' },
+        dealbreakers: [{ dimension: 'childbearing', note: '不要孩子' }],
+      },
+    };
+    const wantKid: ProfileView = {
+      ...hers,
+      l2: { ...hers.l2, family_view: { ...hers.l2.family_view, childbearing: 'want' }, dealbreakers: [] },
+    };
+    const r = screenCompatibility(noKid, wantKid);
+    expect(r.dealbreaker_hits.some((h) => h.dimension === 'childbearing')).toBe(true);
+    expect(r.passed).toBe(false);
+  });
+
+  it('吸烟底线：自己不抽、对方经常抽 → 命中（此前只比对方是否 regularly，漏掉方向）', () => {
+    const r = screenCompatibility(mine, {
+      ...hers,
+      l2: { ...hers.l2, lifestyle: { sleep: 'normal', smoking: 'regularly' }, dealbreakers: [] },
+    });
+    expect(r.dealbreaker_hits.some((h) => h.dimension === 'smoking')).toBe(true);
+  });
+
+  it('共鸣包含目标一致与同城（画像原话优先于权重拼串）', () => {
+    const withGeo = (p: ProfileView): ProfileView => ({
+      ...p,
+      l1: { ...p.l1, goal: 'marriage_oriented', city: { code: '310100', name: '上海' } },
+    });
+    const res = findResonance(withGeo(mine), withGeo(hers));
+    expect(res.some((r) => r.point.includes('目标一致'))).toBe(true);
+    expect(res.some((r) => r.point.includes('同在'))).toBe(true);
+    // 目标不同则不产生这条共鸣
+    const diffGoal = findResonance(withGeo(mine), { ...withGeo(hers), l1: { ...withGeo(hers).l1, goal: 'serious_dating' } });
+    expect(diffGoal.some((r) => r.point.includes('目标一致'))).toBe(false);
+  });
+});

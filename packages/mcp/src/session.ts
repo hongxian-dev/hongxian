@@ -108,7 +108,9 @@ export class Session {
     this.store.write(`${KEYS_DIR}/id.enc`, files.id);
     this.store.write(`${KEYS_DIR}/kx.enc`, files.kx);
     this.store.write(`${KEYS_DIR}/lk.enc`, files.lk);
-    this.store.write('settings.json', DEFAULT_SETTINGS);
+    // 只在没有设置时写默认值——否则"换设备从短语重建"会把用户已改的
+    // opt-in/实例地址/模型声明一并冲掉（v1.1 修复）
+    if (!this.store.exists('settings.json')) this.store.write('settings.json', DEFAULT_SETTINGS);
   }
 
   /** 已初始化身份？（keys 文件存在） */
@@ -135,6 +137,22 @@ export class Session {
 
   settings(): Settings {
     return this.store.read<Settings>('settings.json') ?? DEFAULT_SETTINGS;
+  }
+
+  /**
+   * 空闲超时检查（settings.lock_timeout_minutes）。
+   *
+   * v1.0 只声明了这个配置项却从未执行——用户设了 15 分钟自动锁定，
+   * 实际上密钥一直留在内存里，直到进程退出。这里补上真正的门闩：
+   * 超时即 lock() 并返回 true，调用方据此提示重新解锁。
+   */
+  enforceIdleLockout(now: number = Date.now()): boolean {
+    if (!this.km) return false;
+    const minutes = this.settings().lock_timeout_minutes ?? 0;
+    if (minutes <= 0 || this.lastActivity === 0) return false;
+    if (now - this.lastActivity < minutes * 60_000) return false;
+    this.lock();
+    return true;
   }
 
   updateSettings(patch: Partial<Settings>): Settings {
@@ -165,6 +183,7 @@ export class Session {
   private adopt(km: KeyMaterial, seed: Uint8Array): void {
     this.km = km;
     this.seed = seed;
+    this.lastActivity = Date.now();
     this.provider = this.buildProvider(km, seed);
   }
 
