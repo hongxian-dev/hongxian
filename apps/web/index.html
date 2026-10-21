@@ -148,10 +148,20 @@ h2{font-size:clamp(26px,3vw,38px);font-weight:900;letter-spacing:1px;line-height
 .rep-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px}
 .rep-head b{font-size:17px;font-weight:800}
 .rep-head span{font-size:12.5px;color:var(--muted)}
-.tiers{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-.tier{font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:5px 14px;color:var(--muted)}
+.tiers{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tier{font:inherit;font-size:12.5px;line-height:1.4;border:1px solid var(--line);border-radius:999px;padding:5px 14px;color:var(--muted);background:#fff;cursor:pointer;transition:border-color .18s,color .18s,background .18s,transform .18s}
+.tier:hover{border-color:var(--red);color:var(--red);transform:translateY(-1px)}
+.tier:active{transform:translateY(0)}
+.tier:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .tier.on{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+.tier.on:hover{color:#fff}
+.rep-why{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin:0 0 16px;padding:2px 0 2px 12px;border-left:2px solid var(--red)}
+.rep-why b{color:var(--red-deep);font-weight:700}
 .rep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;border-top:1px dashed var(--line);padding-top:20px}
+.rep-grid>div{transition:opacity .26s ease,transform .26s ease}
+.rep-grid>div:nth-child(2){transition-delay:.04s}
+.rep-grid>div:nth-child(3){transition-delay:.08s}
+.rep-grid.swap>div{opacity:0;transform:translateY(7px);transition-delay:0s}
 .rep-grid h4{font-size:13px;letter-spacing:1px;color:var(--red-deep);margin-bottom:6px}
 .rep-grid p{font-size:13px;color:var(--ink-2);line-height:1.75}
 .rep-foot{margin-top:18px;font-size:12px;color:var(--faint)}
@@ -509,15 +519,16 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   <!-- 五档报告样例（PRD §8：Demo 区须含报告形态） -->
   <div class="wrap">
     <div class="report rv">
-      <div class="rep-head"><b>比对报告样例 · 五档三区</b><span>每个结论必须附双方原话依据 · 不给分数 · 不下判决</span></div>
-      <div class="tiers">
-        <span class="tier">缘分未至</span>
-        <span class="tier">可以聊聊</span>
-        <span class="tier on">值得认识</span>
-        <span class="tier">值得见面</span>
-        <span class="tier">别错过</span>
+      <div class="rep-head"><b>比对报告样例 · 五档三区</b><span>每个结论必须附双方原话依据 · 不给分数 · 不下判决 · 点档位看对照</span></div>
+      <div class="tiers" role="tablist" aria-label="五档报告：选一档查看该档样例">
+        <button class="tier" type="button" role="tab" id="tier-1" aria-controls="repGrid" aria-selected="false" tabindex="-1" data-i="0">缘分未至</button>
+        <button class="tier" type="button" role="tab" id="tier-2" aria-controls="repGrid" aria-selected="false" tabindex="-1" data-i="1">可以聊聊</button>
+        <button class="tier on" type="button" role="tab" id="tier-3" aria-controls="repGrid" aria-selected="true" tabindex="0" data-i="2">值得认识</button>
+        <button class="tier" type="button" role="tab" id="tier-4" aria-controls="repGrid" aria-selected="false" tabindex="-1" data-i="3">值得见面</button>
+        <button class="tier" type="button" role="tab" id="tier-5" aria-controls="repGrid" aria-selected="false" tabindex="-1" data-i="4">别错过</button>
       </div>
-      <div class="rep-grid">
+      <p class="rep-why" id="repWhy"><b>为什么是这一档：</b>共识落在价值观层、差异可被选择、仍有 1 个关键待问 → 继续深聊，暂不建议见面。</p>
+      <div class="rep-grid" id="repGrid" role="tabpanel" aria-labelledby="tier-3" tabindex="0">
         <div><h4>共识</h4><p>"都想在两年内安定下来；都把周末留给户外。"——两侧受访原话一致。</p></div>
         <div><h4>差异</h4><p>"一个想留上海，一个计划三年后回成都。"差异不是问题，但必须被问到、被选择。</p></div>
         <div><h4>待问</h4><p>"生育计划尚未触及。"建议下一轮考题包优先，而不是留到见面现场。</p></div>
@@ -664,6 +675,74 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     });
   }
   bindCopy('cmdTop');bindCopy('cmdBottom');
+
+  /* 五档报告样例：点档位切换三区内容（tablist + 方向键，无 JS 时静态默认档可用） */
+  var TIERS=[
+    {why:'出现一条不可协商的核心诉求冲突 → 直接止步，不拿双方的时间去验一个已知答案。',
+     g:['<b>无。</b>两侧的答案还没在同一个层面上相遇，谈不上共识。',
+        '"一个写「两年内要孩子」，一个写「至少五年再考虑」，且双方都标了不可协商。"——诉求相反，不是节奏快慢的差别。',
+        '不安排。差异已经足够说明问题，再追问只是在消耗彼此的轮次。']},
+    {why:'有真实的共同点，关键差异通常可协商，但信息量还不足以判断合适 → 进深聊轮，不建议见面。',
+     g:['"都喜欢安静一点的社交；都不抽烟。"——共同点存在，但还停留在表层。',
+        '"一个周末必须留一天独处，一个期待周末全程一起。"——频率差异，通常可协商。',
+        '"对「婚后是否与父母同住」尚未触及。"——建议下一轮考题包优先问，别留到见面现场。']},
+    {why:'共识落在价值观层、差异可被选择、仍有 1 个关键待问 → 继续深聊，暂不建议见面。',
+     g:['"都想在两年内安定下来；都把周末留给户外。"——两侧受访原话一致。',
+        '"一个想留上海，一个计划三年后回成都。"——差异不是问题，但必须被问到、被选择。',
+        '"生育计划尚未触及。"——建议下一轮考题包优先，而不是留到见面现场。']},
+    {why:'价值观层对齐、差异已被双方明确选择、无阻塞性未知 → 可以进入见面层，见不见仍由你们定。',
+     g:['"都把「吵架后先冷静再谈」写在最前面；都说钱要各自独立。"——冲突处理与金钱观都对齐。',
+        '"一个想留上海，一个计划三年后回成都。"——已明确讨论过，双方都写「可协商，看机会」。',
+        '只剩"见家长的时间预期"一项——可以在见面时当面聊，不必再占一轮考题。']},
+    {why:'共识罕见地深、差异被双方视为互补、关键问题全部触及 → 建议尽快见面，但月老永不催。',
+     g:['"对「家庭是什么」的回答几乎逐句重合，连「为什么想结婚」都指向同一件事。"——罕见。',
+        '"一个爱计划，一个随性。"——双方都写「这正是我缺的」，差异成了互补而非摩擦。',
+        '无未触及的关键项。剩下的都是见面才答得出的问题。']}
+  ];
+  var tierBtns=[].slice.call(document.querySelectorAll('.tier'));
+  var repGrid=document.getElementById('repGrid');
+  var repWhy=document.getElementById('repWhy');
+  var repCur=2,repSeq=0,reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function fillTier(i){
+    var t=TIERS[i];
+    repWhy.innerHTML='<b>为什么是这一档：</b>'+t.why;
+    var cells=repGrid.children;
+    for(var k=0;k<cells.length;k++){cells[k].querySelector('p').innerHTML=t.g[k];}
+    repGrid.setAttribute('aria-labelledby','tier-'+(i+1));
+  }
+  function syncTier(i){
+    tierBtns.forEach(function(b,k){
+      var on=k===i;
+      b.classList.toggle('on',on);
+      b.setAttribute('aria-selected',on?'true':'false');
+      b.tabIndex=on?0:-1;
+    });
+  }
+  function showTier(i,focus){
+    if(i===repCur&&repGrid.getAttribute('aria-labelledby')==='tier-'+(i+1))return;
+    repCur=i;syncTier(i);
+    if(focus)tierBtns[i].focus();
+    var seq=++repSeq;
+    if(reduce){fillTier(i);return;}
+    repGrid.classList.add('swap');
+    setTimeout(function(){
+      if(seq!==repSeq)return; /* 连点时只认最后一次，避免旧内容回填 */
+      fillTier(i);
+      void repGrid.offsetWidth; /* 强制回流，保证淡入从透明态起步 */
+      repGrid.classList.remove('swap');
+    },170);
+  }
+  tierBtns.forEach(function(b){
+    b.addEventListener('click',function(){showTier(+b.dataset.i,false)});
+    b.addEventListener('keydown',function(e){
+      var i=+b.dataset.i,n=null;
+      if(e.key==='ArrowRight')n=(i+1)%TIERS.length;
+      else if(e.key==='ArrowLeft')n=(i-1+TIERS.length)%TIERS.length;
+      else if(e.key==='Home')n=0;
+      else if(e.key==='End')n=TIERS.length-1;
+      if(n!==null){e.preventDefault();showTier(n,true);}
+    });
+  });
 
   /* demo chat：纯前端预设脚本 */
   var SCRIPT=[

@@ -54,6 +54,14 @@ ok('FAQ 八问', details === 8, `实际 ${details}`);
 ok('含陌生人安全问答（防骚扰）', html.includes('怎么防骚扰'));
 ok('含密钥即身份问答（无手机号）', html.includes('怎么证明'));
 ok('含五档报告样例', html.includes('比对报告样例') && html.includes('值得认识'));
+ok(
+  '五档可交互：tablist + 5 个 tab 绑定同一面板',
+  html.includes('class="tiers" role="tablist"') &&
+    (html.match(/role="tab"/g) || []).length === 5 &&
+    (html.match(/aria-controls="repGrid"/g) || []).length === 5 &&
+    html.includes('id="repGrid" role="tabpanel"'),
+);
+ok('五档各有判据与三区样例（无 JS 时默认档可读）', (html.match(/\{why:'/g) || []).length === 5);
 ok('含 v1/v2 路线区分', html.includes('v2 · 参考实现已完成'));
 
 /* ---------- 5. 透明数据区：键名与 Worker 契约一致 ---------- */

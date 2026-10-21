@@ -74,6 +74,6 @@ node verify.mjs                   # 静态验收（36 项）
 ## 待接入（不阻塞）
 
 - [ ] **GitHub 源码仓库公开**——当前 org 仅有 Pages 仓库，信任清单「读源码 / 自托管」链接暂指 org 页；`schema`/`core`/`mcp`/`server` 与协议规范需在官网上线前推上去
-- [ ] 计数器 Worker 部署（`count.hongxian.dev`），透明数据区自动切换「实时数据」（契约已在 `apps/counter/test/worker.test.ts` 锁定）
-- [ ] 爱发电 / Sponsors 账号就绪后替换页脚赞助链接
+- [x] ~~计数器 Worker 部署（`count.hongxian.dev`）~~ —— **2026-10-21 已上线**，`/stats` 实测 200，透明数据区已接真实端点（无数据时自动降级「等待第一个用户」）
+- [ ] 爱发电账号（afdian.com）创作者主页审核通过后：① 替换页脚赞助链接（当前文案为「爱发电 / GitHub Sponsors（部署后开放）」，改为可点击的 `https://afdian.com/a/<你的ID>`）；② 同步根目录 `.github/FUNDING.yml` 的 custom 链接（现为占位）
 - [ ] 备案号下发后替换页脚「ICP 备案：准备中」
