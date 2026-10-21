@@ -17,7 +17,8 @@
     "build": "npm run build -w @hongxian/schema && npm run build -w @hongxian/crypto && npm run build -w @hongxian/core && npm run build -w @hongxian/mcp && npm run build -w @hongxian/server",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify": "npm run build && npm test"
+    "verify": "npm run build && npm test",
+    "prd": "node docs/build-prd-html.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
