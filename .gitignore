@@ -4,3 +4,6 @@ dist/
 .verify/
 .DS_Store
 *.log
+
+# 服务器 SSH 私钥（腾讯云 Lighthouse），永不入库
+.ssh/

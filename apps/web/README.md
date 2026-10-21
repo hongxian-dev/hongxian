@@ -1,42 +1,40 @@
 # 红线产品介绍网站（apps/web）
 
 > 交付物对应《产品网站与透明统计v1设计初稿》七区信息架构与《v1产品清单与验收标准》第 2 节（落地页 W1–W5）。
-> 纯静态手写 HTML/CSS/JS——**零构建、零依赖、零追踪**：无 Cookie、无统计 SDK、无字体 CDN。
+> 纯静态单文件——**零构建、零依赖、零追踪**：无 Cookie、无统计 SDK、无字体 CDN、无外部资源请求。
 > 「网站自己就是隐私声明」既是承诺，也是验收项。
 
 ## 目录
 
 ```
-apps/web/
-├── index.html              # 单页七区：Hero / 工作原理 / Demo / 信任清单 / 生态数据 / FAQ / 页脚赞助
-├── 404.html                # 品牌 404 页
-├── gen_og_cover.py         # og 分享卡片图生成脚本（PIL，品牌规范硬编码）
-├── verify.js               # 回归验证脚本（playwright：七区渲染 + Demo 全流程 + 外链审计）
-├── assets/
-│   ├── css/style.css       # 品牌样式（禁渐变禁投影、浅色主题、响应式、prefers-reduced-motion）
-│   ├── js/main.js          # 交互（Demo 预设脚本、透明数据拉取与降级、导航、显现动画）
-│   └── img/                # logo/final 交付包复制 + og-cover.png
+apps/web/                     # 部署产物（GitHub Pages / 境内 Nginx 直接托管）
+├── index.html                # 单文件整站：HTML + 内联 CSS + 内联 JS + 内联 SVG
+├── og-cover.png              # 1200×630 分享封面（og:image / twitter:image）
+├── 404.html                  # 自包含 404 页（同规范、无外部依赖）
+├── verify.mjs                # 静态验收（零依赖：node verify.mjs）
 └── README.md
 ```
 
-## 视觉改版 v2（2026-10-15）
+**设计源**：`hongxian-website/`（含 DESIGN-NOTES 设计说明、logo/ 品牌资产、预览截图、`gen_og.cjs` 封面生成器）。
+本目录是 `hongxian-website/index.html` 的部署副本——改版先改设计源，再同步到这里。
 
-改版目标：解决 v1「通篇纸白 + 白卡 + 1px 灰边、七区同节奏」的朴素感，同时**严守品牌宪法**。
+## 版本沿革
 
-**关键判断**：《定位声明》§11 的「禁渐变、禁投影」被 v1 误读成了「只能靠留白建立层次」。但《logo 交付包》规则 4 明确「墨底/深灰底用提亮红 #E8556A」——**深色版面本就是品牌允许的**。v2 因此改用「明暗版面交替」替代「光影装饰」制造视觉层次。
+| 版本 | 日期 | 要点 |
+|---|---|---|
+| v1 | 2026-10-15 | 七区信息架构首版；手写 CSS/JS，assets/ 分离 |
+| v2 | 2026-10-15 | 明暗版面交替、Hero 信号汇聚构图、编辑感版式（`style.css` 时代） |
+| **v3** | **2026-10-21** | **「纸信 · 红线」编辑科技风重塑，单文件化**；品牌换代落地（M4 线团之心 + M1 徽样）；宪法纪律回归（去渐变去投影）；内容补强（陌生人安全 / 密钥即身份 / 五档报告样例 / v1·v2 路线） |
 
-| 手法 | 说明 |
-|---|---|
-| 明暗节奏 | Demo 区、生态数据区、页脚改为墨底 `#141B25`；主色换提亮红 `#E8556A`（logo 规则 4）；亮底/墨底交替形成段落呼吸 |
-| Hero 信号汇聚构图 | 加权心络从「装饰 logo」升格为叙事主角：四路加权信号（画像/意向/偏好/边界）汇入心形，粗细深浅即注意力权重；橙色仍严格限于结点与流动信号 |
-| 编辑感版式 | 标题升至 clamp(64px)，承诺带改为细线分隔行（替掉胶囊标签），区块加「0N / 标题」编号 eyebrow |
-| 工作原理横向卡 | 三张竖排卡改为「左文右图」横向叙事卡，插画加编号 01–03 |
-| 信任清单 stepper | 卡片堆叠改为竖向连通节点（节点间连线 + 等宽数字序号） |
-| FAQ 双栏 | 单栏改为左 sticky 标题 + 右细线列表的编辑版式 |
+### v3 改了什么（相对 v2）
 
-**未改动**：七区信息架构、全部文案措辞（措辞纪律=法律文件）、`main.js` 全部交互钩子、无 Cookie/无 SDK/无字体 CDN、`prefers-reduced-motion`、OG meta。
-
-**验收**：`verify.js` 17/18 通过（唯一未通过项为计数器域名未注册导致的 DNS 失败，与改版无关）。
+- **品牌落地**：nav/页脚/favicon/404 全部换成 M4 线团之心；Hero 月老节点与 Demo 头像改用 M1 线团小月老徽样（额印星芒 + 缠线两笔），旧「加权心络」杂交版退场。
+- **宪法纪律回归**：v2 引入的径向光晕、CTA 红渐变、对话区线性渐变、全站 box-shadow、nav 毛玻璃全部移除——层次改由「明暗版面交替 + 1px 线面 + 留白」承担（`verify.mjs` 静态拦截）。
+- **色板纪律**：#E8445C 只用于墨底（页脚/深色带）；亮底信号线与编号回归 #C8102E。
+- **内容补强**：FAQ 6 → 8（补防骚扰、密钥即身份）；Demo 区补五档报告样例卡（PRD §8 要求）；工作原理下补 v1/v2/v3 路线条；hero 明确「v1 全程本地 / v2 可选加密信箱」。
+- **分享与 SEO**：补 og:image（1200×630）+ twitter:card + canonical + theme-color。
+- **健壮性**：Demo 开场白改为静态 HTML（无 JS 也可见）；SMIL `mpath` 补 `xlink:href`（Safari 兼容）。
+- **验收脚本换代**：playwright 渲染回归 → `verify.mjs` 静态契约检查（36 项）。
 
 ## 本地预览
 
@@ -44,44 +42,38 @@ apps/web/
 cd apps/web
 python -m http.server 8000        # 或 npx serve .
 # 打开 http://localhost:8000
+node verify.mjs                   # 静态验收（36 项）
 ```
 
-## 部署（v1 双轨）
+## 部署
 
-### 境外主站（先行，免 ICP 备案）
+### 境外主站（已上线，免 ICP 备案）
 
-```bash
-# GitHub Pages：repo 设为 hongxian-dev/site，Settings → Pages → 选 main 分支根目录
-# 或 Vercel：vercel --prod（框架选 Other，输出目录即本目录）
-```
+仓库 `hongxian-dev/hongxian-dev.github.io`，Pages 自定义域 `hongxian.dev` + Enforce HTTPS。
+更新流程：把 `index.html` / `og-cover.png` / `404.html` 三件同步到该仓库根目录即可（无需构建）。
 
-域名绑定 `hongxian.dev` 后：
+### 境内镜像（待 ICP 备案通过）
 
-1. 在仓库根放置 `CNAME` 文件，内容一行 `hongxian.dev`（**须在 DNS 已指向托管方之后**，否则 github.io 默认域名会失效）
-2. 托管方开启 HTTPS（Pages/Vercel 自动签发；.dev 强制 HTTPS）
-3. `index.html` 的 `og:image` 可改为绝对地址 `https://hongxian.dev/assets/img/og-cover.png`
-
-### 境内镜像（并行走 ICP 备案）
-
-- 备案通过后，用 Caddy/Nginx 把本目录静态托管到 `hongxian.cn`（与 GitHub Pages 同源双轨）
+- 备案通过后用 Nginx/Caddy 直接托管同一目录；`og:image` 与 canonical 已写死 `https://hongxian.dev`，镜像站无需改动
 - 备案通过前境内站**不得开放访问**（合规链条见《技术详设》v1.5）
-- 备案号位置：`index.html` 页脚 `footer-bottom` 内已留 HTML 注释占位
+- 页脚合规列现为「ICP 备案：准备中」纯文本，拿到备案号后替换为真实链接
 
-## 验收对照（《v1产品清单》第 2 节）
+## 验收对照（`node verify.mjs`，36 项全绿）
 
-| 验收项 | 状态 |
+| 类别 | 断言 |
 |---|---|
-| 静态单文件可部署 Pages/Vercel | ✅ 纯静态，无构建 |
-| Demo 区不发起任何真实网络请求 | ✅ 纯前端预设脚本，main.js 内无 fetch 调用 |
-| 透明数据区数字与上报聚合一致 + 明示匿名聚合/opt-in | ✅ 拉取 `count.hongxian.dev/stats`，失败降级「等待第一个用户」；页面已明示 |
-| 赞助区无婚介措辞、与产品功能区物理隔离 | ✅ 独立 aside 区块 + 明示「不收取任何与婚介相关的费用」 |
-| 移动端可用 / 浅色主题 / 品牌色 | ✅ 响应式 + #C8102E / #1F2937 / #F08200 |
-| 页面无 Cookie、无统计 SDK | ✅ 零外部请求（可抓包验证） |
+| 零请求 | 无外部样式表/脚本、无 webfont、无 `url(http)` 引用 |
+| 视觉纪律 | 无渐变、无 box-shadow/text-shadow、无 backdrop-filter |
+| 分享/SEO | description、canonical、theme-color、og:image + 尺寸、twitter:card |
+| 内容完整 | 七区锚点齐、FAQ 八问、防骚扰问答、密钥即身份问答、五档报告样例、v1/v2 路线 |
+| 数据契约 | 四键 `cards/active/env/plaza` 与 Worker `site` 块一一对应；兼容 `site`/`counters` 两代结构 |
+| 外链白名单 | 仅 `hongxian.dev` / `github.com` / `count.hongxian.dev`（+ SVG 命名空间） |
+| 品牌资产 | 无旧标文件引用；内嵌 M4 符号与 M1 额印星芒 |
+| 体积 | 首页 < 80KB（当前 54KB） |
 
 ## 待接入（不阻塞）
 
-- [ ] GitHub org `hongxian-dev` 与 repo（`site` / `yuelao-skill` / `hongxian-protocol`）创建后，替换页脚链接为真实地址
-- [ ] 域名注册后绑定 + CNAME
-- [ ] 计数器 Worker 部署后，透明数据区自动亮起（见 `apps/counter/README.md`）
-- [ ] 爱发电 / GitHub Sponsors 账号就绪后替换页脚赞助链接与二维码
-- [ ] 协议规范 v0 草案公开后，页脚资源列补链接
+- [ ] **GitHub 源码仓库公开**——当前 org 仅有 Pages 仓库，信任清单「读源码 / 自托管」链接暂指 org 页；`schema`/`core`/`mcp`/`server` 与协议规范需在官网上线前推上去
+- [ ] 计数器 Worker 部署（`count.hongxian.dev`），透明数据区自动切换「实时数据」（契约已在 `apps/counter/test/worker.test.ts` 锁定）
+- [ ] 爱发电 / Sponsors 账号就绪后替换页脚赞助链接
+- [ ] 备案号下发后替换页脚「ICP 备案：准备中」

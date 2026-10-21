@@ -1,23 +1,46 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>页面不存在 · 红线 Hongxian</title>
-  <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#FDFBF7">
-  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" media="(prefers-color-scheme: light)">
-  <link rel="icon" type="image/svg+xml" href="assets/img/favicon-dark.svg" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="assets/css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>页面不存在 · 红线开源工具</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#C8102E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cpath d='M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z' fill='none' stroke='%23C8102E' stroke-width='16' stroke-linejoin='round'/%3E%3Ccircle cx='120' cy='124' r='44' fill='%23C8102E'/%3E%3Ccircle cx='106' cy='120' r='9' fill='%23FDFBF7'/%3E%3Ccircle cx='134' cy='120' r='9' fill='%23FDFBF7'/%3E%3C/svg%3E">
+<style>
+  :root{--red:#C8102E;--ink:#1F2937;--muted:#6B7280;--paper:#FDFBF7;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+    --serif:Georgia,'Times New Roman',serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);line-height:1.75;padding:32px;text-align:center}
+  .box{max-width:520px}
+  .mark{width:88px;height:88px;margin:0 auto 26px}
+  .code{font-family:var(--serif);font-style:italic;font-size:15px;letter-spacing:3px;color:var(--red)}
+  h1{font-size:clamp(24px,4vw,32px);font-weight:900;letter-spacing:1px;margin:12px 0 14px}
+  p{color:var(--muted);font-size:15px}
+  .btn{display:inline-flex;align-items:center;gap:8px;margin-top:28px;background:var(--red);color:#fff;text-decoration:none;
+    border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600}
+  .btn:hover{background:#A60F26}
+  .back{margin-top:16px;font-size:13px;color:var(--muted)}
+  .back a{color:var(--muted)}
+</style>
 </head>
 <body>
-  <main class="section" style="text-align:center; padding-top: 120px;">
-    <div class="container container-narrow">
-      <img src="assets/img/hongxian-mark.svg" alt="" width="88" height="88" style="margin: 0 auto 24px;">
-      <h1 style="font-size: 28px; margin-bottom: 12px;">这条红线还没牵到这里</h1>
-      <p class="lead" style="color:#3D4753;">页面不存在，或者被移动了。回首页看看吧。</p>
-      <p style="margin-top: 28px;"><a class="btn btn-primary" href="index.html">回到首页</a></p>
-    </div>
-  </main>
+<div class="box">
+  <svg class="mark" viewBox="0 0 240 240" aria-hidden="true">
+    <path d="M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z" fill="none" stroke="#C8102E" stroke-width="14" stroke-linejoin="round"/>
+    <circle cx="120" cy="122" r="44" fill="#C8102E"/>
+    <path d="M88 106 C106 94 134 94 152 106" fill="none" stroke="#A60F26" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="106" cy="120" r="10" fill="#FDFBF7"/><circle cx="134" cy="120" r="10" fill="#FDFBF7"/>
+    <circle cx="108" cy="122" r="5" fill="#1F2937"/><circle cx="132" cy="122" r="5" fill="#1F2937"/>
+    <path d="M112 138 Q120 146 128 138" fill="none" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="code">404 · Not Found</div>
+  <h1>这条红线还没牵到这里</h1>
+  <p>页面不存在，或者被移动了。回首页，从第一次访谈开始。</p>
+  <a class="btn" href="/">回首页</a>
+  <div class="back">或者看看 <a href="https://github.com/hongxian-dev">GitHub 仓库</a></div>
+</div>
 </body>
 </html>

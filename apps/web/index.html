@@ -1,560 +1,728 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>红线 Hongxian — 月老牵线，红线传信 | 开源免费的 AI Agent 婚恋匹配工具</title>
-  <meta name="description" content="红线是开源、免费的 AI Agent 婚恋匹配工具：你的 Agent 通过对话了解你，在你授权下与其他人的 Agent 交换信息、评估匹配。数据只存在你的设备，我们提供工具与通信基础设施，永不提供撮合服务。">
-  <meta name="keywords" content="相亲,交友,婚恋,AI 匹配,开源工具,MCP,Agent,红线,月老">
-  <meta name="theme-color" content="#FDFBF7">
-  <meta name="color-scheme" content="light">
-  <style>
-    /* 关键帧内联：避免首屏标志动画延迟一帧（无外部资源，仍为零追踪） */
-    @media (prefers-reduced-motion: no-preference) {
-      .hero-flow { animation: flow 7s linear infinite; }
-      .hero-pulse { animation: pulse 4.5s ease-in-out infinite; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>红线开源工具 · 把红线交给 AI，把心动留给你</title>
+<meta name="description" content="红线开源工具：开源、免费的 AI Agent 婚恋匹配基础设施。客户端月老 Skill 通过对话了解你、生成画像、在授权下与其他月老交换加密匹配卡并本地比对；服务端只做加密信箱。零知识、零追踪、永不撮合。">
+<meta name="theme-color" content="#C8102E">
+<link rel="canonical" href="https://hongxian.dev/">
+<meta property="og:title" content="红线开源工具 · 把红线交给 AI，把心动留给你">
+<meta property="og:description" content="开源、免费的 AI Agent 婚恋匹配基础设施。零知识架构，数据只存你的设备。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hongxian.dev/">
+<meta property="og:image" content="https://hongxian.dev/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="红线开源工具 · 把红线交给 AI，把心动留给你">
+<meta name="twitter:description" content="开源、免费的 AI Agent 婚恋匹配基础设施。零知识架构，数据只存你的设备。">
+<meta name="twitter:image" content="https://hongxian.dev/og-cover.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cpath d='M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z' fill='none' stroke='%23C8102E' stroke-width='16' stroke-linejoin='round'/%3E%3Ccircle cx='120' cy='124' r='44' fill='%23C8102E'/%3E%3Ccircle cx='106' cy='120' r='9' fill='%23FDFBF7'/%3E%3Ccircle cx='134' cy='120' r='9' fill='%23FDFBF7'/%3E%3C/svg%3E">
+<style>
+:root{
+  --red:#C8102E; --red-2:#E8445C; --red-deep:#A60F26; --red-tint:#FBEAEC; --rose:#EF8A97;
+  --orange:#F08200; --orange-tint:#FDF3E3;
+  --ink:#1F2937; --ink-2:#374151; --muted:#6B7280; --faint:#9CA3AF;
+  --paper:#FDFBF7; --paper-2:#F6F2EA; --line:#E7E1D6;
+  --green:#2E7D32;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  --mono:ui-monospace,Consolas,'Courier New',monospace;
+  --serif:Georgia,'Times New Roman',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+::selection{background:var(--red);color:#fff}
+a{color:inherit}
+img,svg{display:block}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.skip{position:absolute;left:-9999px;top:0;background:var(--red);color:#fff;padding:8px 16px;z-index:99;border-radius:0 0 8px 0}
+.skip:focus{left:0}
+:focus-visible{outline:2px solid var(--red);outline-offset:3px;border-radius:4px}
 
-  <!-- Open Graph / 社交分享卡片（替代小程序的既定方案） -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="红线 Hongxian — 月老牵线，红线传信">
-  <meta property="og:description" content="开源免费的 AI Agent 婚恋匹配工具。替你问不好意思问的问题；心动、见面、恋爱，永远归你自己。">
-  <meta property="og:image" content="assets/img/og-cover.png">
-  <meta property="og:locale" content="zh_CN">
-  <meta name="twitter:card" content="summary_large_image">
+/* ---------- nav ---------- */
+nav{position:fixed;inset:0 0 auto 0;z-index:50;background:var(--paper);border-bottom:1px solid transparent;transition:border-color .25s,background .25s}
+nav.scrolled{border-bottom-color:var(--line);background:#fff}
+.nav-in{max-width:1120px;margin:0 auto;padding:0 28px;height:64px;display:flex;align-items:center;gap:28px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:2px;font-size:17px;text-decoration:none}
+.brand svg{width:30px;height:30px}
+.brand .en{font-family:var(--serif);font-style:italic;font-weight:400;font-size:12px;color:var(--muted);letter-spacing:1px;margin-top:4px}
+.nav-links{display:flex;gap:26px;margin-left:auto;font-size:14px;color:var(--ink-2)}
+.nav-links a{text-decoration:none;position:relative;padding:4px 0}
+.nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-2px;height:2px;background:var(--red);transition:right .25s}
+.nav-links a:hover::after{right:0}
+.nav-cta{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid transparent;cursor:pointer;transition:transform .15s,background .2s,border-color .2s,color .2s;font-family:var(--sans)}
+.btn:active{transform:translateY(1px)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-red:hover{background:var(--red-deep);border-color:var(--red-deep)}
+.btn-ghost{border-color:var(--line);background:#fff;color:var(--ink)}
+.btn-ghost:hover{border-color:var(--red);color:var(--red)}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:8px}
 
-  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" media="(prefers-color-scheme: light)">
-  <link rel="icon" type="image/svg+xml" href="assets/img/favicon-dark.svg" media="(prefers-color-scheme: dark)">
-  <link rel="apple-touch-icon" href="assets/img/hongxian-mark.svg">
+/* ---------- hero ---------- */
+header.hero{padding:150px 0 90px;position:relative;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--red);letter-spacing:2px}
+.eyebrow::before{content:"";width:26px;height:2px;background:var(--red);border-radius:2px}
+h1{font-size:clamp(34px,4.6vw,58px);line-height:1.22;letter-spacing:1px;font-weight:900;margin:18px 0 10px}
+h1 .hl{color:var(--red);position:relative;white-space:nowrap}
+h1 .hl svg{position:absolute;left:0;right:0;bottom:-6px;width:100%;height:10px}
+.hero-sub{font-size:17px;color:var(--ink-2);max-width:34em;margin:14px 0 22px}
+.slogan{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--red);color:var(--red);border-radius:999px;padding:7px 18px;font-size:13.5px;font-weight:700;background:#fff}
+.slogan i{width:7px;height:7px;border-radius:50%;background:var(--red);flex:none}
+.hero-cta{display:flex;gap:14px;margin:28px 0 8px;flex-wrap:wrap}
+.cmd{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:#E5E7EB;border-radius:10px;padding:11px 16px;font-family:var(--mono);font-size:13.5px;cursor:pointer;border:none;transition:transform .15s}
+.cmd:active{transform:translateY(1px)}
+.cmd .dollar{color:var(--orange)}
+.cmd .copy{color:var(--faint);font-family:var(--sans);font-size:12px;border-left:1px solid #4B5563;padding-left:10px}
+.cmd.copied .copy{color:#7CE0A0}
+.hero-points{display:flex;gap:26px;margin-top:30px;flex-wrap:wrap}
+.hp{display:flex;align-items:baseline;gap:8px;font-size:13.5px;color:var(--muted)}
+.hp b{font-family:var(--serif);font-size:26px;color:var(--ink);font-weight:700;line-height:1}
+.hp b.red{color:var(--red)}
+.hero-art{position:relative}
+.hero-art svg{width:100%;height:auto}
+.badge-demo{position:absolute;font-size:11px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted)}
 
-  <!-- 隐私自证：无字体 CDN、无统计 SDK、无预连接。全部样式脚本本地加载 -->
-  <link rel="stylesheet" href="assets/css/style.css">
+/* ---------- sections ---------- */
+section{padding:96px 0}
+.sec-head{max-width:640px;margin-bottom:52px}
+.sec-head .no{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--orange);letter-spacing:2px}
+h2{font-size:clamp(26px,3vw,38px);font-weight:900;letter-spacing:1px;line-height:1.3;margin:10px 0 12px}
+.sec-head p{color:var(--muted);font-size:15.5px}
+.alt{background:var(--paper-2)}
+.dark{background:var(--ink);color:#F3F4F6}
+.dark h2{color:#fff}
+.dark .sec-head p{color:#9CA3AF}
+
+/* how it works */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.step{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px 24px 24px;position:relative;transition:transform .25s,border-color .25s;overflow:hidden}
+.step:hover{transform:translateY(-5px);border-color:var(--red)}
+.step .num{font-family:var(--serif);font-style:italic;font-size:40px;position:absolute;top:14px;right:20px;font-weight:700;color:var(--red);opacity:.16}
+.step .ill{height:150px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.step h3{font-size:18px;font-weight:800;margin-bottom:8px;letter-spacing:.5px}
+.step p{font-size:13.5px;color:var(--muted)}
+.step .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.tag{font-size:11px;border-radius:6px;padding:2px 8px;background:var(--red-tint);color:var(--red-deep);font-weight:600}
+.tag.o{background:var(--orange-tint);color:#B45A00}
+.tag.g{background:#EAF6EF;color:var(--green)}
+.flowline{display:flex;align-items:center;justify-content:center;gap:10px;margin:34px 0 0;color:var(--muted);font-size:13px;flex-wrap:wrap}
+.flowline .dot{width:6px;height:6px;background:var(--red);border-radius:50%;flex:none}
+.flowline .ln{flex:0 0 60px;border-top:2px dashed var(--red);height:0}
+.roadmap{margin:22px auto 0;max-width:900px;border-top:1px dashed var(--line);padding-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.rm{font-size:12.5px;color:var(--muted);line-height:1.7}
+.rm .tag{display:inline-block;margin-bottom:5px}
+
+/* demo chat */
+.demo-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:center}
+.demo-note{display:inline-flex;align-items:center;gap:8px;background:var(--orange-tint);color:#B45A00;font-size:12.5px;font-weight:700;border-radius:8px;padding:6px 12px;margin-bottom:18px}
+.chat{background:#fff;border:1.5px solid var(--line);border-radius:20px;overflow:hidden}
+.chat-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--paper)}
+.chat-bar .ava{width:34px;height:34px;flex:none}
+.chat-bar .who b{font-size:14px;display:block;line-height:1.3}
+.chat-bar .who span{font-size:11px;color:var(--muted)}
+.chat-bar .live{margin-left:auto;font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px}
+.chat-bar .live i{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.chat-body{padding:20px 18px;height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;background:#fff}
+.msg{max-width:82%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.7;animation:pop .3s ease}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.y{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+.msg.u{background:var(--red);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.msg .t{display:block;font-size:10.5px;color:var(--faint);margin-top:6px}
+.msg.u .t{color:rgba(255,255,255,.65)}
+.typing{display:flex;gap:4px;padding:14px 16px;align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;border-bottom-left-radius:4px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:tp 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tp{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.chat-foot{padding:14px 16px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;background:var(--paper)}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--ink-2);transition:all .2s;font-family:var(--sans)}
+.chip:hover{border-color:var(--red);color:var(--red)}
+.chip[disabled]{opacity:.4;cursor:not-allowed}
+
+/* report sample */
+.report{max-width:860px;margin:56px auto 0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:30px 30px 26px}
+.rep-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.rep-head b{font-size:17px;font-weight:800}
+.rep-head span{font-size:12.5px;color:var(--muted)}
+.tiers{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.tier{font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:5px 14px;color:var(--muted)}
+.tier.on{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+.rep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;border-top:1px dashed var(--line);padding-top:20px}
+.rep-grid h4{font-size:13px;letter-spacing:1px;color:var(--red-deep);margin-bottom:6px}
+.rep-grid p{font-size:13px;color:var(--ink-2);line-height:1.75}
+.rep-foot{margin-top:18px;font-size:12px;color:var(--faint)}
+
+/* trust */
+.trust{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.tc{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px 18px;position:relative;transition:transform .25s,border-color .25s}
+.tc:hover{transform:translateY(-4px);border-color:var(--red)}
+.tc .n{font-family:var(--serif);font-style:italic;font-weight:700;font-size:15px;color:var(--red);border:1.5px solid var(--red);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.tc h3{font-size:15.5px;font-weight:800;margin-bottom:6px}
+.tc h3 a{text-decoration:none}
+.tc h3 a:hover{color:var(--red)}
+.tc p{font-size:12.5px;color:var(--muted)}
+.trust-note{margin-top:26px;font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:flex-start}
+.trust-note b{color:var(--red-deep)}
+
+/* stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:8px}
+.stat{border:1px solid #374151;border-radius:16px;padding:26px 22px;background:rgba(255,255,255,.03);transition:border-color .25s,background .25s}
+.stat:hover{border-color:var(--red-2);background:rgba(232,68,92,.07)}
+.stat .v{font-family:var(--serif);font-size:44px;font-weight:700;color:#fff;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .k{font-size:13px;color:#9CA3AF;margin-top:8px}
+.stats-src{margin-top:26px;font-size:12.5px;color:#9CA3AF;display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.9}
+.stats-src .pill{border:1px solid #4B5563;border-radius:999px;padding:2px 10px;font-size:11px}
+.rings{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}
+.ring{border-radius:14px;padding:20px;font-size:12.5px;line-height:1.7}
+.ring b{display:block;font-size:14px;margin-bottom:6px}
+.r1{background:#111827;border:1px solid #374151;color:#D1D5DB}
+.r2{background:rgba(200,16,46,.16);border:1px solid rgba(232,68,92,.5);color:#FBD5DB}
+.r3{background:rgba(240,130,0,.12);border:1px solid rgba(240,130,0,.45);color:#FDE8C8}
+
+/* faq */
+.faq{max-width:780px;margin:0 auto}
+details{border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:12px;overflow:hidden;transition:border-color .25s}
+details[open]{border-color:var(--red)}
+summary{list-style:none;cursor:pointer;padding:18px 22px;font-weight:700;font-size:15.5px;display:flex;align-items:center;gap:14px}
+summary::-webkit-details-marker{display:none}
+summary .q{font-family:var(--serif);font-style:italic;color:var(--red);font-size:14px;flex:none}
+summary .ar{margin-left:auto;width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .25s;flex:none}
+details[open] summary .ar{transform:rotate(-135deg)}
+details .a{padding:0 22px 20px 50px;font-size:14px;color:var(--ink-2)}
+details .a b{color:var(--red-deep)}
+
+/* cta band */
+.cta-band{background:var(--red);color:#fff;border-radius:24px;padding:52px 56px;display:flex;align-items:center;gap:40px;position:relative;overflow:hidden}
+.cta-band::after{content:"";position:absolute;right:-60px;top:-60px;width:280px;height:280px;border:2px dashed rgba(255,255,255,.25);border-radius:50%}
+.cta-band::before{content:"";position:absolute;right:20px;bottom:-90px;width:220px;height:220px;border:2px dashed rgba(255,255,255,.18);border-radius:50%}
+.cta-band h2{color:#fff;margin:0 0 10px}
+.cta-band p{color:rgba(255,255,255,.82);font-size:14.5px;max-width:36em}
+.cta-band .right{margin-left:auto;position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.cmd.light{background:rgba(0,0,0,.28);color:#fff}
+.cmd.light .copy{color:rgba(255,255,255,.6)}
+.hosts{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px}
+.hosts span{border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px 10px;color:rgba(255,255,255,.85)}
+
+/* footer */
+footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
+.sponsor{border-bottom:1px dashed #4B5563;padding:34px 0}
+.sponsor-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:13.5px}
+.sponsor-in b{color:#F3F4F6;font-size:15px}
+.sponsor-in .warn{margin-left:auto;color:#FBD5DB;background:rgba(200,16,46,.2);border:1px solid rgba(232,68,92,.4);border-radius:8px;padding:6px 12px;font-size:12px}
+.foot-in{display:flex;gap:48px;padding-top:40px;flex-wrap:wrap}
+.foot-brand{max-width:300px}
+.foot-brand .brand{color:#F3F4F6;margin-bottom:12px}
+.foot-brand p{font-size:12.5px;line-height:1.8}
+.foot-col h4{color:#F3F4F6;font-size:13px;margin-bottom:12px;letter-spacing:1px}
+.foot-col a,.foot-col span{display:block;font-size:12.5px;color:#9CA3AF;text-decoration:none;margin-bottom:8px}
+.foot-col a:hover{color:#fff}
+.foot-col span{color:#6B7280}
+.foot-base{margin-top:36px;padding-top:20px;border-top:1px solid #374151;font-size:12px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.foot-base .lic{margin-left:auto;font-family:var(--mono);font-size:11px;color:#6B7280}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}.rv.d4{transition-delay:.32s}
+
+@media (max-width:960px){
+  .hero-grid,.demo-grid{grid-template-columns:1fr;gap:40px}
+  .steps{grid-template-columns:1fr;max-width:520px;margin:0 auto}
+  .roadmap{grid-template-columns:1fr;gap:12px}
+  .trust{grid-template-columns:repeat(2,1fr)}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .rings{grid-template-columns:1fr}
+  .rep-grid{grid-template-columns:1fr;gap:14px}
+  .cta-band{flex-direction:column;align-items:flex-start;padding:40px 32px}
+  .cta-band .right{margin-left:0}
+  .nav-links{display:none}
+}
+@media (max-width:560px){
+  .trust{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:12px}
+  .stat .v{font-size:32px}
+  section{padding:70px 0}
+  header.hero{padding:120px 0 60px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .rv{opacity:1;transform:none}
+}
+</style>
 </head>
 <body>
-  <a class="skip-link" href="#main">跳到主要内容</a>
+<a class="skip" href="#main">跳到主要内容</a>
 
-  <header class="site-header" id="top">
-    <div class="container header-inner">
-      <a class="brand" href="#top" aria-label="红线 Hongxian 首页">
-        <img src="assets/img/hongxian-mark.svg" alt="" width="36" height="36" class="brand-mark">
-        <span class="brand-text">红线 <span class="brand-en">HONGXIAN</span></span>
-      </a>
-      <button class="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="打开菜单">
-        <span class="nav-toggle-bar"></span>
-        <span class="nav-toggle-bar"></span>
-        <span class="nav-toggle-bar"></span>
-      </button>
-      <nav class="nav" aria-label="主导航">
-        <ul class="nav-links" id="nav-links">
-          <li><a href="#how">工作原理</a></li>
-          <li><a href="#demo">体验演示</a></li>
-          <li><a href="#trust">信任清单</a></li>
-          <li><a href="#data">生态数据</a></li>
-          <li><a href="#faq">常见问题</a></li>
-          <li><a class="nav-github" href="https://github.com/hongxian-dev" rel="noopener">GitHub</a></li>
-        </ul>
-      </nav>
+<nav id="nav" aria-label="主导航">
+  <div class="nav-in">
+    <a class="brand" href="#top" aria-label="红线开源工具 首页">
+      <svg viewBox="0 0 240 240" aria-hidden="true">
+        <path d="M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z" fill="none" stroke="#C8102E" stroke-width="14" stroke-linejoin="round"/>
+        <circle cx="120" cy="122" r="44" fill="#C8102E"/>
+        <path d="M88 106 C106 94 134 94 152 106" fill="none" stroke="#A60F26" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="106" cy="120" r="10" fill="#FDFBF7"/><circle cx="134" cy="120" r="10" fill="#FDFBF7"/>
+        <circle cx="108" cy="122" r="5" fill="#1F2937"/><circle cx="132" cy="122" r="5" fill="#1F2937"/>
+        <path d="M112 138 Q120 146 128 138" fill="none" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      红线<span class="en">hongxian.dev</span>
+    </a>
+    <div class="nav-links">
+      <a href="#how">工作原理</a>
+      <a href="#demo">Demo 体验</a>
+      <a href="#trust">信任清单</a>
+      <a href="#stats">透明数据</a>
+      <a href="#faq">FAQ</a>
     </div>
-  </header>
+    <div class="nav-cta">
+      <a class="btn btn-ghost btn-sm" href="https://github.com/hongxian-dev" rel="noopener">GitHub</a>
+      <a class="btn btn-red btn-sm" href="#install">安装月老</a>
+    </div>
+  </div>
+</nav>
 
-  <main id="main">
-
-    <!-- ============ ① Hero 首屏 ============ -->
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <p class="hero-eyebrow"><span class="hero-eyebrow-dot" aria-hidden="true"></span>开源 · 免费 · 数据主权归你</p>
-          <h1 id="hero-title">月老牵线，<span class="accent">红线传信</span></h1>
-          <p class="hero-lead">开源、免费的 AI Agent 婚恋匹配工具。月老帮你深度了解一个人，也让别人深度了解你——<strong>替你问不好意思问的问题</strong>；心动、见面、恋爱，永远归你自己。</p>
-          <div class="hero-cta">
-            <button class="btn btn-primary" id="install-btn" type="button" aria-expanded="false" aria-controls="install-panel">三步装上月老</button>
-            <a class="btn btn-ghost" href="#how">看看它怎么工作 ↓</a>
-          </div>
-          <ul class="badges" aria-label="项目承诺">
-            <li>开源免费</li>
-            <li>零服务端</li>
-            <li>数据只存在你的设备</li>
-            <li>永不提供撮合服务</li>
-          </ul>
-        </div>
-
-        <div class="hero-art">
-          <div class="hero-art-frame">
-            <p class="hero-art-label">SIGNAL INGRESS · 四路加权信号</p>
-            <!-- 信号汇聚构图：四路信号经加权边汇入心形，橙色结点为 AI 判断，两端为用户 Agent
-                 图形数据与 logo/final 交付包一致；橙色仍严格限于结点与流动信号 -->
-            <svg viewBox="0 0 420 350" class="hero-net" role="img" aria-label="信号汇聚图：画像、意向、偏好、边界四路信号经加权边汇聚到心形，中央橙色结点代表 AI 判断，心形下方虚线连接你的 Agent 与对方的 Agent">
-              <!-- 四路信号入边（粗细与深浅代表注意力权重） -->
-              <g fill="none" stroke="#C8102E" stroke-linecap="round">
-                <path d="M132 74 L190 120" stroke-width="2.6"/>
-                <path d="M132 138 L180 150" stroke-width="1.5" opacity="0.6"/>
-                <path d="M132 202 L180 178" stroke-width="2" opacity="0.8"/>
-                <path d="M132 268 L190 216" stroke-width="1.2" opacity="0.45"/>
-              </g>
-              <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-size="10.5" fill="#5F5E5A">
-                <text x="18" y="78">画像 · IMAGE</text>
-                <text x="18" y="142">意向 · INTENT</text>
-                <text x="18" y="206">偏好 · TASTE</text>
-                <text x="18" y="270">边界</text>
-                <text x="18" y="284" font-size="9.5" fill="#8A8F96">DEALBREAKER</text>
-              </g>
-              <g fill="#C8102E">
-                <circle cx="132" cy="74" r="3"/><circle cx="132" cy="138" r="3"/>
-                <circle cx="132" cy="202" r="3"/><circle cx="132" cy="268" r="3"/>
-              </g>
-
-              <!-- 加权心络主标志（放大居中，图形数据与 logo/final 交付包一致） -->
-              <g fill="none" stroke="#C8102E" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M 186 122 L 214 92 L 242 122 L 270 92 L 298 122 L 291 141 L 242 204 L 193 141 Z" stroke-width="3.5"/>
-                <path d="M 214 92 L 242 122" stroke-width="2" opacity="0.65"/>
-                <path d="M 270 92 L 242 122" stroke-width="2" opacity="0.65"/>
-                <path d="M 193 141 L 242 204" stroke-width="1.6" opacity="0.45"/>
-                <path d="M 291 141 L 242 204" stroke-width="1.6" opacity="0.45"/>
-                <path d="M 214 92 L 270 92" stroke-width="1.5" opacity="0.55" stroke-dasharray="2 5"/>
-              </g>
-              <g fill="#1F2937">
-                <circle cx="186" cy="122" r="6"/><circle cx="214" cy="92" r="6.5"/>
-                <circle cx="242" cy="122" r="8.5"/><circle cx="270" cy="92" r="6.5"/>
-                <circle cx="298" cy="122" r="6"/><circle cx="291" cy="141" r="5.5"/>
-                <circle cx="193" cy="141" r="5.5"/><circle cx="242" cy="204" r="8"/>
-              </g>
-              <!-- 结点橙：AI 的点睛之处（logo 交付包规则 1，整标唯一橙色） -->
-              <circle cx="242" cy="122" r="3.2" fill="#F08200" class="hero-pulse"/>
-              <!-- 动态形态：橙色信号沿轮廓循环流动（logo 交付包规则 6） -->
-              <path class="hero-flow" d="M 186 122 L 214 92 L 242 122 L 270 92 L 298 122 L 291 141 L 242 204 L 193 141 Z"
-                    pathLength="200" fill="none" stroke="#F08200" stroke-width="4" stroke-linecap="round" stroke-dasharray="7 193"/>
-
-              <!-- 底部虚线：两个 Agent 节点 -->
-              <g stroke="#C8102E" stroke-width="2.5" fill="none" stroke-dasharray="3 6">
-                <path d="M 242 204 L 202 234"/>
-                <path d="M 242 204 L 282 234"/>
-              </g>
-              <g fill="#FDFBF7" stroke="#1F2937" stroke-width="3">
-                <circle cx="202" cy="234" r="9"/><circle cx="282" cy="234" r="9"/>
-              </g>
-              <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-size="10.5" fill="#5F5E5A" text-anchor="middle">
-                <text x="202" y="256">你的 Agent</text>
-                <text x="282" y="256">对方的 Agent</text>
-              </g>
-              <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle">
-                <text x="242" y="290" font-size="11.5" fill="#B02E35" font-weight="600">两次握手 · 无自由聊天 · 无服务器</text>
-                <text x="242" y="310" font-size="11" fill="#5F5E5A">所有信号，都通向你</text>
-              </g>
-            </svg>
-          </div>
-        </div>
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow rv in">开源 · 免费 · 零知识架构</span>
+      <h1 class="rv in">把<span class="hl">红线<svg viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7 C 30 2, 60 9, 118 4" fill="none" stroke="#F08200" stroke-width="3" stroke-linecap="round"/></svg></span>交给 AI，<br>把心动留给你。</h1>
+      <p class="hero-sub rv in d1">月老 Skill 是一个运行在你自己 Agent 里的 AI 月老：通过对话了解你、生成画像，在你授权下与其他月老交换<b>加密匹配卡</b>、本地比对评估，最终把合适的人介绍给你。v1 全程本地换卡；v2 可选的加密信箱只递信，永不拆信。</p>
+      <span class="slogan rv in d1"><i></i>我们提供工具和通信基础设施，永不提供撮合服务</span>
+      <div class="hero-cta rv in d2">
+        <button class="cmd" id="cmdTop" type="button"><span class="dollar">$</span> npx @hongxian/mcp <span class="copy">复制</span></button>
+        <a class="btn btn-ghost" href="#how">看它如何工作 ↓</a>
       </div>
-
-      <!-- 三步安装面板 -->
-      <div class="container">
-        <div class="install-panel" id="install-panel" hidden>
-          <ol class="install-steps">
-            <li>
-              <h3>安装月老</h3>
-              <p>一条命令，或在你常用的 Agent 里添加自定义 MCP：</p>
-              <div class="code-block">
-                <code id="install-cmd">npx -y @hongxian/mcp@latest</code>
-                <button class="copy-btn" type="button" data-copy-target="install-cmd" aria-label="复制安装命令">复制</button>
-              </div>
-            </li>
-            <li>
-              <h3>完成知情同意，备份恢复短语</h3>
-              <p>首次启动只有一页说明：收集什么、存在哪、如何随时删除。恢复短语是你的身份，请离线保管好。</p>
-            </li>
-            <li>
-              <h3>对宿主说「你好，月老」</h3>
-              <p>开始第一次访谈，大约一杯咖啡的时间，建立你的画像。</p>
-            </li>
-          </ol>
-          <p class="install-note">已支持桌面宿主：WorkBuddy · Claude Desktop / Code · Codex CLI · 豆包桌面版 · 千问 · Cursor · Cline · Cherry Studio（手机 App 端暂不支持）。安装不超过 3 步。</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ ② 它是怎么工作的 ============ -->
-    <section class="section" id="how" aria-labelledby="how-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">02 / 它是怎么工作的</p>
-          <h2 id="how-title">相亲的低效，低在「过程税」</h2>
-          <p class="lead">时间要对齐、自我介绍要重复、好问题不好意思问、被拒了下不来台。月老把这些成本降到趋近于零：画像一次建立、千次复用；异步交换，无需对方在线；多个候选并行评估；<strong>敏感的问题，AI 问起来没有社交代价</strong>。</p>
-        </div>
-
-        <div class="how-grid">
-          <figure class="how-card">
-            <figcaption>
-              <h3><span class="num">01</span>两次握手，没有闲聊</h3>
-              <p>你和自己的月老日常对话；两位月老之间只有两次结构化握手——互换加密名片、互换意向封。<strong>没有自由聊天</strong>，不越权代理表态，不泄露信息面。</p>
-            </figcaption>
-            <div class="illus-box">
-            <svg viewBox="0 0 680 250" class="illus" role="img" aria-label="通信模型：主人甲与月老甲日常对话，月老甲与月老乙仅两次结构化握手，月老乙与主人乙日常对话，全程无服务器">
-              <defs>
-                <marker id="arr-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </marker>
-              </defs>
-              <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif">
-                <rect x="30" y="70" width="118" height="64" rx="8" fill="#FDFBF7" stroke="#5F5E5A" stroke-width="1"/>
-                <text x="89" y="95" text-anchor="middle" font-size="15" font-weight="600" fill="#1F2937">主人甲</text>
-                <text x="89" y="118" text-anchor="middle" font-size="11.5" fill="#5F5E5A">提需求 · 做决定</text>
-                <rect x="200" y="70" width="118" height="64" rx="8" fill="#FDFBF7" stroke="#C8102E" stroke-width="1.2"/>
-                <text x="259" y="95" text-anchor="middle" font-size="15" font-weight="600" fill="#1F2937">月老甲</text>
-                <text x="259" y="118" text-anchor="middle" font-size="11.5" fill="#5F5E5A">建画像 · 比对 · 汇报</text>
-                <rect x="362" y="70" width="118" height="64" rx="8" fill="#FDFBF7" stroke="#C8102E" stroke-width="1.2"/>
-                <text x="421" y="95" text-anchor="middle" font-size="15" font-weight="600" fill="#1F2937">月老乙</text>
-                <text x="421" y="118" text-anchor="middle" font-size="11.5" fill="#5F5E5A">建画像 · 比对 · 汇报</text>
-                <rect x="532" y="70" width="118" height="64" rx="8" fill="#FDFBF7" stroke="#5F5E5A" stroke-width="1"/>
-                <text x="591" y="95" text-anchor="middle" font-size="15" font-weight="600" fill="#1F2937">主人乙</text>
-                <text x="591" y="118" text-anchor="middle" font-size="11.5" fill="#5F5E5A">提需求 · 做决定</text>
-                <line x1="150" y1="102" x2="198" y2="102" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arr-g)" marker-start="url(#arr-g)"/>
-                <line x1="320" y1="102" x2="360" y2="102" stroke="#C8102E" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr-g)" marker-start="url(#arr-g)"/>
-                <line x1="482" y1="102" x2="530" y2="102" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arr-g)" marker-start="url(#arr-g)"/>
-                <text x="340" y="40" text-anchor="middle" font-size="12.5" fill="#B02E35">第一次握手：互换加密名片</text>
-                <text x="340" y="58" text-anchor="middle" font-size="12.5" fill="#B02E35">第二次握手：互换意向封</text>
-                <text x="174" y="164" text-anchor="middle" font-size="11.5" fill="#5F5E5A">日常对话 · 报告 · 复盘</text>
-                <text x="340" y="164" text-anchor="middle" font-size="11.5" fill="#B02E35">仅结构化握手，无自由聊天</text>
-                <text x="506" y="164" text-anchor="middle" font-size="11.5" fill="#5F5E5A">日常对话 · 报告 · 复盘</text>
-                <text x="340" y="210" text-anchor="middle" font-size="12" fill="#1F2937">v1 全程无服务器 · 每条连线都走你的设备或当面信道</text>
-                <circle cx="89" cy="216" r="2.5" fill="#F08200"/><circle cx="591" cy="216" r="2.5" fill="#F08200"/>
-              </g>
-            </svg>
-            </div>
-          </figure>
-
-          <figure class="how-card">
-            <figcaption>
-              <h3><span class="num">02</span>三阶信息阶梯</h3>
-              <p>信息一层比一层深，每一阶升级都要<strong>双方同意</strong>，且<strong>对称互换</strong>——你给多少，才能拿多少。身份证号、精确住址、精确收入、聊天记录，任何一阶都不收。</p>
-            </figcaption>
-            <div class="illus-box">
-            <svg viewBox="0 0 680 330" class="illus" role="img" aria-label="三阶信息阶梯：名片层、深聊层、见面层，每阶升级需双方同意且信息对称互换">
-              <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif">
-                <defs>
-                  <marker id="arr-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </marker>
-                </defs>
-                <rect x="30" y="170" width="190" height="110" rx="10" fill="#FDFBF7" stroke="#5F5E5A" stroke-width="1"/>
-                <text x="46" y="196" font-size="14.5" font-weight="600" fill="#1F2937">第一阶 · 名片层</text>
-                <text x="46" y="218" font-size="11.5" fill="#5F5E5A">递名片时可见</text>
-                <text x="46" y="240" font-size="11.5" fill="#5F5E5A">昵称 · 年龄段 · 城市 · 婚况</text>
-                <text x="46" y="258" font-size="11.5" fill="#5F5E5A">职业大类 · 兴趣标签</text>
-                <text x="46" y="276" font-size="11.5" fill="#5F5E5A">一句话自我介绍 · 目标声明</text>
-                <rect x="245" y="120" width="190" height="160" rx="10" fill="#FDFBF7" stroke="#C8102E" stroke-width="1.2"/>
-                <text x="261" y="146" font-size="14.5" font-weight="600" fill="#1F2937">第二阶 · 深聊层</text>
-                <text x="261" y="168" font-size="11.5" fill="#5F5E5A">双方同意进一步认识后</text>
-                <text x="261" y="190" font-size="11.5" fill="#5F5E5A">真实照片 1–3 张</text>
-                <text x="261" y="208" font-size="11.5" fill="#5F5E5A">价值观问答与故事原文</text>
-                <text x="261" y="226" font-size="11.5" fill="#5F5E5A">生活方式 · 家庭观 · 消费观</text>
-                <text x="261" y="244" font-size="11.5" fill="#5F5E5A">房车等硬条件概况</text>
-                <text x="261" y="262" font-size="11.5" fill="#5F5E5A">各自的 dealbreaker 清单</text>
-                <rect x="460" y="70" width="190" height="210" rx="10" fill="#FCEBEB" stroke="#C8102E" stroke-width="1.2"/>
-                <text x="476" y="96" font-size="14.5" font-weight="600" fill="#1F2937">第三阶 · 见面层</text>
-                <text x="476" y="118" font-size="11.5" fill="#5F5E5A">约定线下见面之前</text>
-                <text x="476" y="140" font-size="11.5" fill="#5F5E5A">微信号 / 手机号（你自选）</text>
-                <text x="476" y="158" font-size="11.5" fill="#5F5E5A">真实姓名 · 工作单位</text>
-                <text x="476" y="176" font-size="11.5" fill="#5F5E5A">常去区域（到商圈为止）</text>
-                <text x="476" y="194" font-size="11.5" fill="#5F5E5A">见面锦囊（话题准备）</text>
-                <text x="476" y="212" font-size="11.5" fill="#5F5E5A">安全提示 · 反诈终检（自动附）</text>
-                <line x1="222" y1="172" x2="241" y2="158" stroke="#B02E35" stroke-width="1.5" marker-end="url(#arr-r)"/>
-                <line x1="437" y1="122" x2="456" y2="108" stroke="#B02E35" stroke-width="1.5" marker-end="url(#arr-r)"/>
-                <text x="340" y="312" text-anchor="middle" font-size="12" fill="#1F2937">每一阶升级都需双方同意 · 信息对称互换（你给多少，才能拿多少）</text>
-                <text x="340" y="330" text-anchor="middle" font-size="12" fill="#5F5E5A">永不收集：身份证号 · 精确住址 · 精确收入数字 · 聊天记录</text>
-              </g>
-            </svg>
-            </div>
-          </figure>
-
-          <figure class="how-card">
-            <figcaption>
-              <h3><span class="num">03</span>双盲决策，静默拒绝</h3>
-              <p>换卡后，各自的月老在本地比对，<strong>各自主人独立看报告、独立决定</strong>。在双方同意之前，任何决定对另一方不可见。婉拒时，对方收不到任何被拒信号——被拒没有情绪损耗，也不用担心伤面子。</p>
-            </figcaption>
-            <div class="illus-box">
-            <svg viewBox="0 0 680 260" class="illus" role="img" aria-label="双盲静默机制：两人各自看自己的报告，决定互不可见，婉拒则静默无痕">
-              <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif">
-                <rect x="40" y="40" width="240" height="180" rx="10" fill="#FDFBF7" stroke="#5F5E5A" stroke-width="1"/>
-                <text x="160" y="68" text-anchor="middle" font-size="14.5" font-weight="600" fill="#1F2937">你这边</text>
-                <rect x="62" y="86" width="196" height="52" rx="8" fill="#FCEBEB" stroke="#C8102E" stroke-width="1"/>
-                <text x="160" y="107" text-anchor="middle" font-size="12" fill="#B02E35">本地比对报告（五档结论）</text>
-                <text x="160" y="126" text-anchor="middle" font-size="11" fill="#5F5E5A">只属于你，对方永远看不到</text>
-                <text x="160" y="164" text-anchor="middle" font-size="11.5" fill="#5F5E5A">你的决定 ⇄ 只进你的手账</text>
-                <text x="160" y="186" text-anchor="middle" font-size="11.5" fill="#5F5E5A">婉拒 ＝ 静默，无任何信号传出</text>
-                <rect x="400" y="40" width="240" height="180" rx="10" fill="#FDFBF7" stroke="#5F5E5A" stroke-width="1"/>
-                <text x="520" y="68" text-anchor="middle" font-size="14.5" font-weight="600" fill="#1F2937">对方那边</text>
-                <rect x="422" y="86" width="196" height="52" rx="8" fill="#FCEBEB" stroke="#C8102E" stroke-width="1"/>
-                <text x="520" y="107" text-anchor="middle" font-size="12" fill="#B02E35">另一份本地比对报告</text>
-                <text x="520" y="126" text-anchor="middle" font-size="11" fill="#5F5E5A">同样只属于对方</text>
-                <text x="520" y="164" text-anchor="middle" font-size="11.5" fill="#5F5E5A">对方的决定 ⇄ 只进对方的手账</text>
-                <text x="520" y="186" text-anchor="middle" font-size="11.5" fill="#5F5E5A">是否已读已想，月老不假装知道</text>
-                <line x1="286" y1="130" x2="394" y2="130" stroke="#5F5E5A" stroke-width="1.5" stroke-dasharray="4 4"/>
-                <text x="340" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#1F2937">决定互不可见</text>
-                <text x="340" y="150" text-anchor="middle" font-size="11.5" fill="#5F5E5A">直到双方都愿意</text>
-                <text x="340" y="242" text-anchor="middle" font-size="12" fill="#1F2937">月老只递线，不牵线——心动归你，见面也归你</text>
-              </g>
-            </svg>
-            </div>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ ③ Demo 体验区（墨底深水区） ============ -->
-    <section class="section section-deep" id="demo" aria-labelledby="demo-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">03 / Demo 体验区</p>
-          <h2 id="demo-title">和月老聊三句</h2>
-          <p class="lead">「Agent 替我相亲」必须被体验，而不是被解释。下面是一次预设脚本演示——纯前端运行，<strong>不调用任何模型，也不发起任何网络请求</strong>。真实的访谈更深、更慢，也由你自己掌握节奏。</p>
-        </div>
-
-        <div class="demo-grid">
-          <div class="chat" id="chat" aria-live="polite">
-            <div class="chat-head">
-              <img src="assets/img/hongxian-mark.svg" alt="" width="28" height="28">
-              <span class="chat-name">月老</span>
-              <span class="demo-tag">演示</span>
-            </div>
-            <div class="chat-body" id="chat-body">
-              <!-- 消息由 main.js 注入 -->
-            </div>
-            <div class="chat-options" id="chat-options" hidden>
-              <!-- 选项按钮由 main.js 注入 -->
-            </div>
-            <div class="chat-foot">
-              <button class="btn btn-small btn-ghost" id="demo-restart" type="button" hidden>重新演示</button>
-              <button class="btn btn-small btn-primary" id="demo-report-btn" type="button" hidden>看看月老能给出什么样的报告 →</button>
-            </div>
-          </div>
-
-          <div class="report-wrap" id="report-wrap" hidden>
-            <div class="report" role="figure" aria-label="样例匹配报告">
-              <div class="report-head">
-                <p class="report-title">红线匹配报告</p>
-                <span class="report-private">只属于你</span>
-              </div>
-              <p class="report-meta">对象：林间风 · 32 岁 · 杭州</p>
-              <div class="report-tier">
-                <p><span class="tier-name">值得见面</span><span class="tier-rank">五档中的第四档</span></p>
-                <p class="tier-basis">依据：3 项硬性条件全部符合 · 6 处共鸣 · 无硬伤预警</p>
-              </div>
-              <p class="report-label">共鸣点</p>
-              <p class="report-text">你们都把「周末爬山」写进生活方式，还常去同一片山；都提到「希望三年内安定下来」。</p>
-              <p class="report-label">可聊差异（破冰建议）</p>
-              <p class="report-text">对方是夜跑族，你是清晨徒步派——开场可以聊「运动节奏怎么互相迁就」。</p>
-              <p class="report-label">硬伤预警</p>
-              <p class="report-text">无。</p>
-              <p class="report-foot">结论均有双方画像原文作依据 · 对方永远看不到本报告</p>
-            </div>
-            <div class="tier-strip" aria-label="五档结论">
-              <span class="tier">缘分未至</span>
-              <span class="tier">可以聊聊</span>
-              <span class="tier">值得认识</span>
-              <span class="tier tier-on">值得见面</span>
-              <span class="tier">别错过</span>
-            </div>
-            <p class="report-note">对话热度 ≠ 真人合适。报告由你配置的模型生成，仅供参考；画像内容为本人自述，未经平台核验。</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ ④ 信任清单 ============ -->
-    <section class="section" id="trust" aria-labelledby="trust-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">04 / 信任清单</p>
-          <h2 id="trust-title">你不必信任我们，你可以自己验证</h2>
-          <p class="lead">开源是必要条件，不是充分条件——你信任的不该是「代码公开」，而是「平台没有作恶的能力」。以下每一步，你都可以亲自执行。</p>
-        </div>
-        <ol class="trust-list">
-          <li class="trust-step">
-            <span class="trust-num">1</span>
-            <div>
-              <h3>读源码</h3>
-              <p>Skill 与协议代码全量开源（Apache-2.0），放在 GitHub 上，每一行都可审查。匹配计算发生在你的设备，不在我们这里。</p>
-            </div>
-          </li>
-          <li class="trust-step">
-            <span class="trust-num">2</span>
-            <div>
-              <h3>抓包看流量</h3>
-              <p>运行全程，出网流量只有密文和一条匿名计数；关掉计数开关，出网为零。技术用户可以用 Wireshark 自行验证。</p>
-            </div>
-          </li>
-          <li class="trust-step">
-            <span class="trust-num">3</span>
-            <div>
-              <h3>核对安装包哈希</h3>
-              <p>每次发布附带 <code>SHA256SUMS.txt</code>，README 提供核对命令——防止改装版 Skill 外传你的画像。</p>
-            </div>
-          </li>
-          <li class="trust-step">
-            <span class="trust-num">4</span>
-            <div>
-              <h3>一键删除数据</h3>
-              <p>一条命令清空本地全部数据，磁盘无残留。已解锁交给对方的明文无法远程撤回——这个丑话，我们在你第一次使用前就说清楚。</p>
-            </div>
-          </li>
-          <li class="trust-step">
-            <span class="trust-num">5</span>
-            <div>
-              <h3>（v2）自托管交换服务</h3>
-              <p>多疑的用户可以把信任转移给自己：docker 一键部署，官方实例只是「其中之一」。</p>
-            </div>
-          </li>
-        </ol>
-        <p class="trust-foot">顺便说一句：本页无 Cookie、无统计 SDK、无字体 CDN——这个网站自己就是隐私声明。</p>
-      </div>
-    </section>
-
-    <!-- ============ ⑤ 透明数据区（墨底深水区） ============ -->
-    <section class="section section-deep" id="data" aria-labelledby="data-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">05 / 红线生态健康数据</p>
-          <h2 id="data-title">连数据，都摊开给你看</h2>
-          <p class="lead">以下数字来自月老 Skill 的 <strong>opt-in 匿名上报</strong>（默认关闭，安装时明示）：无用户 ID、无 IP 记录、无时间戳关联，客户端先匿名化再上报。<strong>男女比例</strong>是这个页面的战略价值——双边市场是否失衡，需要早期预警。</p>
-        </div>
-
-        <div class="stats-grid" id="stats-grid">
-          <div class="stat-card"><p class="stat-num" id="stat-cards">—</p><p class="stat-label">累计建卡数</p></div>
-          <div class="stat-card"><p class="stat-num" id="stat-active">—</p><p class="stat-label">近 30 天活跃卡数</p></div>
-          <div class="stat-card"><p class="stat-num" id="stat-exchanges">—</p><p class="stat-label">名片交换次数</p></div>
-          <div class="stat-card stat-wide">
-            <p class="stat-label">性别比例</p>
-            <div class="bar" id="stat-gender" hidden>
-              <div class="bar-seg bar-f" id="bar-f"><span id="bar-f-num">0</span></div>
-              <div class="bar-seg bar-m" id="bar-m"><span id="bar-m-num">0</span></div>
-            </div>
-            <p class="stat-empty" id="gender-empty">等待第一个用户</p>
-          </div>
-          <div class="stat-card stat-wide">
-            <p class="stat-label">年龄段分布</p>
-            <div class="bar bar-stacked" id="stat-age" hidden>
-              <!-- 年龄段条由 main.js 注入 -->
-            </div>
-            <p class="stat-empty" id="age-empty">等待第一个用户</p>
-          </div>
-        </div>
-
-        <p class="stats-empty-lead" id="stats-empty" hidden>第一批数据，等待第一个用户。安装月老并在知情同意页打开匿名计数，这里就会亮起来。</p>
-
-        <details class="stats-detail">
-          <summary>计数是怎么工作的？</summary>
-          <p>一个独立于月老与协议的纯计数器（Cloudflare Worker + KV），法律性质约等于网站访问计数器：它不存储任何用户数据、不参与任何匹配流程、不认识任何用户。写端点限速并带工作量证明，防止刷数字——数字被刷爆，反而会反噬信任。</p>
-        </details>
-      </div>
-    </section>
-
-    <!-- ============ ⑥ FAQ ============ -->
-    <section class="section" id="faq" aria-labelledby="faq-title">
-      <div class="container">
-        <div class="faq-layout">
-          <aside class="faq-aside">
-            <p class="eyebrow">常见问题</p>
-            <h2 id="faq-title">先把丑话说完</h2>
-            <p>这八条是用户最常问、也最容易被含糊带过的问题。我们把它写在最显眼的位置——包括对我们不利的那些。</p>
-          </aside>
-          <div class="faq-list">
-          <details class="faq-item">
-            <summary>这是婚介所吗？</summary>
-            <p>不是。我们提供工具和通信基础设施，<strong>永不提供撮合服务</strong>。匹配计算发生在你自己的设备上，由你自己的 Agent 完成。我们不排序、不评估、不推荐，也看不到你的任何内容。</p>
-          </details>
-          <details class="faq-item">
-            <summary>我的数据存在哪？</summary>
-            <p>你的设备里。画像、卡片、报告只落本地；平台不收集、不存储、不传输明文。设备丢失 = 数据丢失——这是我们换取「零存储」定位的代价，第一次启动时会明确告诉你。</p>
-          </details>
-          <details class="faq-item">
-            <summary>怎么收费？</summary>
-            <p>不收费。开源免费，<strong>永远不收取任何与婚介相关的费用</strong>。页脚的赞助入口是自愿支持开源项目开发，与任何婚介服务无关，也影响不了任何功能。</p>
-          </details>
-          <details class="faq-item">
-            <summary>用 AI 要花多少钱？</summary>
-            <p>推理走你自己配置的模型（自备 Key），各付各的 token，对称公平。交换动作——加解密、扫码、传文件——是纯本地密码学运算，零 token。也提供「省 token 模式」：结构化字段算法初筛（零 token），LLM 只用于生成报告叙事。</p>
-          </details>
-          <details class="faq-item">
-            <summary>支持哪些 Agent？手机能用吗？</summary>
-            <p>任何支持本地 MCP 的桌面宿主：WorkBuddy、Claude Desktop / Code、Codex CLI、豆包桌面版、千问、Cursor、Cline、Cherry Studio。手机 App 端暂时不支持——没有本地文件系统、不开放自装 MCP，这是两个硬障碍，我们不糊弄你。</p>
-          </details>
-          <details class="faq-item">
-            <summary>对方会看到我的报告吗？</summary>
-            <p>永远不会。报告只属于你。双方月老之间只有结构化握手，没有自由聊天；你的 dealbreaker、你的复盘笔记，都只留在你的设备上。</p>
-          </details>
-          <details class="faq-item">
-            <summary>怎么删除数据？删得掉吗？</summary>
-            <p>本地数据随时一键全删，卸载即无痕（本来就没有服务端）。但有一件事必须说清楚：已经解锁交给对方的明文，无法远程撤回——P2P 架构没有撤销信道，唯一兜底是卡片到期自动过期。首次启动的知情同意页会写明这一点。</p>
-          </details>
-          <details class="faq-item">
-            <summary>报告是 AI 生成的，可信吗？</summary>
-            <p>报告由你配置的模型生成，页面与报告均标注 AI 生成；画像内容为本人自述，<strong>未经平台核验</strong>。每条结论都能追溯到双方画像原话——看得见「为什么」，才谈得上自己判断。</p>
-          </details>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- ============ ⑦ 页脚 + 赞助区 ============ -->
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <img src="assets/img/hongxian-logo-dark.svg" alt="红线 Hongxian" width="180" height="71">
-          <p>用开源技术和最小的成本，缓解「年轻人找不到对象」的社会问题——先当可证伪的实验做，验证成立再当事业讲。</p>
-        </div>
-        <nav class="footer-col" aria-label="产品">
-          <h2>产品</h2>
-          <ul>
-            <li><a href="#how">工作原理</a></li>
-            <li><a href="#demo">体验演示</a></li>
-            <li><a href="#trust">信任清单</a></li>
-            <li><a href="#data">生态健康数据</a></li>
-            <li><a href="#faq">常见问题</a></li>
-          </ul>
-        </nav>
-        <nav class="footer-col" aria-label="资源">
-          <h2>资源</h2>
-          <ul>
-            <li><a href="https://github.com/hongxian-dev" rel="noopener">GitHub 组织</a></li>
-            <li><a href="https://github.com/hongxian-dev/yuelao-skill" rel="noopener">月老 Skill 源码</a></li>
-            <li><a href="https://github.com/hongxian-dev/hongxian-protocol" rel="noopener">红线协议规范 v0（草案）</a></li>
-            <li><a href="https://github.com/hongxian-dev/site" rel="noopener">本站源码</a></li>
-          </ul>
-        </nav>
-        <nav class="footer-col" aria-label="许可与立场">
-          <h2>许可与立场</h2>
-          <ul>
-            <li>Skill：Apache-2.0</li>
-            <li>交换服务（v2）：AGPL-3.0</li>
-            <li>工具语态，不是服务语态</li>
-            <li>永不进入婚介经营</li>
-          </ul>
-        </nav>
-      </div>
-
-      <!-- 赞助区：与产品功能区物理隔离，措辞与婚介彻底切割 -->
-      <aside class="sponsor" aria-label="赞助区">
-        <div class="sponsor-text">
-          <h2>支持这个开源项目继续开发</h2>
-          <p>赞助是自愿的开源支持，<strong>本工具不收取任何与婚介相关的费用</strong>。赞助不影响任何功能，也不建立任何服务关系。</p>
-        </div>
-        <div class="sponsor-links">
-          <!-- 爱发电 / GitHub Sponsors 账号就绪后替换为真实链接与二维码 -->
-          <a class="btn btn-ghost btn-small" href="https://github.com/sponsors/hongxian-dev" rel="noopener">GitHub Sponsors</a>
-          <a class="btn btn-ghost btn-small" href="#" aria-disabled="true">爱发电（筹备中）</a>
-        </div>
-      </aside>
-
-      <div class="footer-bottom">
-        <p>© <span id="year">2026</span> 红线 Hongxian · 隐私自证：无 Cookie · 无统计 SDK · 无字体 CDN</p>
-        <p class="footer-disclaimer">画像内容为本人自述，未经平台核验；报告由 AI 模型生成，仅供参考。</p>
-        <!-- ICP 备案号占位：境内镜像站（hongxian.cn）备案通过后填入此处 -->
+      <div class="hero-points rv in d3">
+        <div class="hp"><b class="red">0</b>追踪 · 无 Cookie 无统计 SDK</div>
+        <div class="hp"><b class="red">0</b>服务端依赖 · v1 全程本地</div>
+        <div class="hp"><b>3</b>层独立加密信封</div>
+        <div class="hp"><b>24</b>词恢复短语即身份</div>
       </div>
     </div>
-  </footer>
+    <div class="hero-art rv in d2" aria-hidden="true">
+      <svg viewBox="0 0 520 420" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <defs>
+          <path id="wire" d="M96 210 C 150 210, 160 150, 210 150 L 310 150 C 360 150, 370 210, 424 210" fill="none"/>
+        </defs>
+        <!-- 主人节点 -->
+        <g font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">
+          <circle cx="66" cy="210" r="30" fill="#fff" stroke="#1F2937" stroke-width="2"/>
+          <circle cx="57" cy="204" r="4" fill="#1F2937"/><circle cx="75" cy="204" r="4" fill="#1F2937"/>
+          <path d="M58 218 Q66 225 74 218" fill="none" stroke="#1F2937" stroke-width="2.5" stroke-linecap="round"/>
+          <text x="66" y="262" text-anchor="middle" font-size="13" fill="#6B7280">主人甲</text>
+          <circle cx="454" cy="210" r="30" fill="#fff" stroke="#1F2937" stroke-width="2"/>
+          <circle cx="445" cy="204" r="4" fill="#1F2937"/><circle cx="463" cy="204" r="4" fill="#1F2937"/>
+          <path d="M446 218 Q454 225 462 218" fill="none" stroke="#1F2937" stroke-width="2.5" stroke-linecap="round"/>
+          <text x="454" y="262" text-anchor="middle" font-size="13" fill="#6B7280">主人乙</text>
+          <!-- 月老节点：M1 线球小月老徽样（额印星芒 + 缠线，≡ 品牌规范） -->
+          <g>
+            <circle cx="210" cy="150" r="38" fill="#C8102E"/>
+            <path d="M 232 128 C 244 136 246 148 240 158" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+            <path d="M 184 166 C 198 178 222 177 236 165" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+            <path d="M210 119 L211.2 122.4 L214.6 123.6 L211.2 124.8 L210 128.2 L208.8 124.8 L205.4 123.6 L208.8 122.4 Z" fill="#F08200"/>
+            <circle cx="199" cy="153" r="7" fill="#FDFBF7"/><circle cx="221" cy="153" r="7" fill="#FDFBF7"/>
+            <circle cx="200.5" cy="154.5" r="3.2" fill="#1F2937"/><circle cx="219.5" cy="154.5" r="3.2" fill="#1F2937"/>
+            <path d="M204 166 Q210 171 216 166" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+          </g>
+          <text x="210" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#C8102E">月老甲</text>
+          <g>
+            <circle cx="310" cy="150" r="38" fill="#C8102E"/>
+            <path d="M 332 128 C 344 136 346 148 340 158" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+            <path d="M 284 166 C 298 178 322 177 336 165" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+            <path d="M310 119 L311.2 122.4 L314.6 123.6 L311.2 124.8 L310 128.2 L308.8 124.8 L305.4 123.6 L308.8 122.4 Z" fill="#F08200"/>
+            <circle cx="299" cy="153" r="7" fill="#FDFBF7"/><circle cx="321" cy="153" r="7" fill="#FDFBF7"/>
+            <circle cx="300.5" cy="154.5" r="3.2" fill="#1F2937"/><circle cx="319.5" cy="154.5" r="3.2" fill="#1F2937"/>
+            <path d="M304 166 Q310 171 316 166" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+          </g>
+          <text x="310" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#C8102E">月老乙</text>
+        </g>
+        <!-- 连线 -->
+        <path d="M96 210 C 150 210, 160 150, 210 150" fill="none" stroke="#9CA3AF" stroke-width="2"/>
+        <path d="M310 150 C 360 150, 370 210, 424 210" fill="none" stroke="#9CA3AF" stroke-width="2"/>
+        <path d="M248 150 L 272 150" fill="none" stroke="#C8102E" stroke-width="2.5" stroke-dasharray="5 4"/>
+        <!-- 信号流 -->
+        <path d="M96 210 C 150 210, 160 150, 210 150 L 310 150 C 360 150, 370 210, 424 210" fill="none" stroke="#C8102E" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round">
+          <animate attributeName="stroke-dashoffset" from="48" to="0" dur="1.6s" repeatCount="indefinite"/>
+        </path>
+        <!-- 加密信封在月老间传递 -->
+        <g>
+          <rect x="-13" y="-9" width="26" height="18" rx="3" fill="#FDFBF7" stroke="#C8102E" stroke-width="2"/>
+          <path d="M-13 -9 L0 2 L13 -9" fill="none" stroke="#C8102E" stroke-width="2"/>
+          <circle cx="0" cy="4" r="3" fill="#C8102E"/>
+          <animateMotion dur="3.2s" repeatCount="indefinite" rotate="0">
+            <mpath xlink:href="#wire" href="#wire"/>
+          </animateMotion>
+        </g>
+        <!-- 标注 -->
+        <g font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11.5" fill="#6B7280">
+          <text x="260" y="232" text-anchor="middle" fill="#C8102E" font-weight="700">仅结构化握手 · 全程密文</text>
+          <text x="150" y="196" text-anchor="middle">日常对话 · 报告</text>
+          <text x="372" y="196" text-anchor="middle">日常对话 · 报告</text>
+        </g>
+        <!-- 底部心结：M4 线团之心（品牌符号，≡ 品牌规范） -->
+        <g transform="translate(212,248) scale(0.4)">
+          <path d="M 120 200 C 70 164 36 128 36 92 C 36 66 56 54 78 60 C 96 65 112 80 120 96 C 128 80 144 65 162 60 C 184 54 204 66 204 92 C 204 128 170 164 120 200 Z" fill="none" stroke="#C8102E" stroke-width="9" stroke-linejoin="round"/>
+          <path d="M 120 200 C 118 210 110 214 102 212" fill="none" stroke="#C8102E" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="120" cy="122" r="52" fill="#FDFBF7"/>
+          <circle cx="120" cy="122" r="44" fill="#C8102E"/>
+          <path d="M 88 106 C 106 94 134 94 152 106" fill="none" stroke="#A60F26" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="106" cy="120" r="10" fill="#FDFBF7"/><circle cx="134" cy="120" r="10" fill="#FDFBF7"/>
+          <circle cx="108" cy="122" r="5" fill="#1F2937"/><circle cx="132" cy="122" r="5" fill="#1F2937"/>
+          <path d="M 112 138 Q 120 146 128 138" fill="none" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round"/>
+        </g>
+        <text x="260" y="378" text-anchor="middle" font-size="12" fill="#6B7280" font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">一根红线，系成心结 —— 见面与心动，永远归你</text>
+      </svg>
+    </div>
+  </div>
+</header>
 
-  <script src="assets/js/main.js" defer></script>
+<main id="main">
+<!-- ============ 工作原理 ============ -->
+<section id="how" class="alt">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="no">01 / How it works</span>
+      <h2>月老如何工作：三步，且只三步</h2>
+      <p>月老消除的是相亲的"过程税"——时间同步、重复介绍、情绪损耗、客套周折。但心动、见面、恋爱，永远归主人。</p>
+    </div>
+    <div class="steps">
+      <article class="step rv">
+        <span class="num">01</span>
+        <div class="ill">
+          <svg viewBox="0 0 300 150" width="260" aria-hidden="true">
+            <rect x="18" y="18" width="120" height="34" rx="10" fill="#fff" stroke="#E7E1D6" stroke-width="2"/>
+            <text x="32" y="40" font-size="12" fill="#6B7280" font-family="'PingFang SC','Microsoft YaHei',sans-serif">周末你一般怎么过？</text>
+            <rect x="120" y="64" width="150" height="34" rx="10" fill="#FBEAEC" stroke="#C8102E" stroke-width="2"/>
+            <text x="134" y="86" font-size="12" fill="#A60F26" font-family="'PingFang SC','Microsoft YaHei',sans-serif">爬山，每月一次那种…</text>
+            <circle cx="70" cy="118" r="24" fill="#C8102E"/>
+            <path d="M70 95 L71 98.5 L74.5 99.5 L71 100.5 L70 104 L69 100.5 L65.5 99.5 L69 98.5 Z" fill="#F08200"/>
+            <circle cx="62" cy="114" r="5.5" fill="#FDFBF7"/><circle cx="78" cy="114" r="5.5" fill="#FDFBF7"/>
+            <circle cx="63.5" cy="115.5" r="2.6" fill="#1F2937"/><circle cx="76.5" cy="115.5" r="2.6" fill="#1F2937"/>
+            <path d="M64 126 Q70 131 76 126" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+            <path d="M96 112 L112 96" stroke="#F08200" stroke-width="4" stroke-linecap="round"/>
+            <path d="M112 96 L116 92" stroke="#1F2937" stroke-width="4" stroke-linecap="round"/>
+            <text x="150" y="126" font-size="11" fill="#6B7280" font-family="'PingFang SC','Microsoft YaHei',sans-serif">3 次渐进访谈 · 复述确认</text>
+          </svg>
+        </div>
+        <h3>对话建画像</h3>
+        <p>三次渐进访谈：硬事实 → 偏好与生活方式 → 价值观故事。每次结束月老复述"我理解的你是……"，你确认后才写入。dealbreakers 负面清单优先。</p>
+        <div class="tags"><span class="tag">纯本地</span><span class="tag o">可跨天</span><span class="tag g">防幻觉写歪</span></div>
+      </article>
+      <article class="step rv d1">
+        <span class="num">02</span>
+        <div class="ill">
+          <svg viewBox="0 0 300 150" width="260" aria-hidden="true">
+            <rect x="70" y="14" width="160" height="118" rx="12" fill="#fff" stroke="#1F2937" stroke-width="2.5"/>
+            <rect x="84" y="28" width="132" height="20" rx="5" fill="#F3F4F6"/>
+            <text x="92" y="42" font-size="10" fill="#374151" font-family="Consolas,monospace">meta · 公钥指纹 · TTL</text>
+            <rect x="84" y="54" width="132" height="18" rx="5" fill="#FBEAEC" stroke="#C8102E"/>
+            <text x="92" y="67" font-size="10" fill="#C8102E" font-family="Consolas,monospace">L1 公开层 · AES-256-GCM</text>
+            <rect x="84" y="77" width="132" height="18" rx="5" fill="#F7C1C1" stroke="#C8102E"/>
+            <text x="92" y="90" font-size="10" fill="#A60F26" font-family="Consolas,monospace">L2 匹配层 · dealbreakers</text>
+            <rect x="84" y="100" width="132" height="18" rx="5" fill="#C8102E"/>
+            <text x="92" y="113" font-size="10" fill="#FDFBF7" font-family="Consolas,monospace">L3 私密层 · 逐字段 opt-in</text>
+            <circle cx="248" cy="40" r="14" fill="none" stroke="#F08200" stroke-width="3"/>
+            <path d="M242 40 L247 45 L255 35" fill="none" stroke="#F08200" stroke-width="3" stroke-linecap="round"/>
+            <text x="150" y="146" text-anchor="middle" font-size="11" fill="#6B7280" font-family="'PingFang SC','Microsoft YaHei',sans-serif">Ed25519 整体签名 · 验签失败整卡作废</text>
+          </svg>
+        </div>
+        <h3>签发加密匹配卡</h3>
+        <p>一张卡 = 一个信封文件：明文 meta + 三层独立加密 payload + 整体签名。三阶信息披露是物理隔离，不存在"一张明文卡靠权限控制"。</p>
+        <div class="tags"><span class="tag">AES-256-GCM</span><span class="tag">Ed25519</span><span class="tag o">换卡即换公钥</span></div>
+      </article>
+      <article class="step rv d2">
+        <span class="num">03</span>
+        <div class="ill">
+          <svg viewBox="0 0 300 150" width="260" aria-hidden="true">
+            <circle cx="80" cy="70" r="34" fill="#C8102E"/>
+            <path d="M80 41.5 L81.2 44.8 L84.5 46 L81.2 47.2 L80 50.5 L78.8 47.2 L75.5 46 L78.8 44.8 Z" fill="#F08200"/>
+            <circle cx="70" cy="66" r="7" fill="#FDFBF7"/><circle cx="90" cy="66" r="7" fill="#FDFBF7"/>
+            <circle cx="72" cy="68" r="3.2" fill="#1F2937"/><circle cx="88" cy="68" r="3.2" fill="#1F2937"/>
+            <path d="M73 82 Q80 88 87 82" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="220" cy="70" r="34" fill="#C8102E"/>
+            <path d="M220 41.5 L221.2 44.8 L224.5 46 L221.2 47.2 L220 50.5 L218.8 47.2 L215.5 46 L218.8 44.8 Z" fill="#F08200"/>
+            <circle cx="210" cy="66" r="7" fill="#FDFBF7"/><circle cx="230" cy="66" r="7" fill="#FDFBF7"/>
+            <circle cx="212" cy="68" r="3.2" fill="#1F2937"/><circle cx="228" cy="68" r="3.2" fill="#1F2937"/>
+            <path d="M213 82 Q220 88 227 82" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+            <path d="M114 70 L 186 70" stroke="#C8102E" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <rect x="137" y="58" width="26" height="18" rx="3" fill="#FDFBF7" stroke="#C8102E" stroke-width="2"/>
+            <path d="M137 58 L150 68 L163 58" fill="none" stroke="#C8102E" stroke-width="2"/>
+            <path d="M150 34 C 143 28 139 24 139 20 C 139 16 143 14 146 15.5 C 148 16.4 149.4 18.4 150 20 C 150.6 18.4 152 16.4 154 15.5 C 157 14 161 16 161 20 C 161 24 157 28 150 34 Z" fill="#C8102E"/>
+            <text x="150" y="126" text-anchor="middle" font-size="11" fill="#6B7280" font-family="'PingFang SC','Microsoft YaHei',sans-serif">两次结构化握手 · 本地比对 · 双盲决策</text>
+            <text x="150" y="144" text-anchor="middle" font-size="11" fill="#6B7280" font-family="'PingFang SC','Microsoft YaHei',sans-serif">婉拒静默无痕 · 被拒零情绪损耗</text>
+          </svg>
+        </div>
+        <h3>月老换卡、本地比对</h3>
+        <p>两位月老仅结构化握手，无自由聊天。换卡后各自本地比对、各自主人独立看报告独立决定。报告五档三区，每个结论必须有原话依据。</p>
+        <div class="tags"><span class="tag">本地比对</span><span class="tag g">静默拒绝</span><span class="tag o">不给分数</span></div>
+      </article>
+    </div>
+    <div class="flowline rv"><span class="dot"></span><span class="ln"></span>缘分未至 → 可以聊聊 → 值得认识 → 值得见面 → 别错过<span class="ln"></span><span class="dot"></span></div>
+    <div class="roadmap rv">
+      <div class="rm"><span class="tag g">v1 · 现在可用</span><br>本地换卡：信封文件交换，零服务端</div>
+      <div class="rm"><span class="tag o">v2 · 参考实现已完成</span><br>加密信箱 + 红线广场，可自托管；官方实例待合规就绪后开放</div>
+      <div class="rm"><span class="tag">v3 · 规划中</span><br>私有看板 + 小程序</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Demo ============ -->
+<section id="demo">
+  <div class="wrap demo-grid">
+    <div class="rv">
+      <span class="no" style="font-family:var(--serif);font-style:italic;font-size:15px;color:var(--orange);letter-spacing:2px">02 / Live demo</span>
+      <h2>和月老聊三句</h2>
+      <p style="color:var(--muted);font-size:15px;margin:10px 0 18px">不需要安装，先感受月老怎么说话：温暖、克制、涉数据表述诚实。点下面的问题开始。</p>
+      <span class="demo-note">⚠ 纯前端预设脚本演示 · 未接入真实 LLM</span>
+      <ul style="list-style:none;font-size:13.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;margin-top:6px">
+        <li>· 月老不做闲聊伙伴，无推送、不主动打扰</li>
+        <li>· 不做养成游戏：互动必须有信息增量</li>
+        <li>· 涉及数据去向，必须诚实说明（"这条会经过你配置的模型"）</li>
+      </ul>
+    </div>
+    <div class="chat rv d1" aria-label="月老演示对话">
+      <div class="chat-bar">
+        <svg class="ava" viewBox="0 0 240 240" aria-hidden="true">
+          <circle cx="120" cy="128" r="86" fill="#C8102E"/>
+          <path d="M196 96 C 216 118 218 148 204 170" fill="none" stroke="#EF8A97" stroke-width="8" stroke-linecap="round"/>
+          <path d="M40 178 C 82 204 158 202 196 176" fill="none" stroke="#EF8A97" stroke-width="8" stroke-linecap="round"/>
+          <path d="M120 76 L122.5 85 L131 87.5 L122.5 90 L120 99 L117.5 90 L109 87.5 L117.5 85 Z" fill="#F08200"/>
+          <circle cx="96" cy="134" r="18" fill="#FDFBF7"/><circle cx="144" cy="134" r="18" fill="#FDFBF7"/>
+          <circle cx="99" cy="137" r="8" fill="#1F2937"/><circle cx="141" cy="137" r="8" fill="#1F2937"/>
+          <circle cx="101.5" cy="134" r="2.6" fill="#FDFBF7"/><circle cx="143.5" cy="134" r="2.6" fill="#FDFBF7"/>
+          <path d="M110 162 Q120 172 130 162" fill="none" stroke="#FDFBF7" stroke-width="7" stroke-linecap="round"/>
+        </svg>
+        <div class="who"><b>月老</b><span>Yuelao Skill · 演示人格</span></div>
+        <div class="live"><i></i>本地运行</div>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="msg y">你好，我是你的月老。我只做三件事：了解你、替你跑腿、给你介绍人。想先试试我怎么问问题吗？<span class="t">月老 · 本地人格模板</span></div>
+      </div>
+      <div class="chat-foot" id="chatFoot"></div>
+    </div>
+  </div>
+
+  <!-- 五档报告样例（PRD §8：Demo 区须含报告形态） -->
+  <div class="wrap">
+    <div class="report rv">
+      <div class="rep-head"><b>比对报告样例 · 五档三区</b><span>每个结论必须附双方原话依据 · 不给分数 · 不下判决</span></div>
+      <div class="tiers">
+        <span class="tier">缘分未至</span>
+        <span class="tier">可以聊聊</span>
+        <span class="tier on">值得认识</span>
+        <span class="tier">值得见面</span>
+        <span class="tier">别错过</span>
+      </div>
+      <div class="rep-grid">
+        <div><h4>共识</h4><p>"都想在两年内安定下来；都把周末留给户外。"——两侧受访原话一致。</p></div>
+        <div><h4>差异</h4><p>"一个想留上海，一个计划三年后回成都。"差异不是问题，但必须被问到、被选择。</p></div>
+        <div><h4>待问</h4><p>"生育计划尚未触及。"建议下一轮考题包优先，而不是留到见面现场。</p></div>
+      </div>
+      <p class="rep-foot">报告只做信息预审与引荐；见面、心动、恋爱，永远归你自己。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 信任清单 ============ -->
+<section id="trust" class="alt">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="no">03 / Trust, verifiable</span>
+      <h2>信任清单：别相信我们，去验证</h2>
+      <p>开源是必要条件，不是充分条件。你信任的不该是"代码公开"，而是"平台没有作恶的能力"。以下五步，每一步都可执行。</p>
+    </div>
+    <div class="trust">
+      <div class="tc rv"><span class="n">1</span><h3><a href="https://github.com/hongxian-dev" rel="noopener">读源码</a></h3><p>Skill Apache-2.0 / 服务端 AGPL-3.0，逐行可审查，包括这份人格模板。</p></div>
+      <div class="tc rv d1"><span class="n">2</span><h3>自己抓包</h3><p>出网流量只有密文与匿名计数。技术用户可自行抓包验证，无隐藏信道。</p></div>
+      <div class="tc rv d2"><span class="n">3</span><h3>核对哈希</h3><p>v2 起可复现构建 + 哈希公示：验证"运行的服务器"就等于"公开的代码"。</p></div>
+      <div class="tc rv d3"><span class="n">4</span><h3>一键删除</h3><p>画像、卡片、手账全在 ~/.hongxian，一键删光、磁盘无残留，无需申请。</p></div>
+      <div class="tc rv d4"><span class="n">5</span><h3><a href="https://github.com/hongxian-dev" rel="noopener">自托管</a></h3><p>多疑是把信任转移给自己：docker 一键部署参考实现，联邦互通。</p></div>
+    </div>
+    <p class="trust-note rv"><b>诚实披露：</b>画像内容为本人自述，未经平台核验；已解锁交给对方的明文无法远程撤回（无撤销信道），兜底 = TTL 自动过期 + 重签作废。我们把局限写在明面上。</p>
+  </div>
+</section>
+
+<!-- ============ 透明数据 ============ -->
+<section id="stats" class="dark">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="no" style="color:var(--orange)">04 / Transparency</span>
+      <h2>透明数据区：我们只数数，不认人</h2>
+      <p>匿名 opt-in 聚合计数，独立 Cloudflare Worker 公开只读。没有 ID、没有画像、没有日志——法律性质 ≈ 网站计数器。</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat rv"><div class="v" data-k="cards">0</div><div class="k">匹配卡签发（张）</div></div>
+      <div class="stat rv d1"><div class="v" data-k="active">0</div><div class="k">近 30 天活跃月老（位）</div></div>
+      <div class="stat rv d2"><div class="v" data-k="env">0</div><div class="k">加密信封投递（封）</div></div>
+      <div class="stat rv d3"><div class="v" data-k="plaza">0</div><div class="k">红线广场贴卡（张）</div></div>
+    </div>
+    <div class="stats-src rv"><span class="pill" id="srcPill">示例数据</span>数据源：count.hongxian.dev/stats（PoW + 限速 + 无日志）· 计数器部署后自动切换为实时数据 · 本站无 Cookie、无统计 SDK</div>
+    <div class="rings">
+      <div class="ring r1 rv"><b>第一环 · 内容环（零知识）</b>信件、画像、偏好只存你的设备；平台只见密文。永不放松。</div>
+      <div class="ring r2 rv d1"><b>第二环 · 聚合环（匿名指标）</b>建卡数、信件流量、广场热度、男女比——对外形态就是上面这块透明页。</div>
+      <div class="ring r3 rv d2"><b>第三环 · 行为分析环（授权）</b>使用频次、功能路径、设备类型，一律绑定密钥假名 ID，禁止关联真实身份；提供退出通道。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head rv" style="margin-left:auto;margin-right:auto;text-align:center">
+      <span class="no">05 / FAQ</span>
+      <h2>你可能想问</h2>
+    </div>
+    <div class="faq">
+      <details class="rv" open><summary><span class="q">Q1</span>这是婚介所吗？<span class="ar"></span></summary><div class="a"><b>不是。</b>红线不提供任何形式的撮合、排序、推荐或人工介入。匹配计算永远发生在你的设备上，服务端只负责递送密文信封——邮局投递信件，但从不拆信、不评判内容、不决定送给谁。</div></details>
+      <details class="rv"><summary><span class="q">Q2</span>我的数据存哪？<span class="ar"></span></summary><div class="a"><b>你的设备里。</b>画像、匹配卡、红线手账全部落在本地 <b>~/.hongxian/</b>。出网的只有三层加密后的密文和你 opt-in 的匿名聚合计数。平台对用户的一切了解，最多到"某个假名公钥做了什么"。</div></details>
+      <details class="rv"><summary><span class="q">Q3</span>怎么收费？<span class="ar"></span></summary><div class="a"><b>不收费，开源免费。</b>未来若收费，只允许增值层与 B 端层；数据层与撮合层永远不得收费——"付费才能被介绍"即沦为付费婚介，与定位冲突。</div></details>
+      <details class="rv"><summary><span class="q">Q4</span>AI 匹配靠谱吗？<span class="ar"></span></summary><div class="a">月老做的是<b>信息预审与引荐</b>，不是情感代餐。报告五档三区、每个结论必须有双方原话依据、不给分数；并永远提示"对话热度 ≠ 真人合适"。验证命题公开可证伪：AI 介导的深度画像匹配，是否比刷脸式筛选产生更高的线下见面转化率。</div></details>
+      <details class="rv"><summary><span class="q">Q5</span>被拒绝了会尴尬吗？<span class="ar"></span></summary><div class="a"><b>不会。</b>静默机制：婉拒时对方收不到任何被拒信号，即使对自己的主人也不透传谁是拒绝方。被拒零情绪损耗，是月老对冲"过程税"的一部分。</div></details>
+      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架：<b>npx @hongxian/mcp</b> 一行安装。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
+      <details class="rv"><summary><span class="q">Q7</span>陌生人社交，怎么防骚扰？<span class="ar"></span></summary><div class="a"><b>靠结构，不靠举报按钮。</b>① 没有自由聊天信道——月老之间只能发结构化信封（申请解锁 / 授权 / 考题包 / 婉拒），搭讪式骚扰无处发生；② 三次未回应自动拉黑，整条线不再呈报，也可随时手动拉黑；③ 婉拒静默，对方零信号；④ 见面层逐字段授权，授权前月老会做一轮反诈提示——任何涉及金钱的请求都会亮红灯；⑤ 首次启动须承诺 ≥18 岁。你可以随时撤卡、随时 <b>wipe</b> 删光全部本地数据。</div></details>
+      <details class="rv"><summary><span class="q">Q8</span>不用手机号，怎么证明"我是我"？<span class="ar"></span></summary><div class="a"><b>密钥即身份。</b>注册 = 在你设备上生成一对密钥，平台只保存公钥档案，没有手机号、邮箱或密码。你的唯一凭证是 <b>24 词恢复短语</b>——抄在纸上，别拍照存云盘。丢了它等于丢了这个身份，别人拿到它也能成为你：这是"没有中心账号"的另一面。换设备用恢复短语重建，或导出加密档案。</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ install CTA ============ -->
+<section id="install" style="padding-top:0">
+  <div class="wrap">
+    <div class="cta-band rv">
+      <div>
+        <h2>装上月老，红线开始织</h2>
+        <p>首次启动一页知情同意：收集什么、存哪里、可随时删除、云端 LLM 数据流披露、"解锁即无法撤回"明示。然后，从第一次访谈开始。</p>
+      </div>
+      <div class="right">
+        <button class="cmd light" id="cmdBottom" type="button"><span class="dollar">$</span> npx @hongxian/mcp <span class="copy">复制</span></button>
+        <div class="hosts"><span>WorkBuddy</span><span>豆包桌面版</span><span>千问</span><span>Claude Desktop</span><span>Codex CLI</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ============ footer（赞助区物理隔离） ============ -->
+<footer>
+  <div class="wrap sponsor">
+    <div class="sponsor-in">
+      <b>♥ 支持开源项目开发</b>
+      <span>爱发电 / GitHub Sponsors（部署后开放）· 你的赞助只养服务器和咖啡</span>
+      <span class="warn">明示：永不收取任何婚介相关费用 · 数据层与撮合层永不收费</span>
+    </div>
+  </div>
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <a class="brand" href="#top">
+        <svg viewBox="0 0 240 240" aria-hidden="true">
+          <path d="M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z" fill="none" stroke="#E8445C" stroke-width="14" stroke-linejoin="round"/>
+          <circle cx="120" cy="122" r="44" fill="#E8445C"/>
+          <circle cx="106" cy="120" r="10" fill="#1F2937"/><circle cx="134" cy="120" r="10" fill="#1F2937"/>
+          <path d="M112 138 Q120 146 128 138" fill="none" stroke="#1F2937" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        红线<span class="en" style="color:#6B7280">hongxian.dev</span></a>
+      <p>开源、免费的 AI Agent 婚恋匹配基础设施。先当可证伪的实验做，验证成立再当事业讲。</p>
+    </div>
+    <div class="foot-col"><h4>产品</h4><a href="#how">工作原理</a><a href="#demo">Demo 体验</a><a href="#install">安装月老 Skill</a><a href="#stats">透明数据</a></div>
+    <div class="foot-col"><h4>开发者</h4><a href="https://github.com/hongxian-dev" rel="noopener">GitHub 仓库</a><a href="https://github.com/hongxian-dev" rel="noopener">红线协议规范 v1</a><a href="#trust">信任清单</a><a href="https://github.com/hongxian-dev" rel="noopener">自托管部署（docker）</a></div>
+    <div class="foot-col"><h4>合规</h4><a href="#faq">FAQ</a><a href="#trust">隐私与数据边界</a><span>ICP 备案：准备中</span><span>境内镜像：hongxian.red（备案后上线）</span></div>
+  </div>
+  <div class="wrap foot-base">
+    <span>© 2026 红线开源工具 · 零收入公益与社会实验</span>
+    <span>本站无 Cookie · 无统计 SDK · 无追踪</span>
+    <span class="lic">Skill: Apache-2.0 · Server: AGPL-3.0</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  /* nav scroll state */
+  var nav=document.getElementById('nav');
+  var onScroll=function(){nav.classList.toggle('scrolled',window.scrollY>8)};
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+  /* reveal on scroll */
+  var io=('IntersectionObserver' in window)?new IntersectionObserver(function(es){
+    es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.12}):null;
+  document.querySelectorAll('.rv').forEach(function(el){io?io.observe(el):el.classList.add('in')});
+
+  /* copy install cmd */
+  function bindCopy(id){
+    var b=document.getElementById(id);if(!b)return;
+    b.addEventListener('click',function(){
+      var t='npx @hongxian/mcp';
+      function done(){b.classList.add('copied');b.querySelector('.copy').textContent='已复制 ✓';
+        setTimeout(function(){b.classList.remove('copied');b.querySelector('.copy').textContent='复制';},1800);}
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done);}
+      else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);done();}
+    });
+  }
+  bindCopy('cmdTop');bindCopy('cmdBottom');
+
+  /* demo chat：纯前端预设脚本 */
+  var SCRIPT=[
+    {u:null,y:'你好，我是你的月老。我只做三件事：了解你、替你跑腿、给你介绍人。想先试试我怎么问问题吗？'},
+    {u:'你怎么问问题？',y:'比如你告诉我"对方说爱旅行"，我真正要问清的是：ta 是"一年一次奖励自己"型，还是"每周末必须在路上"型。我会把这类问题变成结构化考题包，交给对方月老代答——收入、婚史、生育计划这些不好意思问的，我来问，没有社交代价。'},
+    {u:'我的数据存哪里？',y:'你的设备里。我看到的才是明文，出网的全是密文；平台连密文钥匙都没有——零知识不是承诺，是数学结构。这条回答会经过你配置的模型，我不说"只有我知道"这种话。'},
+    {u:'怎么收费？',y:'不收费。开源、免费、零收入公益。未来若收费，只可能在增值层；数据层和撮合层永远不收费——付费才能被介绍，那就沦为付费婚介了，不是我。'}
+  ];
+  var body=document.getElementById('chatBody'),foot=document.getElementById('chatFoot');
+  /* 开场白为静态 HTML（无 JS 也可见）；这里从第 2 轮接续 */
+  var idx=1,started=true,busy=false;
+  function el(cls,html){var d=document.createElement('div');d.className=cls;d.innerHTML=html;return d;}
+  function scroll(){body.scrollTop=body.scrollHeight;}
+  function addY(text){
+    var t=el('typing','<i></i><i></i><i></i>');body.appendChild(t);scroll();
+    setTimeout(function(){t.remove();body.appendChild(el('msg y',text+'<span class="t">月老 · 本地人格模板</span>'));scroll();},900+Math.min(1200,text.length*8));
+  }
+  function renderChips(){
+    foot.innerHTML='';
+    if(idx>=SCRIPT.length){var r=el('chip','↺ 重播演示');r.onclick=function(){body.innerHTML='';idx=0;started=false;renderChips();};foot.appendChild(r);return;}
+    if(!started){var s=el('chip','👋 开始：和月老打个招呼');s.onclick=function(){started=true;addY(SCRIPT[0].y);idx=1;renderChips();};foot.appendChild(s);return;}
+    var next=SCRIPT[idx];
+    if(next&&next.u){var c=el('chip',next.u);c.onclick=function(){if(busy)return;busy=true;body.appendChild(el('msg u',next.u+'<span class="t">你</span>'));scroll();idx++;setTimeout(function(){addY(next.y);busy=false;renderChips();},420);};foot.appendChild(c);}
+    var hint=el('chip','演示脚本 · 共 '+SCRIPT.length+' 轮');hint.disabled=true;foot.appendChild(hint);
+  }
+  renderChips();
+
+  /* counters + live stats fetch（失败保持示例值） */
+  var SAMPLE={cards:1284,active:326,env:3562,plaza:216};
+  var LIVE=null;
+  function fmt(n){return n.toLocaleString('zh-CN');}
+  function countUp(elm,to){
+    var t0=null,dur=1400;
+    function step(ts){if(!t0)t0=ts;var p=Math.min(1,(ts-t0)/dur);var v=Math.round(to*(1-Math.pow(1-p,3)));elm.textContent=fmt(v);if(p<1)requestAnimationFrame(step);}
+    requestAnimationFrame(step);
+  }
+  var statsDone=false;
+  function runStats(){
+    if(statsDone)return;statsDone=true;
+    var data=LIVE||SAMPLE;
+    document.querySelectorAll('.stat .v').forEach(function(v){countUp(v,data[v.dataset.k]||0);});
+  }
+  var sio=('IntersectionObserver' in window)?new IntersectionObserver(function(es){
+    es.forEach(function(e){if(e.isIntersecting){runStats();sio.disconnect();}});
+  },{threshold:.3}):null;
+  var statsSec=document.getElementById('stats');
+  if(sio&&statsSec){sio.observe(statsSec);}else{runStats();}
+  /* 拉取真实计数器：优先 d.site（站点友好块），回退 d.counters 原始键；未部署时静默保持示例值 */
+  try{
+    fetch('https://count.hongxian.dev/stats',{mode:'cors'}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){
+      var c=d&&(d.site||d.counters);
+      if(c&&typeof c.cards==='number'){
+        LIVE={cards:c.cards||0,env:c.envelopes||0,plaza:c.plaza||0,active:c.cards_active_30d||0};
+        var p=document.getElementById('srcPill');p.textContent='实时数据';p.style.borderColor='#2E7D32';p.style.color='#7CE0A0';
+        if(statsDone){document.querySelectorAll('.stat .v').forEach(function(v){v.textContent=fmt(LIVE[v.dataset.k]||0);});}
+      }
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
 </body>
 </html>
