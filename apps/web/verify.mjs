@@ -77,9 +77,9 @@ ok('计数器失败静默（catch 空处理）', /\.catch\(function\(\)\{\}\)/.t
 /* ---------- 6. 外链白名单 ---------- */
 const hosts = new Set([...html.matchAll(/https?:\/\/([^/"'\s]+)/g)].map((m) => m[1]));
 // www.w3.org 是 SVG 命名空间标识符（xmlns:xlink），不是网络请求
-const allowed = new Set(['hongxian.dev', 'github.com', 'count.hongxian.dev', 'www.w3.org']);
+const allowed = new Set(['hongxian.dev', 'github.com', 'count.hongxian.dev', 'www.w3.org', 'afdian.com']);
 const illegal = [...hosts].filter((h) => !allowed.has(h));
-ok('外链仅 hongxian.dev / github.com / count.hongxian.dev', illegal.length === 0, illegal.join(','));
+ok('外链仅 hongxian.dev / github.com / count.hongxian.dev / afdian.com', illegal.length === 0, illegal.join(','));
 
 /* ---------- 7. 品牌资产：不引用已退役的旧标文件 ---------- */
 ok('无旧标资源引用（assets/img/、hongxian-mark）', !/assets\/img\/|hongxian-mark/.test(html));
@@ -90,7 +90,22 @@ ok('内嵌 M1 额印星芒（#F08200 五角星路径）', /#F08200/.test(html));
 ok('404 页自包含（无外部样式/脚本）', !/rel=["']stylesheet|<script[^>]+src=/.test(notFound));
 ok('404 页无渐变无投影', !/(linear|radial)-gradient|box-shadow/.test(notFound));
 
-/* ---------- 9. 体积 ---------- */
+/* ---------- 9. 赞助区合规（2026-10-21 拍板：只走爱发电，站内不放个人收款码） ----------
+ * 背景：央行 259 号文禁止个人静态收款码远程非面对面收款，网站挂码属典型违规场景；
+ * GitHub Sponsors 大陆区不可收款；"礼金/谢媒礼"措辞与宪法 §12 不收费婚介费用的承诺冲突。
+ * 故赞助只能经第三方平台代收，且文案必须显式声明不对价。 */
+const spStart = html.indexOf('id="sponsor"');
+const spEnd = html.indexOf('class="wrap foot-in"');
+const sp = spStart > -1 && spEnd > spStart ? html.slice(spStart, spEnd) : '';
+ok('赞助区存在且位于页脚（物理隔离于产品区）', sp.length > 300, `${sp.length} 字符`);
+ok('赞助区不含图片 / 内嵌二维码', !/<img|data:image/i.test(sp));
+ok('全站无个人收款码字样', !/收款码图片|付款码|二维码收款/.test(html));
+ok('全站无婚介收款措辞（礼金 / 谢媒礼 / 彩礼 / 介绍费）', !/礼金|谢媒礼|彩礼|介绍费/.test(html));
+ok('赞助明示不换取对价', sp.includes('不换取任何服务、优先权或匹配机会'));
+ok('赞助走爱发电（GitHub Sponsors 大陆不可收款，已移除）', sp.includes('爱发电') && !/GitHub Sponsors/.test(html));
+ok('爱发电入口带 TODO 标记（开通后替换 href）', sp.includes('TODO(sponsor)'));
+
+/* ---------- 10. 体积 ---------- */
 const kb = statSync(join(here, 'index.html')).size / 1024;
 ok('首页 < 80KB（单文件零依赖）', kb < 80, `${kb.toFixed(1)}KB`);
 

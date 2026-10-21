@@ -58,7 +58,7 @@ node verify.mjs                   # 静态验收（36 项）
 - 备案通过前境内站**不得开放访问**（合规链条见《技术详设》v1.5）
 - 页脚合规列现为「ICP 备案：准备中」纯文本，拿到备案号后替换为真实链接
 
-## 验收对照（`node verify.mjs`，36 项全绿）
+## 验收对照（`node verify.mjs`，45 项全绿）
 
 | 类别 | 断言 |
 |---|---|
@@ -67,13 +67,14 @@ node verify.mjs                   # 静态验收（36 项）
 | 分享/SEO | description、canonical、theme-color、og:image + 尺寸、twitter:card |
 | 内容完整 | 七区锚点齐、FAQ 八问、防骚扰问答、密钥即身份问答、五档报告样例、v1/v2 路线 |
 | 数据契约 | 四键 `cards/active/env/plaza` 与 Worker `site` 块一一对应；兼容 `site`/`counters` 两代结构 |
-| 外链白名单 | 仅 `hongxian.dev` / `github.com` / `count.hongxian.dev`（+ SVG 命名空间） |
+| 外链白名单 | 仅 `hongxian.dev` / `github.com` / `count.hongxian.dev` / `afdian.com`（+ SVG 命名空间） |
 | 品牌资产 | 无旧标文件引用；内嵌 M4 符号与 M1 额印星芒 |
-| 体积 | 首页 < 80KB（当前 54KB） |
+| 赞助合规 | 页脚赞助区存在且隔离、无图片/内嵌二维码、无「礼金/谢媒礼/彩礼/介绍费」措辞、对价声明齐、只走爱发电、TODO 标记在 |
+| 体积 | 首页 < 80KB（当前 61.7KB） |
 
 ## 待接入（不阻塞）
 
 - [ ] **GitHub 源码仓库公开**——当前 org 仅有 Pages 仓库，信任清单「读源码 / 自托管」链接暂指 org 页；`schema`/`core`/`mcp`/`server` 与协议规范需在官网上线前推上去
 - [x] ~~计数器 Worker 部署（`count.hongxian.dev`）~~ —— **2026-10-21 已上线**，`/stats` 实测 200，透明数据区已接真实端点（无数据时自动降级「等待第一个用户」）
-- [ ] 爱发电账号（afdian.com）创作者主页审核通过后：① 替换页脚赞助链接（当前文案为「爱发电 / GitHub Sponsors（部署后开放）」，改为可点击的 `https://afdian.com/a/<你的ID>`）；② 同步根目录 `.github/FUNDING.yml` 的 custom 链接（现为占位）
+- [ ] 爱发电账号（afdian.com）创作者主页审核通过后：① 替换页脚赞助区入口——把 `<span class="sp-btn pending">爱发电 · 筹备中</span>` 换成 `<a class="sp-btn" href="https://afdian.com/a/<你的ID>" rel="noopener">爱发电 · 支持红线</a>`，删掉 `pending` 类与 `.sp-note`，并移除 `<!-- TODO(sponsor) -->` 注释；② 同步根目录 `.github/FUNDING.yml` 的 custom 链接（现为占位）；③ 改完跑 `node verify.mjs`（第 9 组断言要求 TODO 标记存在，届时该条断言需一并改写为「已接入真实链接」）
 - [ ] 备案号下发后替换页脚「ICP 备案：准备中」
