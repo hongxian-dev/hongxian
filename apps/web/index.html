@@ -45,7 +45,7 @@ img,svg{display:block}
 nav{position:fixed;inset:0 0 auto 0;z-index:50;background:var(--paper);border-bottom:1px solid transparent;transition:border-color .25s,background .25s}
 nav.scrolled{border-bottom-color:var(--line);background:#fff}
 .nav-in{max-width:1120px;margin:0 auto;padding:0 28px;height:64px;display:flex;align-items:center;gap:28px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:2px;font-size:17px;text-decoration:none}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:2px;font-size:17px;text-decoration:none;white-space:nowrap;flex:none}
 .brand svg{width:30px;height:30px}
 .brand .en{font-family:var(--serif);font-style:italic;font-weight:400;font-size:12px;color:var(--muted);letter-spacing:1px;margin-top:4px}
 .nav-links{display:flex;gap:26px;margin-left:auto;font-size:14px;color:var(--ink-2)}
@@ -53,7 +53,7 @@ nav.scrolled{border-bottom-color:var(--line);background:#fff}
 .nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-2px;height:2px;background:var(--red);transition:right .25s}
 .nav-links a:hover::after{right:0}
 .nav-cta{display:flex;gap:10px;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid transparent;cursor:pointer;transition:transform .15s,background .2s,border-color .2s,color .2s;font-family:var(--sans)}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid transparent;cursor:pointer;transition:transform .15s,background .2s,border-color .2s,color .2s;font-family:var(--sans);white-space:nowrap}
 .btn:active{transform:translateY(1px)}
 .btn-red{background:var(--red);color:#fff;border-color:var(--red)}
 .btn-red:hover{background:var(--red-deep);border-color:var(--red-deep)}
@@ -62,8 +62,8 @@ nav.scrolled{border-bottom-color:var(--line);background:#fff}
 .btn-sm{padding:7px 14px;font-size:13px;border-radius:8px}
 
 /* ---------- hero ---------- */
-header.hero{padding:150px 0 90px;position:relative;overflow:hidden}
-.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;position:relative}
+header.hero{padding:136px 0 76px;position:relative;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:52px;align-items:center;position:relative}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--red);letter-spacing:2px}
 .eyebrow::before{content:"";width:26px;height:2px;background:var(--red);border-radius:2px}
 h1{font-size:clamp(34px,4.6vw,58px);line-height:1.22;letter-spacing:1px;font-weight:900;margin:18px 0 10px}
@@ -220,23 +220,28 @@ details .a b{color:var(--red-deep)}
 /* footer */
 footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
 .sponsor{border-bottom:1px dashed #4B5563;padding-top:36px;padding-bottom:36px}
-.sponsor-in{display:grid;grid-template-columns:1fr auto;gap:26px 36px;align-items:center}
+.sponsor-in{display:flex;gap:56px;align-items:center;justify-content:space-between;max-width:940px;margin:0 auto}
 .sp-title{color:#F3F4F6;font-size:15px;margin:0 0 9px;letter-spacing:.02em}
 .sp-lead{color:#9CA3AF;font-size:13.5px;line-height:1.75;margin:0;max-width:44em}
-.sp-terms{list-style:none;margin:12px 0 0;padding:0;font-size:12px;line-height:1.85;color:#FBD5DB;display:grid;grid-template-columns:repeat(2,minmax(0,max-content));gap:0 34px}
+.sp-terms{list-style:none;margin:12px 0 0;padding:0;font-size:12px;line-height:1.9;color:#FBD5DB}
 .sp-terms li{position:relative;padding-left:13px}
 .sp-terms li::before{content:"·";position:absolute;left:2px;color:#E8445C}
-.sp-cta{display:flex;flex-direction:column;gap:9px;align-items:flex-start;border-left:1px dashed #374151;padding-left:30px}
-.sp-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid #C8102E;border-radius:9px;padding:10px 18px;font-size:13.5px;color:#F3F4F6;text-decoration:none;white-space:nowrap}
-.sp-btn:hover{background:rgba(200,16,46,.22);border-color:#E8445C}
-.sp-btn.pending{border-style:dashed;border-color:#4B5563;color:#9CA3AF;cursor:default}
-.sp-btn.pending:hover{background:none;border-color:#4B5563}
-.sp-note{color:#6B7280;font-size:11.5px;line-height:1.6;max-width:29ch}
+.sp-cta{display:flex;flex-direction:column;gap:12px;align-items:center;border-left:1px dashed #374151;padding-left:30px}
+.sp-card{background:#FDFBF7;border-radius:10px;padding:12px 12px 10px;text-align:center}
+.sp-qr{display:block;padding:0;border:0;background:none;cursor:zoom-in;line-height:0}
+.sp-qr img{display:block;width:164px;height:164px}
+.sp-card b{display:block;color:#1F2937;font-size:12.5px;font-weight:700;margin-top:7px;letter-spacing:.02em}
+.sp-card i{display:block;color:#9CA3AF;font-size:10.5px;font-style:normal;margin-top:3px}
+.sp-alt{color:#6B7280;font-size:11.5px;line-height:1.5;text-align:center}
+.qr-dlg{border:0;border-radius:12px;padding:20px 20px 16px;background:#FDFBF7;max-width:min(92vw,380px);margin:auto}
+.qr-dlg::backdrop{background:rgba(31,41,55,.62)}
+.qr-dlg img{display:block;width:320px;max-width:100%;height:auto;margin:0 auto}
+.qr-dlg p{color:#1F2937;font-size:12.5px;text-align:center;margin:12px 0 14px}
+.qr-dlg button{display:block;width:100%;border:1px solid #D1D5DB;background:#fff;color:#374151;border-radius:8px;padding:9px 0;font-size:13px;cursor:pointer;font-family:inherit}
+.qr-dlg button:hover{border-color:#C8102E;color:#C8102E}
 @media(max-width:680px){
-  .sponsor-in{grid-template-columns:1fr;gap:24px}
-  .sp-terms{grid-template-columns:1fr;gap:0}
-  .sp-cta{border-left:0;padding-left:0;border-top:1px dashed #374151;padding-top:22px;width:100%}
-  .sp-note{max-width:none}
+  .sponsor-in{flex-direction:column;gap:24px;max-width:none}
+  .sp-cta{border-left:0;padding-left:0;border-top:1px dashed #374151;padding-top:24px;width:100%}
 }
 .foot-in{display:flex;gap:48px;padding-top:40px;flex-wrap:wrap}
 .foot-brand{max-width:300px}
@@ -272,6 +277,11 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   .stat .v{font-size:32px}
   section{padding:70px 0}
   header.hero{padding:120px 0 60px}
+  .nav-in{padding:0 16px;gap:12px}
+  .brand .en{display:none}
+  .nav-cta{gap:8px}
+  .nav-cta .btn{padding:8px 12px;font-size:12.5px}
+  .hero-art{margin-left:-24px;margin-right:-24px}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -329,67 +339,92 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       </div>
     </div>
     <div class="hero-art rv in d2" aria-hidden="true">
-      <svg viewBox="0 0 520 420" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <svg viewBox="0 92 560 296" xmlns:xlink="http://www.w3.org/1999/xlink" id="heroDiagram">
         <defs>
-          <path id="wire" d="M96 210 C 150 210, 160 150, 210 150 L 310 150 C 360 150, 370 210, 424 210" fill="none"/>
+          <path id="segH" d="M252 180 L308 180"/>
         </defs>
-        <!-- 主人节点 -->
-        <g font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">
-          <circle cx="66" cy="210" r="30" fill="#fff" stroke="#1F2937" stroke-width="2"/>
-          <circle cx="57" cy="204" r="4" fill="#1F2937"/><circle cx="75" cy="204" r="4" fill="#1F2937"/>
-          <path d="M58 218 Q66 225 74 218" fill="none" stroke="#1F2937" stroke-width="2.5" stroke-linecap="round"/>
-          <text x="66" y="262" text-anchor="middle" font-size="13" fill="#6B7280">主人甲</text>
-          <circle cx="454" cy="210" r="30" fill="#fff" stroke="#1F2937" stroke-width="2"/>
-          <circle cx="445" cy="204" r="4" fill="#1F2937"/><circle cx="463" cy="204" r="4" fill="#1F2937"/>
-          <path d="M446 218 Q454 225 462 218" fill="none" stroke="#1F2937" stroke-width="2.5" stroke-linecap="round"/>
-          <text x="454" y="262" text-anchor="middle" font-size="13" fill="#6B7280">主人乙</text>
-          <!-- 月老节点：M1 线球小月老徽样（额印星芒 + 缠线，≡ 品牌规范） -->
-          <g>
-            <circle cx="210" cy="150" r="38" fill="#C8102E"/>
-            <path d="M 232 128 C 244 136 246 148 240 158" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
-            <path d="M 184 166 C 198 178 222 177 236 165" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
-            <path d="M210 119 L211.2 122.4 L214.6 123.6 L211.2 124.8 L210 128.2 L208.8 124.8 L205.4 123.6 L208.8 122.4 Z" fill="#F08200"/>
-            <circle cx="199" cy="153" r="7" fill="#FDFBF7"/><circle cx="221" cy="153" r="7" fill="#FDFBF7"/>
-            <circle cx="200.5" cy="154.5" r="3.2" fill="#1F2937"/><circle cx="219.5" cy="154.5" r="3.2" fill="#1F2937"/>
-            <path d="M204 166 Q210 171 216 166" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
-          </g>
-          <text x="210" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#C8102E">月老甲</text>
-          <g>
-            <circle cx="310" cy="150" r="38" fill="#C8102E"/>
-            <path d="M 332 128 C 344 136 346 148 340 158" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
-            <path d="M 284 166 C 298 178 322 177 336 165" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
-            <path d="M310 119 L311.2 122.4 L314.6 123.6 L311.2 124.8 L310 128.2 L308.8 124.8 L305.4 123.6 L308.8 122.4 Z" fill="#F08200"/>
-            <circle cx="299" cy="153" r="7" fill="#FDFBF7"/><circle cx="321" cy="153" r="7" fill="#FDFBF7"/>
-            <circle cx="300.5" cy="154.5" r="3.2" fill="#1F2937"/><circle cx="319.5" cy="154.5" r="3.2" fill="#1F2937"/>
-            <path d="M304 166 Q310 171 316 166" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
-          </g>
-          <text x="310" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#C8102E">月老乙</text>
+
+        <!-- ① 静态线路：主—月老 细灰实线，月老之间 红虚线（结构化握手） -->
+        <g fill="none" stroke-linecap="round">
+          <path d="M78 180 L180 180" stroke="#D1D5DB" stroke-width="2"/>
+          <path d="M380 180 L482 180" stroke="#D1D5DB" stroke-width="2"/>
+          <path d="M252 180 L308 180" stroke="#C8102E" stroke-width="3" stroke-dasharray="6 3.5"/>
         </g>
-        <!-- 连线 -->
-        <path d="M96 210 C 150 210, 160 150, 210 150" fill="none" stroke="#9CA3AF" stroke-width="2"/>
-        <path d="M310 150 C 360 150, 370 210, 424 210" fill="none" stroke="#9CA3AF" stroke-width="2"/>
-        <path d="M248 150 L 272 150" fill="none" stroke="#C8102E" stroke-width="2.5" stroke-dasharray="5 4"/>
-        <!-- 信号流 -->
-        <path d="M96 210 C 150 210, 160 150, 210 150 L 310 150 C 360 150, 370 210, 424 210" fill="none" stroke="#C8102E" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round">
-          <animate attributeName="stroke-dashoffset" from="48" to="0" dur="1.6s" repeatCount="indefinite"/>
-        </path>
-        <!-- 加密信封在月老间传递 -->
+
+        <!-- ② 信号流：三段错峰，先入、再握手、后出 -->
+        <g fill="none" stroke="#C8102E" stroke-width="2" stroke-dasharray="3 10" stroke-linecap="round">
+          <path d="M78 180 L180 180"><animate attributeName="stroke-dashoffset" from="52" to="0" dur="2.4s" begin="0s" repeatCount="indefinite"/></path>
+          <path d="M380 180 L482 180"><animate attributeName="stroke-dashoffset" from="52" to="0" dur="2.4s" begin="1.6s" repeatCount="indefinite"/></path>
+        </g>
+
+        <!-- ③ 握手涟漪：只在信封到达时亮一次，细环扩散（非光晕，无模糊无投影） -->
+        <g fill="none" stroke="#C8102E" stroke-width="1.4">
+          <circle cx="216" cy="180" r="38" opacity="0">
+            <animate attributeName="r" values="38;52" dur="2.4s" begin="1.2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;.5;0" keyTimes="0;.18;.62" dur="2.4s" begin="1.2s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="344" cy="180" r="38" opacity="0">
+            <animate attributeName="r" values="38;52" dur="2.4s" begin="1.2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;.5;0" keyTimes="0;.18;.62" dur="2.4s" begin="1.2s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+
+        <!-- ④ 主人甲 -->
         <g>
-          <rect x="-13" y="-9" width="26" height="18" rx="3" fill="#FDFBF7" stroke="#C8102E" stroke-width="2"/>
-          <path d="M-13 -9 L0 2 L13 -9" fill="none" stroke="#C8102E" stroke-width="2"/>
-          <circle cx="0" cy="4" r="3" fill="#C8102E"/>
-          <animateMotion dur="3.2s" repeatCount="indefinite" rotate="0">
-            <mpath xlink:href="#wire" href="#wire"/>
+          <circle cx="52" cy="180" r="26" fill="#fff" stroke="#1F2937" stroke-width="2"/>
+          <circle cx="44" cy="174" r="4" fill="#1F2937"/><circle cx="60" cy="174" r="4" fill="#1F2937"/>
+          <path d="M45 188 Q52 194 59 188" fill="none" stroke="#1F2937" stroke-width="2.4" stroke-linecap="round"/>
+        </g>
+        <!-- ⑤ 月老甲：M1 徽样（红球 + 缠线 + 额印星芒），坐标以球心为原点 -->
+        <g transform="translate(216,180)">
+          <circle r="36" fill="#C8102E"/>
+          <path d="M22 -22 C34 -14 36 -2 30 8" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+          <path d="M-26 16 C-12 28 12 27 26 15" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+          <path d="M0 -31 L1.2 -27.6 L4.6 -26.4 L1.2 -25.2 L0 -21.8 L-1.2 -25.2 L-4.6 -26.4 L-1.2 -27.6 Z" fill="#F08200"/>
+          <circle cx="-11" cy="3" r="7" fill="#FDFBF7"/><circle cx="11" cy="3" r="7" fill="#FDFBF7"/>
+          <circle cx="-9.5" cy="4.5" r="3.2" fill="#1F2937"/><circle cx="9.5" cy="4.5" r="3.2" fill="#1F2937"/>
+          <path d="M-6 16 Q0 21 6 16" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <!-- ⑥ 月老乙 -->
+        <g transform="translate(344,180)">
+          <circle r="36" fill="#C8102E"/>
+          <path d="M22 -22 C34 -14 36 -2 30 8" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+          <path d="M-26 16 C-12 28 12 27 26 15" fill="none" stroke="#EF8A97" stroke-width="4" stroke-linecap="round"/>
+          <path d="M0 -31 L1.2 -27.6 L4.6 -26.4 L1.2 -25.2 L0 -21.8 L-1.2 -25.2 L-4.6 -26.4 L-1.2 -27.6 Z" fill="#F08200"/>
+          <circle cx="-11" cy="3" r="7" fill="#FDFBF7"/><circle cx="11" cy="3" r="7" fill="#FDFBF7"/>
+          <circle cx="-9.5" cy="4.5" r="3.2" fill="#1F2937"/><circle cx="9.5" cy="4.5" r="3.2" fill="#1F2937"/>
+          <path d="M-6 16 Q0 21 6 16" fill="none" stroke="#FDFBF7" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <!-- ⑦ 主人乙 -->
+        <g>
+          <circle cx="508" cy="180" r="26" fill="#fff" stroke="#1F2937" stroke-width="2"/>
+          <circle cx="500" cy="174" r="4" fill="#1F2937"/><circle cx="516" cy="174" r="4" fill="#1F2937"/>
+          <path d="M501 188 Q508 194 515 188" fill="none" stroke="#1F2937" stroke-width="2.4" stroke-linecap="round"/>
+        </g>
+
+        <!-- ⑧ 加密信封：只在两位月老之间往返，不越界到主人一侧 -->
+        <g>
+          <rect x="-11" y="-8" width="22" height="16" rx="2.5" fill="#FDFBF7" stroke="#C8102E" stroke-width="2"/>
+          <path d="M-11 -8 L0 1 L11 -8" fill="none" stroke="#C8102E" stroke-width="2"/>
+          <circle cx="0" cy="3" r="2.6" fill="#C8102E"/>
+          <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.42;1" calcMode="linear">
+            <mpath xlink:href="#segH" href="#segH"/>
           </animateMotion>
         </g>
-        <!-- 标注 -->
-        <g font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif" font-size="11.5" fill="#6B7280">
-          <text x="260" y="232" text-anchor="middle" fill="#C8102E" font-weight="700">仅结构化握手 · 全程密文</text>
-          <text x="150" y="196" text-anchor="middle">日常对话 · 报告</text>
-          <text x="372" y="196" text-anchor="middle">日常对话 · 报告</text>
+
+        <!-- ⑨ 标注 -->
+        <g font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">
+          <text x="129" y="160" text-anchor="middle" font-size="11.5" fill="#6B7280">对话 · 报告</text>
+          <text x="431" y="160" text-anchor="middle" font-size="11.5" fill="#6B7280">对话 · 报告</text>
+          <text x="216" y="124" text-anchor="middle" font-size="14" font-weight="700" fill="#C8102E">月老甲</text>
+          <text x="344" y="124" text-anchor="middle" font-size="14" font-weight="700" fill="#C8102E">月老乙</text>
+          <text x="52" y="226" text-anchor="middle" font-size="14" fill="#6B7280">主人甲</text>
+          <text x="508" y="226" text-anchor="middle" font-size="14" fill="#6B7280">主人乙</text>
+          <text x="280" y="240" text-anchor="middle" font-size="12.5" fill="#C8102E" font-weight="700">仅结构化握手 · 全程密文</text>
         </g>
-        <!-- 底部心结：M4 线团之心（品牌符号，≡ 品牌规范） -->
-        <g transform="translate(212,248) scale(0.4)">
+
+        <!-- ⑩ 底部心结：M4 线团之心（品牌符号，≡ 品牌规范） -->
+        <g transform="translate(232,254) scale(0.42)">
           <path d="M 120 200 C 70 164 36 128 36 92 C 36 66 56 54 78 60 C 96 65 112 80 120 96 C 128 80 144 65 162 60 C 184 54 204 66 204 92 C 204 128 170 164 120 200 Z" fill="none" stroke="#C8102E" stroke-width="9" stroke-linejoin="round"/>
           <path d="M 120 200 C 118 210 110 214 102 212" fill="none" stroke="#C8102E" stroke-width="6" stroke-linecap="round"/>
           <circle cx="120" cy="122" r="52" fill="#FDFBF7"/>
@@ -399,7 +434,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
           <circle cx="108" cy="122" r="5" fill="#1F2937"/><circle cx="132" cy="122" r="5" fill="#1F2937"/>
           <path d="M 112 138 Q 120 146 128 138" fill="none" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round"/>
         </g>
-        <text x="260" y="378" text-anchor="middle" font-size="12" fill="#6B7280" font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">一根红线，系成心结 —— 见面与心动，永远归你</text>
+        <text x="280" y="372" text-anchor="middle" font-size="12.5" fill="#6B7280" font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">一根红线，系成心结 —— 见面与心动，永远归你</text>
       </svg>
     </div>
   </div>
@@ -642,15 +677,20 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
         <ul class="sp-terms">
           <li>赞助不换取任何服务、优先权或匹配机会，不构成对价</li>
           <li>不涉及任何婚介相关费用，数据层与撮合层永不收费</li>
-          <li>只经第三方赞助平台代收，站内不投放个人收款码</li>
+          <li>赞赏码为微信官方个人赞赏功能，只收自愿小额打赏</li>
         </ul>
       </div>
       <div class="sp-cta">
-        <!-- TODO(sponsor): 爱发电主页开通后，把下面的 span 换成
-             <a class="sp-btn" href="https://afdian.com/a/<主页ID>" rel="noopener">爱发电 · 支持红线</a>
-             并删掉 pending 类与 .sp-note -->
-        <span class="sp-btn pending" aria-disabled="true">爱发电 · 筹备中</span>
-        <span class="sp-note">开通后此处直达，当前不接受任何形式的打款</span>
+        <div class="sp-card">
+          <button class="sp-qr" type="button" id="qrOpen" aria-label="放大赞赏码">
+            <img src="sponsor-qr.png" width="164" height="164" alt="微信赞赏码：感谢支持本项目" loading="lazy" decoding="async">
+          </button>
+          <b>感谢支持本项目</b>
+          <i>微信赞赏 · 自愿、无对价</i>
+        </div>
+        <!-- TODO(sponsor): 爱发电主页开通后，把下面这行换成
+             <a class="sp-alt" href="https://afdian.com/a/<主页ID>" rel="noopener">也可通过爱发电赞助 →</a> -->
+        <span class="sp-alt">爱发电通道筹备中<br>开通后与赞赏码并列</span>
       </div>
     </div>
   </div>
@@ -677,6 +717,13 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   </div>
 </footer>
 
+<!-- 赞赏码放大层（原生 dialog，无库无依赖） -->
+<dialog class="qr-dlg" id="qrDlg">
+  <img src="sponsor-qr.png" width="320" height="320" alt="微信赞赏码">
+  <p>微信扫码，或长按识别 · 感谢支持本项目</p>
+  <form method="dialog"><button type="submit">关闭</button></form>
+</dialog>
+
 <script>
 (function(){
   "use strict";
@@ -690,6 +737,19 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
   },{threshold:.12}):null;
   document.querySelectorAll('.rv').forEach(function(el){io?io.observe(el):el.classList.add('in')});
+
+  /* hero 动效降级：SMIL 动画不受 CSS transition-duration 约束，须显式暂停 */
+  var heroSvg=document.getElementById('heroDiagram');
+  if(heroSvg&&window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    if(typeof heroSvg.pauseAnimations==='function')heroSvg.pauseAnimations();
+  }
+
+  /* 赞赏码放大层 */
+  var qrDlg=document.getElementById('qrDlg'),qrOpen=document.getElementById('qrOpen');
+  if(qrDlg&&qrOpen&&typeof qrDlg.showModal==='function'){
+    qrOpen.addEventListener('click',function(){qrDlg.showModal();});
+    qrDlg.addEventListener('click',function(e){if(e.target===qrDlg)qrDlg.close();});
+  }
 
   /* copy install cmd */
   function bindCopy(id){

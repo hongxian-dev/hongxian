@@ -1,8 +1,10 @@
 /**
  * 红线产品网站 · 静态验收（零依赖，node verify.mjs）
  *
- * 替换了旧版 playwright 回归：新站是单文件零请求，验收重点从"渲染"转为
- * "纪律可静态证明"——外链白名单、禁渐变禁投影、SEO/分享元信息、内容完整性。
+ * 替换了旧版 playwright 回归：新站是单文件零请求（唯一外部资源 = 页脚赞赏码
+ * sponsor-qr.png，扫码质量要求真图，不能内联 base64 到 HTML），验收重点从"渲染"
+ * 转为"纪律可静态证明"——外链白名单、禁渐变禁投影、SEO/分享元信息、内容完整性、
+ * 赞助合规、Hero 动效降级。
  *
  * 退出码：0 全通过 / 1 有失败项
  */
@@ -90,24 +92,40 @@ ok('内嵌 M1 额印星芒（#F08200 五角星路径）', /#F08200/.test(html));
 ok('404 页自包含（无外部样式/脚本）', !/rel=["']stylesheet|<script[^>]+src=/.test(notFound));
 ok('404 页无渐变无投影', !/(linear|radial)-gradient|box-shadow/.test(notFound));
 
-/* ---------- 9. 赞助区合规（2026-10-21 拍板：只走爱发电，站内不放个人收款码） ----------
- * 背景：央行 259 号文禁止个人静态收款码远程非面对面收款，网站挂码属典型违规场景；
- * GitHub Sponsors 大陆区不可收款；"礼金/谢媒礼"措辞与宪法 §12 不收费婚介费用的承诺冲突。
- * 故赞助只能经第三方平台代收，且文案必须显式声明不对价。 */
+/* ---------- 9. 赞助区合规（2026-10-21 定稿：爱发电为主 + 微信赞赏码为辅） ----------
+ * 背景：央行 259 号文禁止个人静态收款码用于远程非面对面收款；GitHub Sponsors 大陆区
+ * 不可收款；「礼金/谢媒礼」措辞与宪法 §12 不收费婚介费用的承诺冲突。
+ * 孙超拍板：主通道爱发电（待开通），同时展示微信官方「赞赏码」收自愿打赏。
+ * 赞赏码 ≠ 收款码：微信官方个人非商业性赞赏工具，规则禁止用于商业交易与代收款，
+ * 单笔上限 200 元。一旦出现"付费换服务/优先匹配"即为越界，故对价声明为硬断言。 */
 const spStart = html.indexOf('id="sponsor"');
 const spEnd = html.indexOf('class="wrap foot-in"');
 const sp = spStart > -1 && spEnd > spStart ? html.slice(spStart, spEnd) : '';
 ok('赞助区存在且位于页脚（物理隔离于产品区）', sp.length > 300, `${sp.length} 字符`);
-ok('赞助区不含图片 / 内嵌二维码', !/<img|data:image/i.test(sp));
-ok('全站无个人收款码字样', !/收款码图片|付款码|二维码收款/.test(html));
+ok('赞赏码为站内本地图片（唯一外部资源）', /<img src="sponsor-qr\.png"/.test(sp));
+ok('赞赏码图片文件存在且 < 60KB', statSync(join(here, 'sponsor-qr.png')).size < 60 * 1024, `${(statSync(join(here, 'sponsor-qr.png')).size / 1024).toFixed(1)}KB`);
+ok('赞赏码有可读 alt（无障碍 / 长按识别）', /alt="微信赞赏码[^"]*"/.test(sp));
+ok('赞赏码可放大（dialog + showModal）', html.includes('id="qrDlg"') && html.includes('showModal'));
+ok('无个人收款码 / 付款码（赞赏码为官方非商业性工具）', !/收款码图片|付款码|收钱码|二维码收款/.test(html));
 ok('全站无婚介收款措辞（礼金 / 谢媒礼 / 彩礼 / 介绍费）', !/礼金|谢媒礼|彩礼|介绍费/.test(html));
 ok('赞助明示不换取对价', sp.includes('不换取任何服务、优先权或匹配机会'));
-ok('赞助走爱发电（GitHub Sponsors 大陆不可收款，已移除）', sp.includes('爱发电') && !/GitHub Sponsors/.test(html));
+ok('赞赏通道标注「自愿、无对价」', sp.includes('自愿、无对价'));
+ok('爱发电通道保留（GitHub Sponsors 大陆不可收款，已移除）', sp.includes('爱发电') && !/GitHub Sponsors/.test(html));
 ok('爱发电入口带 TODO 标记（开通后替换 href）', sp.includes('TODO(sponsor)'));
 
-/* ---------- 10. 体积 ---------- */
+/* ---------- 10. Hero 主图：结构与动效降级 ---------- */
+const hero = (html.match(/<svg viewBox="0 92 560 296"[\s\S]*?<\/svg>/) || [''])[0];
+ok('Hero 图存在且为内联 SVG', hero.length > 1500, `${hero.length} 字符`);
+ok('信号流两段（主—月老双向流动）', (hero.match(/attributeName="stroke-dashoffset"/g) || []).length === 2);
+ok('信封只在月老之间往返（animateMotion + mpath）', hero.includes('<animateMotion') && hero.includes('mpath'));
+ok('信封不越界到主人一侧（keyPoints 往返而非单程）', /keyPoints="0;1;0"/.test(hero));
+ok('握手区用品牌红密虚线', /stroke="#C8102E" stroke-width="3" stroke-dasharray="6 3\.5"/.test(hero));
+ok('prefers-reduced-motion 显式暂停 SMIL（CSS 无法接管）', html.includes('pauseAnimations'));
+ok('Hero 无渐变无投影', !/(linear|radial)-gradient|filter=|drop-shadow|feGaussianBlur/.test(hero));
+
+/* ---------- 11. 体积 ---------- */
 const kb = statSync(join(here, 'index.html')).size / 1024;
-ok('首页 < 80KB（单文件零依赖）', kb < 80, `${kb.toFixed(1)}KB`);
+ok('首页 < 80KB（单文件 + 一张赞赏码）', kb < 80, `${kb.toFixed(1)}KB`);
 
 console.log(failed === 0 ? '\n全部通过' : `\n${failed} 项失败`);
 process.exit(failed === 0 ? 0 : 1);

@@ -1,7 +1,8 @@
 # 红线产品介绍网站（apps/web）
 
 > 交付物对应《产品网站与透明统计v1设计初稿》七区信息架构与《v1产品清单与验收标准》第 2 节（落地页 W1–W5）。
-> 纯静态单文件——**零构建、零依赖、零追踪**：无 Cookie、无统计 SDK、无字体 CDN、无外部资源请求。
+> 纯静态——**零构建、零依赖、零追踪**：无 Cookie、无统计 SDK、无字体 CDN。
+> 唯一外部资源是页脚赞赏码 `sponsor-qr.png`（扫码质量要求真图，不内联 base64）。
 > 「网站自己就是隐私声明」既是承诺，也是验收项。
 
 ## 目录
@@ -10,6 +11,7 @@
 apps/web/                     # 部署产物（GitHub Pages / 境内 Nginx 直接托管）
 ├── index.html                # 单文件整站：HTML + 内联 CSS + 内联 JS + 内联 SVG
 ├── og-cover.png              # 1200×630 分享封面（og:image / twitter:image）
+├── sponsor-qr.png            # 微信赞赏码（480×480，28KB，页脚赞助区）
 ├── 404.html                  # 自包含 404 页（同规范、无外部依赖）
 ├── verify.mjs                # 静态验收（零依赖：node verify.mjs）
 └── README.md
@@ -25,6 +27,7 @@ apps/web/                     # 部署产物（GitHub Pages / 境内 Nginx 直�
 | v1 | 2026-10-15 | 七区信息架构首版；手写 CSS/JS，assets/ 分离 |
 | v2 | 2026-10-15 | 明暗版面交替、Hero 信号汇聚构图、编辑感版式（`style.css` 时代） |
 | **v3** | **2026-10-21** | **「纸信 · 红线」编辑科技风重塑，单文件化**；品牌换代落地（M4 线团之心 + M1 徽样）；宪法纪律回归（去渐变去投影）；内容补强（陌生人安全 / 密钥即身份 / 五档报告样例 / v1·v2 路线） |
+| **v3.1** | **2026-10-21** | 五档报告样例改可切换 tab；**Hero 主图重做**（横向四节点链 + 三段错峰信号流 + 信封只在月老间往返 + 握手涟漪 + reduced-motion 显式暂停）；页脚赞助区改双栏 + **微信赞赏码卡片**（点击放大） |
 
 ### v3 改了什么（相对 v2）
 
@@ -34,7 +37,13 @@ apps/web/                     # 部署产物（GitHub Pages / 境内 Nginx 直�
 - **内容补强**：FAQ 6 → 8（补防骚扰、密钥即身份）；Demo 区补五档报告样例卡（PRD §8 要求）；工作原理下补 v1/v2/v3 路线条；hero 明确「v1 全程本地 / v2 可选加密信箱」。
 - **分享与 SEO**：补 og:image（1200×630）+ twitter:card + canonical + theme-color。
 - **健壮性**：Demo 开场白改为静态 HTML（无 JS 也可见）；SMIL `mpath` 补 `xlink:href`（Safari 兼容）。
-- **验收脚本换代**：playwright 渲染回归 → `verify.mjs` 静态契约检查（36 项）。
+- **验收脚本换代**：playwright 渲染回归 → `verify.mjs` 静态契约检查（现 56 项）。
+
+### v3.1 改了什么
+
+- **Hero 主图**：原「W 形曲线 + 一体式信号流动 + 信封跑全程」有三处硬伤——标签压在连线上、握手线只有 24px 看不清、信封会跑到主人一侧（语义错误：加密信封只在两位月老之间传递）。重做为**横向四节点链**（主人甲 — 月老甲 ⇄ 月老乙 — 主人乙），`viewBox 0 92 560 296`：三段线路语义分明（主—月老用细灰实线 + 红色流动点表示日常对话，月老之间用品牌红密虚线表示结构化握手），信号流两段错峰（0s / 1.6s），信封用 `keyPoints="0;1;0"` 在握手区间往返、不越界，握手瞬间两球各扩散一圈淡出细环。
+- **动效降级**：SMIL 动画不受 CSS `transition-duration` 约束——新增 `svg.pauseAnimations()`，`prefers-reduced-motion: reduce` 时整图静止（此前是漏洞）。
+- **赞助区**：双栏（左：用途 + 三条纪律；右：白底卡片内嵌微信赞赏码 164px + 「感谢支持本项目」）。点击赞赏码弹出原生 `<dialog>` 放大到 320px（手机可长按识别），`::backdrop` 纯色半透明、无模糊。爱发电通道保留占位。
 
 ## 本地预览
 
@@ -58,7 +67,7 @@ node verify.mjs                   # 静态验收（36 项）
 - 备案通过前境内站**不得开放访问**（合规链条见《技术详设》v1.5）
 - 页脚合规列现为「ICP 备案：准备中」纯文本，拿到备案号后替换为真实链接
 
-## 验收对照（`node verify.mjs`，45 项全绿）
+## 验收对照（`node verify.mjs`，56 项全绿）
 
 | 类别 | 断言 |
 |---|---|
@@ -69,12 +78,14 @@ node verify.mjs                   # 静态验收（36 项）
 | 数据契约 | 四键 `cards/active/env/plaza` 与 Worker `site` 块一一对应；兼容 `site`/`counters` 两代结构 |
 | 外链白名单 | 仅 `hongxian.dev` / `github.com` / `count.hongxian.dev` / `afdian.com`（+ SVG 命名空间） |
 | 品牌资产 | 无旧标文件引用；内嵌 M4 符号与 M1 额印星芒 |
-| 赞助合规 | 页脚赞助区存在且隔离、无图片/内嵌二维码、无「礼金/谢媒礼/彩礼/介绍费」措辞、对价声明齐、只走爱发电、TODO 标记在 |
-| 体积 | 首页 < 80KB（当前 61.7KB） |
+| 赞助合规 | 页脚赞助区隔离、赞赏码为本地图片且 <60KB、有可读 alt、可放大、无个人收款码、无「礼金/谢媒礼/彩礼/介绍费」措辞、对价声明齐、标注「自愿、无对价」、爱发电占位保留 |
+| Hero 动效 | 内联 SVG、两段信号流、信封 `keyPoints="0;1;0"` 往返不越界、握手密虚线、`pauseAnimations` 降级、无渐变无滤镜 |
+| 体积 | 首页 < 80KB（当前 65.3KB）+ 赞赏码 27.2KB |
 
 ## 待接入（不阻塞）
 
 - [ ] **GitHub 源码仓库公开**——当前 org 仅有 Pages 仓库，信任清单「读源码 / 自托管」链接暂指 org 页；`schema`/`core`/`mcp`/`server` 与协议规范需在官网上线前推上去
 - [x] ~~计数器 Worker 部署（`count.hongxian.dev`）~~ —— **2026-10-21 已上线**，`/stats` 实测 200，透明数据区已接真实端点（无数据时自动降级「等待第一个用户」）
-- [ ] 爱发电账号（afdian.com）创作者主页审核通过后：① 替换页脚赞助区入口——把 `<span class="sp-btn pending">爱发电 · 筹备中</span>` 换成 `<a class="sp-btn" href="https://afdian.com/a/<你的ID>" rel="noopener">爱发电 · 支持红线</a>`，删掉 `pending` 类与 `.sp-note`，并移除 `<!-- TODO(sponsor) -->` 注释；② 同步根目录 `.github/FUNDING.yml` 的 custom 链接（现为占位）；③ 改完跑 `node verify.mjs`（第 9 组断言要求 TODO 标记存在，届时该条断言需一并改写为「已接入真实链接」）
+- [ ] 爱发电账号（afdian.com）创作者主页审核通过后：① 把页脚赞助区的 `<span class="sp-alt">爱发电通道筹备中…</span>` 换成 `<a class="sp-alt" href="https://afdian.com/a/<你的ID>" rel="noopener">也可通过爱发电赞助 →</a>`，移除 `<!-- TODO(sponsor) -->` 注释；② 同步根目录 `.github/FUNDING.yml` 的 custom 链接（现整行注释）；③ 跑 `node verify.mjs`（第 9 组断言要求 TODO 标记存在，届时改写为「已接入真实链接」）
+- [x] ~~微信赞赏码上站~~ —— **2026-10-21 已上线**（原图裁掉多余留白 + 12% 静区，480×480 调色板 PNG 27.2KB；点击弹 dialog 放大）
 - [ ] 备案号下发后替换页脚「ICP 备案：准备中」
