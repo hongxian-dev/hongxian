@@ -1,6 +1,6 @@
 # 红线产品介绍网站（apps/web）
 
-> 交付物对应《产品网站与透明统计v1设计初稿》七区信息架构与《v1产品清单与验收标准》第 2 节（落地页 W1–W5）。
+> 交付物对应 PRD §8（产品网站与透明统计）与《v1产品清单与验收标准》第 2 节（落地页 W1–W5）。
 > 纯静态——**零构建、零依赖、零追踪**：无 Cookie、无统计 SDK、无字体 CDN。
 > 唯一外部资源是页脚赞赏码 `sponsor-qr.png`（扫码质量要求真图，不内联 base64）。
 > 「网站自己就是隐私声明」既是承诺，也是验收项。
@@ -17,8 +17,7 @@ apps/web/                     # 部署产物（GitHub Pages / 境内 Nginx 直�
 └── README.md
 ```
 
-**设计源**：`hongxian-website/`（含 DESIGN-NOTES 设计说明、logo/ 品牌资产、预览截图、`gen_og.cjs` 封面生成器）。
-本目录是 `hongxian-website/index.html` 的部署副本——改版先改设计源，再同步到这里。
+**唯一真源**：本目录。`index.html` 是单文件整站（HTML + 内联 CSS + 内联 JS + 内联 SVG），改版直接改这里——不再有上游设计源目录，避免"改设计稿忘记同步"的两份真相。品牌资产见 [`brand/`](../../brand)，配色与禁用项见 [brand/README.md](../../brand/README.md)。
 
 ## 版本沿革
 

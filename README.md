@@ -98,15 +98,14 @@ npx @hongxian/mcp
 ```
 packages/        协议契约 schema · 密钥体系 crypto · 领域逻辑 core · 月老本体 mcp · 平台服务 server
 apps/            产品网站 web · 匿名计数器 counter
-docs/            全部文档（00-定位与PRD / 10-产品设计 / 20-技术设计 / 90-归档 + 对外规范）
+docs/            全部文档（00-定位与PRD / 10-产品设计 / 20-技术设计 + 对外规范）
 diagrams/        设计图（SVG，文档内引用）
-logo/            品牌资产（legacy-v1 旧「加权心络」/ concepts 概念稿；当前主标 M1 见下）
-hongxian-website/ 网站设计工作台（设计源 + M1 线球小月老规范 logo/mascot-guidelines.html）
+brand/           品牌资产：主标 M1「线球小月老」家族 + 规范页 + 标识使用规则
 ```
 
 ## License
 
-代码 [Apache-2.0](LICENSE) · 协议文档 [CC-BY-SA 4.0](docs/protocol-v0-spec.md)
+代码 [Apache-2.0](LICENSE) · 协议文档 [CC-BY-SA 4.0](docs/protocol-v1-spec.md) · 品牌标识不适用代码许可，使用规则见 [brand/README.md](brand/README.md)
 
 ---
 

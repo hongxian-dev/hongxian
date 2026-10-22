@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <title>红线 · 主 logo 反白版 v2（深色底单色）</title>
+  <path d="M 58 42 L 62 54 L 74 58 L 62 62 L 58 74 L 54 62 L 42 58 L 54 54 Z" fill="#FDFBF7"/>
+  <path d="M 148 78 C 158 64 174 62 179 72 C 183 81 174 90 165 85" fill="none" stroke="#FDFBF7" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="104" cy="128" r="66" fill="#FDFBF7"/>
+  <path d="M 50 118 C 78 92 128 74 156 78" fill="none" stroke="#1F2937" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 62 134 C 92 106 136 88 162 98" fill="none" stroke="#1F2937" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 46 90 C 74 96 116 108 144 120" fill="none" stroke="#1F2937" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 58 74 C 86 84 126 98 154 112" fill="none" stroke="#1F2937" stroke-width="5.5" stroke-linecap="round"/>
+  <circle cx="82" cy="140" r="14" fill="#1F2937"/>
+  <circle cx="126" cy="140" r="14" fill="#1F2937"/>
+  <circle cx="85" cy="142" r="6.5" fill="#FDFBF7"/>
+  <circle cx="123" cy="142" r="6.5" fill="#FDFBF7"/>
+  <path d="M 94 162 Q 104 172 114 162" fill="none" stroke="#1F2937" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 166 142 C 186 146 196 138 199 126" fill="none" stroke="#FDFBF7" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 204 124 C 194 117 189 110 189 104 C 189 98 194 95 199 97 C 202 98 203.5 101 204 103.5 C 204.5 101 206 98 209 97 C 214 95 219 98 219 104 C 219 110 214 117 204 124 Z" fill="#FDFBF7"/>
+</svg>

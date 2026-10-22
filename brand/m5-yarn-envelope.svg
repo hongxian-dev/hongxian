@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <title>红线吉祥物 · 信封探头（邮局之信）</title>
+  <!-- 打开的信封后 flap -->
+  <path d="M 52 128 L 120 74 L 188 128 Z" fill="none" stroke="#F08200" stroke-width="6" stroke-linejoin="round"/>
+  <!-- 毛线球探头 -->
+  <circle cx="120" cy="108" r="56" fill="#C8102E"/>
+  <path d="M 76 78 C 100 62 140 62 164 78" fill="none" stroke="#A60F26" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M 68 96 C 100 78 140 78 172 96" fill="none" stroke="#A60F26" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="100" cy="102" r="12" fill="#FDFBF7"/>
+  <circle cx="140" cy="102" r="12" fill="#FDFBF7"/>
+  <circle cx="102" cy="104" r="6" fill="#1F2937"/>
+  <circle cx="138" cy="104" r="6" fill="#1F2937"/>
+  <circle cx="104" cy="101" r="2" fill="#FDFBF7"/>
+  <circle cx="140" cy="101" r="2" fill="#FDFBF7"/>
+  <path d="M 111 118 Q 120 125 129 118" fill="none" stroke="#FDFBF7" stroke-width="4.5" stroke-linecap="round"/>
+  <ellipse cx="84" cy="114" rx="7" ry="4.5" fill="#F08200" opacity="0.55"/>
+  <ellipse cx="156" cy="114" rx="7" ry="4.5" fill="#F08200" opacity="0.55"/>
+  <!-- 扒住信封边的线头小手 -->
+  <path d="M 66 118 C 60 124 58 130 61 136" fill="none" stroke="#C8102E" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 174 118 C 180 124 182 130 179 136" fill="none" stroke="#C8102E" stroke-width="5" stroke-linecap="round"/>
+  <!-- 信封前片 + 心形火漆 -->
+  <rect x="52" y="126" width="136" height="84" rx="10" fill="#FDFBF7" stroke="#F08200" stroke-width="6"/>
+  <path d="M 120 180 C 110 173 105 166 105 160 C 105 154 110 151 115 153 C 118 154.2 119.5 157 120 159.5 C 120.5 157 122 154.2 125 153 C 130 151 135 154 135 160 C 135 166 130 173 120 180 Z" fill="#C8102E"/>
+</svg>

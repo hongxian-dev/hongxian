@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <title>红线吉祥物 · 月牙安睡（月老值夜）</title>
+  <!-- 梦境泡泡 -->
+  <path d="M 186 74 C 178 68 174 62 174 57 C 174 52 178 50 182 51.5 C 184.4 52.5 185.6 54.8 186 57 C 186.4 54.8 187.6 52.5 190 51.5 C 194 50 198 52 198 57 C 198 62 194 68 186 74 Z" fill="#C8102E"/>
+  <circle cx="178" cy="88" r="4" fill="#C8102E" opacity="0.5"/>
+  <circle cx="172" cy="100" r="2.5" fill="#C8102E" opacity="0.35"/>
+  <!-- 毛线球（安睡脸） -->
+  <circle cx="120" cy="118" r="54" fill="#C8102E"/>
+  <path d="M 78 94 C 102 78 138 78 162 94" fill="none" stroke="#A60F26" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M 70 112 C 100 94 140 94 170 112" fill="none" stroke="#A60F26" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M 92 118 Q 100 126 108 118" fill="none" stroke="#FDFBF7" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 132 118 Q 140 126 148 118" fill="none" stroke="#FDFBF7" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 112 138 Q 120 145 128 138" fill="none" stroke="#FDFBF7" stroke-width="4.5" stroke-linecap="round"/>
+  <ellipse cx="86" cy="132" rx="7" ry="4.5" fill="#F08200" opacity="0.55"/>
+  <ellipse cx="154" cy="132" rx="7" ry="4.5" fill="#F08200" opacity="0.55"/>
+  <!-- 月牙摇篮 -->
+  <path d="M 44 140 C 56 184 184 184 196 140 C 188 170 156 188 120 188 C 84 188 56 170 44 140 Z" fill="#F08200"/>
+</svg>
