@@ -17,7 +17,11 @@
     "build": "npm run build -w @hongxian/schema && npm run build -w @hongxian/crypto && npm run build -w @hongxian/core && npm run build -w @hongxian/mcp && npm run build -w @hongxian/server",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify": "npm run build && npm test",
+    "e2e": "node packages/mcp/e2e/run-e2e.mjs",
+    "e2e:server": "node packages/server/e2e/run-e2e.mjs",
+    "smoke": "node packages/mcp/e2e/host-smoke.mjs",
+    "verify:web": "node apps/web/verify.mjs",
+    "verify": "npm run build && npm test && npm run e2e && npm run e2e:server && npm run smoke && npm run verify:web",
     "prd": "node docs/build-prd-html.mjs"
   },
   "devDependencies": {

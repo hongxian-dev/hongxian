@@ -20,6 +20,7 @@ import {
   MAX_DAILY_DELIVERIES,
   MsgEnvelope,
   PLAZA_PAGE_SIZE,
+  REPORT_REASONS,
   canonicalBytes,
   fromBase64,
   isPlazaCard,
@@ -253,6 +254,76 @@ export function createApp(store: ServerStore, config: ServerConfig): Hono {
     const ok = store.deleteEnvelope(parsed.opaque_id, envId);
     if (!ok) return c.json({ error: '信不存在' }, 404);
     return c.json({ deleted: true });
+  });
+
+  // ---------- 举报（行为信号；永不上传信件内容） ----------
+
+  /**
+   * 举报：只接受"对某个 opaque ID 的行为信号"，理由为受控枚举。
+   *
+   * 为什么这样设计（零知识的代价，必须诚实）：
+   * - 服务端读不到信件，所以**没法审核证据**——能做的只有数独立举报人数；
+   * - 举报人也签名认证（防伪造举报刷标记），但其身份以加盐假名落盘，
+   *   数据目录被拖走也反查不出"谁举报了谁"；
+   * - 越过阈值只代表"值得运营者看一眼"，不代表平台裁决——联邦制下用户可换实例。
+   */
+  app.post('/v2/reports', async (c) => {
+    let body: { target_opaque_id?: string; reason_code?: string };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: '请求体必须是 JSON' }, 400);
+    }
+    const { target_opaque_id, reason_code } = body;
+    if (!target_opaque_id || !reason_code) {
+      return c.json({ error: '缺少 target_opaque_id / reason_code' }, 400);
+    }
+    if (!(REPORT_REASONS as readonly string[]).includes(reason_code)) {
+      return c.json({ error: `reason_code 必须取自受控枚举：${REPORT_REASONS.join(' / ')}` }, 400);
+    }
+    const action = 'POST /v2/reports';
+    const header = c.req.header(AUTH_HEADER);
+    const provisional = header?.split(':')[0];
+    const reporter = provisional ? store.getIdentity(provisional) : null;
+    if (!reporter) return c.json({ error: '举报人身份未注册' }, 401);
+    const auth = verifyAuthHeader(header, action, reporter.sig_public);
+    if (!auth.ok) return c.json({ error: `举报需持钥证明：${auth.error}` }, 401);
+    if (auth.ctx.opaque_id === target_opaque_id) {
+      return c.json({ error: '不能举报自己' }, 400);
+    }
+    if (!store.getIdentity(target_opaque_id)) {
+      return c.json({ error: '被举报对象不在本实例' }, 404);
+    }
+    const summary = store.addReport(target_opaque_id, auth.ctx.opaque_id, reason_code);
+    // 回执只给汇总，不透露举报人是谁（连"是不是熟人举报"都不给）
+    return c.json({ recorded: true, summary }, 201);
+  });
+
+  /**
+   * 查看"我"的举报汇总：只有被举报者本人可查（持钥认证）。
+   * 别人查不了任何人——否则举报计数会变成公开羞辱工具。
+   */
+  app.get('/v2/reports/:opaqueId', (c) => {
+    const opaqueId = c.req.param('opaqueId');
+    const identity = store.getIdentity(opaqueId);
+    if (!identity) return c.json({ error: '身份不存在' }, 404);
+    const action = `GET /v2/reports/${opaqueId}`;
+    const auth = verifyAuthHeader(c.req.header(AUTH_HEADER), action, identity.sig_public);
+    if (!auth.ok) return c.json({ error: auth.error }, 401);
+    if (auth.ctx.opaque_id !== opaqueId) return c.json({ error: '只能查看自己的举报汇总' }, 403);
+    return c.json({ summary: store.getReportSummary(opaqueId) });
+  });
+
+  // ---------- 透明度（M4：匿名聚合，公开只读） ----------
+
+  /**
+   * 实例匿名聚合：身份数 / 贴卡数 / 信封数 / 被举报目标数。
+   * 不含任何一个 opaque ID、不含任何内容、不含活跃度明细——
+   * 与网站透明数据区同一条纪律：只公开能公开的总和。
+   */
+  app.get('/v2/stats', (c) => {
+    const s = store.stats();
+    return c.json({ ...s, instance: config.instance });
   });
 
   return app;

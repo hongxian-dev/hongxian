@@ -38,6 +38,7 @@ import {
   SLEEP_TYPES,
   SOCIAL_LEVELS,
   VALUES_TAGS,
+  VISIBLE_TO,
 } from './vocab.js';
 import { isBase64OfLength, isUuidV7 } from './canonical.js';
 
@@ -76,6 +77,38 @@ export const CardDepth = z.object({
 });
 export type CardDepth = z.infer<typeof CardDepth>;
 
+/**
+ * meta · 声明式圈层（Schema v0.5，D8 唯一分发模型）
+ *
+ * 为什么必须明文：L1 是密文，广场浏览方在 grant_l1 之前解不开；如果"同城/年龄段"
+ * 也藏在 L1 里，客户端就永远无法按圈层筛选——D8 的圈层选择会变成一句空话。
+ * 因此把**四个粗粒度字段**提到 meta 明文，由主人贴卡时逐项确认（可见性提示）。
+ *
+ * 零知识的边界（诚实声明）：
+ * - 这四个字段是**用户自己声明要公开**的检索条件，不是画像内容；
+ * - 服务端依然不筛选、不排序（哑管道不变），过滤 100% 在客户端；
+ * - 但"我声明了什么"对服务端与所有拉取方可见——这是圈层机制的**代价**，
+ *   不是疏漏。不想公开就不填（字段可选），只是也享受不到对应筛选。
+ *
+ * 签名覆盖 meta，故声明内容不可被服务端或第三方篡改。
+ */
+export const DeclaredFilters = z
+  .object({
+    /** 我的性别（配对方按 seeking 反向匹配） */
+    gender: z.enum(GENDERS).optional(),
+    /** 我想认识哪个性别（方向性过滤的正面声明） */
+    seeking: z.enum(GENDERS).optional(),
+    /** 市级行政区代码（GB/T 2260，6 位）——到市为止，不收更细 */
+    city: z.string().regex(/^\d{6}$/, '市级行政区代码为 6 位国标码（GB/T 2260）').optional(),
+    age_band: z.enum(AGE_BANDS).optional(),
+    /** 可见性声明圈 B：谁能看到我（客户端受信执行） */
+    visible_to: z.enum(VISIBLE_TO).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, {
+    message: 'declared_filters 若出现就必须至少声明一个字段（空对象无意义）',
+  });
+export type DeclaredFilters = z.infer<typeof DeclaredFilters>;
+
 /** meta · 明文元数据（任何人可读） */
 export const CardMeta = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
@@ -102,6 +135,8 @@ export const CardMeta = z.object({
   card_type: z.enum(CARD_TYPES),
   depth: CardDepth,
   introducer_sig: z.string().optional(), // @deprecated 2026-10-20 D8 修订：介绍人链裁撤（分发半径唯一模型=声明式圈层），编号保留不复用，v0.5 移除
+  /** 声明式圈层（v0.5）：仅广场卡可携带——文件直交的 match_card 走不着圈层 */
+  declared_filters: DeclaredFilters.optional(),
   algo: AlgoDeclaration,
 });
 export type CardMeta = z.infer<typeof CardMeta>;
@@ -262,6 +297,16 @@ export const MatchCardEnvelope = z
         path: ['key_l1'],
         message:
           '广场卡（plaza_card）不得携带 key_l1——服务端不得持有可解密 L1 的材料（零知识军规，Schema v0.4）',
+      });
+    }
+    // v0.5（D8）：declared_filters 只在广场存在意义。文件直交的 match_card 携带它
+    // 等于把"我的检索声明"写进私交名片——没有消费者，只会多一条泄露面。
+    if (env.meta.card_type === 'match_card' && env.meta.declared_filters !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['meta', 'declared_filters'],
+        message:
+          'match_card 不得携带 declared_filters——声明式圈层只属于广场（Schema v0.5，D8）',
       });
     }
   });

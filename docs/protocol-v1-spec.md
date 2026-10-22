@@ -1,10 +1,13 @@
 # Hongxian Protocol v1 (Spec)
 
 > Machine-readable form: [`@hongxian/schema`](../packages/schema) (Zod).
-> Status: **v1.1, public for review** (2026-10-21). Supersedes [protocol v0 draft](protocol-v0-spec.md).
+> Status: **v1.2, public for review** (2026-10-22). Supersedes [protocol v0 draft](protocol-v0-spec.md).
 > v1.1 change (non-breaking): the meeting layer (`payload_L3`) is a *sealed container* with per-field
 > subkeys, and `grant_l3` may carry `container_key` — see §3.3. Readers must keep accepting the v1.0
 > whole-layer shape.
+> v1.2 change (non-breaking, opt-in): plaza cards may carry `declared_filters` — four coarse,
+> self-declared retrieval conditions in plaintext meta (§2.1, §5). Plus anti-abuse reports (§6.1)
+> and the anonymous instance aggregate (§6.2). Cards without `declared_filters` remain valid.
 > License: [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — the protocol itself must stay open; the code is Apache-2.0.
 
 ---
@@ -72,7 +75,8 @@ MatchCardEnvelope
 | `created_at` / `expires_at` | ISO 8601 | TTL default 30 days | renewal required after expiry |
 | `card_type` | enum | `match_card` / `plaza_card` | selects the `key_l1` rule (§2.2) |
 | `depth` | object | required | `interview_rounds`, `completeness` (0–1), `model_tier` (`local`/`cloud`) |
-| `introducer_sig` | optional | introducer signature | trust weighting for the introducer chain |
+| `introducer_sig` | optional | **@deprecated** (v0.5 removal) | introducer chain retired 2026-10-20 (D8: declared circles only) |
+| `declared_filters` | optional | **plaza_card only** | coarse self-declared conditions that become public: `gender`, `seeking`, `city` (6-digit GB/T 2260), `age_band`, `visible_to` (`all`/`same_city`/`same_age_band`). Signed like every other meta field; an empty object is invalid. See §5.1 |
 | `algo` | object | fixed | `{"sig":"ed25519","aead":"aes-256-gcm","kex":"x25519"}` |
 
 ### 2.2 key_l1 — carriage rule split by variant (v1 hard rule)
@@ -190,13 +194,44 @@ Design notes:
 - **Step 2 is intentionally austere.** Discovery shows that someone exists and matches
   nothing; the name card is earned by asking, not by browsing. This is the ladder
   philosophy (tier-by-tier opt-in) applied to strangers.
-- **No filtering parameter exists in the API.** Coarse declaration-based filtering
-  (`declared_filters`) is a later, explicitly deferred increment (constitution §3:
-  "coarse bucketing is the allowed limit… not by default in v2") — client-side filtering
-  over the pulled pool is the v1/v2.0 mechanism.
+- **No filtering parameter exists in the API.** The server never accepts a query that
+  sorts, ranks or narrows the pool. Circle selection happens entirely on the client,
+  over `declared_filters` (§5.1) — "coarse bucketing is the allowed limit, and v2.0
+  keeps it out of the server" (constitution §3).
 - **Silence is a complete answer.** No delivery receipt beyond "entered the mailbox",
   no read receipt, no presence. The owner may simply not respond — the protocol makes
   that indistinguishable from never having seen the request, by design (D4).
+
+### 5.1 declared_filters — declared circles without server bucketing
+
+Discovery by strangers needs *some* coarse narrowing: "same city / same age band / the
+direction I'm looking for". But L1 is ciphertext, so before `grant_l1` a browsing client
+knows nothing to narrow by. Two options existed:
+
+| Option | Verdict |
+|---|---|
+| Server-side bucketing on plaintext filters | ✗ turns the post office into a matching desk (D8, principle: pull not push) |
+| **Client-side bucketing on *self-declared* plaintext** | ✓ adopted (v1.2) |
+
+`declared_filters` therefore holds **only what the owner chooses to publish** — not
+profile content:
+
+- `gender` / `seeking` — the direction pair; both sides check reciprocally (A sees B
+  only if A wants B's gender *and* B wants A's), so a one-way peek is not expressible.
+- `city` — 6-digit GB/T 2260 city code; the city, never the district or address.
+- `age_band` — same controlled vocabulary as L1.
+- `visible_to` — circle B ("who may see me"). `same_city` / `same_age_band` mean a
+  browser that cannot confirm the match is not shown the card at all.
+
+Rules:
+
+1. The field lives in `meta` and is **covered by the signature** — a server or third
+   party cannot rewrite someone's declared scope without breaking verification.
+2. `match_card` MUST NOT carry it (direct-file cards have no circle consumers).
+3. Filtering is **client-side only**. The server still returns the whole pool.
+4. Honest limit: `visible_to` is enforced by cooperating clients, not by the server.
+   A modified client can ignore someone's visibility declaration — but it still cannot
+   read a single byte of their name card without `grant_l1`.
 
 ---
 
@@ -213,6 +248,36 @@ Design notes:
 
 The mailbox holds ciphertext and opaque IDs only. A server operator cannot read, rank,
 or match content even under legal compulsion short of key possession — which it never has.
+
+### 6.1 Anti-abuse reports (behaviour signals, never content)
+
+Zero knowledge has a structural cost: the server **cannot review content**, so it cannot
+adjudicate a complaint either. The protocol is honest about that and limits reports to
+what a server can legitimately know:
+
+```
+POST /v2/reports          { target_opaque_id, reason_code }   (signed by reporter)
+GET  /v2/reports/:id      → { reports, distinct, flagged }     (signed by the target)
+```
+
+| Rule | Value | Rationale |
+|---|---|---|
+| `reason_code` | closed enum: `harassment` / `spam` / `fraud_suspicion` / `impersonation` / `other` | free text would turn reports into a content-review channel |
+| Reporter identity | salted pseudonym `SHA-256(instance_secret \| opaque_id)`, never the raw ID | dedupe possible, "who reported whom" not recoverable from a stolen data directory |
+| Counting | distinct reporters only; N=3 distinct sets `flagged` | one person cannot flag someone by repetition |
+| Who can read a summary | the target only | a public report count becomes a shaming tool |
+| Effect of `flagged` | "worth an operator's look" — throttling/banning is an instance decision | the protocol never adjudicates; federation is the user's exit |
+| Self-report / unknown target | rejected (400 / 404) | — |
+
+### 6.2 Anonymous instance aggregate (transparency)
+
+```
+GET /v2/stats  → { identities, cards, envelopes, reported_targets, flagged_targets, generated_at, instance }
+```
+
+Totals only: no opaque IDs, no per-user activity, no content, no ranking. Same discipline
+as the v1 counter page — publish what can be published, publish nothing that identifies
+anyone.
 
 ---
 
@@ -287,4 +352,5 @@ Any future field added under these slots MUST follow the §10.2 rule.
 ## 12. Changelog
 
 - **v0 draft (2026-10-19)**: first public draft. Envelope structure, three-tier fields, nine message types, key system, validation rules, reserved slots.
+- **v1.2 (2026-10-22)**: declared circles without server bucketing — `declared_filters` in plaintext meta on plaza cards only (§2.1, §5.1), reciprocal direction check, signature-covered. Anti-abuse reports on behaviour signals with salted reporter pseudonyms (§6.1). Anonymous instance aggregate (§6.2). All additive: v1.0/v1.1 cards remain valid.
 - **v1 (2026-10-19)**: platform-service layer formalized. `key_l1` carriage split by card variant (plaza cards carry none — zero-knowledge hard rule, §2.2/§10.5); `grant_l1` message and the plaza flow (§5); mailbox semantics (§6); `opaque_id@instance` addressing with federation reserved (§7); `upgrade_request` gains required `requester_kx_public`. Message family is now nine + `grant_l1`.

@@ -211,3 +211,35 @@ export const MAILBOX_RETENTION_DAYS = 30;
 export const MAX_DAILY_DELIVERIES = 20;
 /** 广场卡池分页大小（哑管道：全量拉取 + cursor 分页，过滤 100% 在客户端） */
 export const PLAZA_PAGE_SIZE = 100;
+
+// ---------- 声明式圈层（D8，Schema v0.5） ----------
+
+/**
+ * 可见性声明圈 B 的取值（"谁能看到我"）。
+ * 与拉取条件圈 A（city / age_band / gender / seeking）对称，同一套受控枚举。
+ */
+export const VISIBLE_TO = [
+  'all', // 不限（默认——广场本来就是给陌生人的）
+  'same_city', // 只对同城可见
+  'same_age_band', // 只对同年龄段可见
+] as const;
+
+/** 声明式圈层字段名（贴卡时逐项向主人确认"这些条件会公开"——D1④ 可见性提示的广场版） */
+export const DECLARED_FILTER_KEYS = ['gender', 'seeking', 'city', 'age_band', 'visible_to'] as const;
+
+// ---------- 反滥用 · 举报（v2 初稿 §6：只管行为信号，永不审内容） ----------
+
+/** 举报事由（受控枚举，不含任何自由文本——防举报变成内容审查通道） */
+export const REPORT_REASONS = [
+  'harassment', // 骚扰
+  'spam', // 广播式骚扰 / 群发
+  'fraud_suspicion', // 疑似诈骗（索要钱财等）
+  'impersonation', // 冒用他人身份
+  'other', // 其他（不采集细节，只记信号）
+] as const;
+
+/**
+ * 标记阈值：N 个**不同** opaque ID 独立举报同一目标 → 实例运营者可见标记。
+ * 与"1 人 1 卡 + 签名链"同属结构限制（服务端读不到信件内容，只能数信号）。
+ */
+export const REPORT_FLAG_THRESHOLD = 3;

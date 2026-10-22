@@ -8,7 +8,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createRequire } from 'node:module';
-import { createServer } from './server.js';
+import { createServer, TOOL_COUNT, PROMPT_COUNT } from './server.js';
 
 const log = (...args: unknown[]) => console.error('[yuelao]', ...args);
 
@@ -47,7 +47,7 @@ async function serve() {
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log('月老已上线（STDIO，零服务端）。12 件工具 + 4 条指引就绪。');
+  log(`月老已上线（STDIO，零服务端依赖）。${TOOL_COUNT} 件工具 + ${PROMPT_COUNT} 条指引就绪。`);
 }
 
 main().catch((e) => {

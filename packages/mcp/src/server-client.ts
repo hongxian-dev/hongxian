@@ -178,6 +178,57 @@ export async function withdrawPlazaCard(instance: string, fingerprint: string, s
   return apiRequest('DELETE', `${instance}/v2/cards/${encodeURIComponent(fingerprint)}`, { auth });
 }
 
+// ---------- 举报（行为信号；不含任何信件内容） ----------
+
+export interface ReportSummaryDto {
+  reports: number;
+  distinct: number;
+  flagged: boolean;
+}
+
+/** 举报一个 opaque ID（持钥证明；服务端只记行为信号，读不到信件内容） */
+export async function reportAbuse(
+  instance: string,
+  targetOpaqueId: string,
+  reasonCode: string,
+  session: Session,
+): Promise<ApiResult<{ recorded: boolean; summary: ReportSummaryDto }>> {
+  const key = session.keyProvider();
+  const auth = buildAuthHeaderValue(session.keyIdB64, 'POST /v2/reports', key.sign);
+  return apiRequest<{ recorded: boolean; summary: ReportSummaryDto }>('POST', `${instance}/v2/reports`, {
+    body: { target_opaque_id: targetOpaqueId, reason_code: reasonCode },
+    auth,
+  });
+}
+
+/** 查看"我"被举报的汇总（只有本人可查——否则举报计数会变成公开羞辱工具） */
+export async function fetchReportSummary(
+  instance: string,
+  opaqueId: string,
+  session: Session,
+): Promise<ApiResult<{ summary: ReportSummaryDto }>> {
+  const key = session.keyProvider();
+  const auth = buildAuthHeaderValue(session.keyIdB64, `GET /v2/reports/${opaqueId}`, key.sign);
+  return apiRequest<{ summary: ReportSummaryDto }>('GET', `${instance}/v2/reports/${encodeURIComponent(opaqueId)}`, {
+    auth,
+  });
+}
+
+/** 实例匿名聚合（M4 透明度；公开只读、无个体数据） */
+export interface InstanceStatsDto {
+  identities: number;
+  cards: number;
+  envelopes: number;
+  reported_targets: number;
+  flagged_targets: number;
+  generated_at: string;
+  instance?: string;
+}
+
+export function fetchInstanceStats(instance: string): Promise<ApiResult<InstanceStatsDto>> {
+  return apiRequest<InstanceStatsDto>('GET', `${instance}/v2/stats`);
+}
+
 // ---------- 信箱 ----------
 
 /** 投递（定向地址；服务端不校验发件方认证头，但随头携带持钥证明——v2.1 联邦预留） */

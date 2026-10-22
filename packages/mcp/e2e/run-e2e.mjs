@@ -182,8 +182,8 @@ async function main() {
     await bootstrap(a);
     const initRes = await a.request('tools/list');
     const tools = initRes.result.tools.map((t) => t.name);
-    check('tools/list 返回 20 件工具', tools.length === 20, `实际 ${tools.length}: ${tools.join(',')}`);
-    for (const t of ['interview', 'sign_card', 'export_card', 'import_card', 'compare', 'send_envelope', 'receive_envelope', 'ledger', 'coach', 'round', 'meeting_kit', 'debrief', 'view_l3', 'backup', 'restore', 'wipe', 'plaza_browse', 'plaza_publish', 'send_via_server', 'mailbox_pull']) {
+    check('tools/list 返回 21 件工具', tools.length === 21, `实际 ${tools.length}: ${tools.join(',')}`);
+    for (const t of ['interview', 'sign_card', 'export_card', 'import_card', 'compare', 'send_envelope', 'receive_envelope', 'ledger', 'coach', 'round', 'meeting_kit', 'debrief', 'view_l3', 'backup', 'restore', 'wipe', 'plaza_browse', 'plaza_publish', 'send_via_server', 'mailbox_pull', 'report_abuse']) {
       check(`工具存在: ${t}`, tools.includes(t));
     }
     const promptsRes = await a.request('prompts/list');
@@ -485,9 +485,21 @@ async function main() {
     const storedCard = JSON.parse(readFileSync(join(serverHome, 'cards', storedCardFiles[0]), 'utf8'));
     check('服务端卡无 key_l1 字段（§10.5）', !('key_l1' in storedCard.envelope));
     check('服务端卡为 plaza_card 变体', storedCard.envelope.meta.card_type === 'plaza_card');
+    // v0.5 声明式圈层（D8）：声明进 meta 明文，且贴卡时逐项告知主人
+    const declared = storedCard.envelope.meta.declared_filters;
+    check('贴卡携带 declared_filters（圈层声明）', !!declared && typeof declared === 'object');
+    check('圈层声明含可见范围', declared?.visible_to === 'all', JSON.stringify(declared));
+    check('贴卡回执念出"这次公开了这些检索条件"', pubA.text.includes('这次公开了这些检索条件'), pubA.text.slice(0, 200));
 
-    // B 浏览：只见轮廓，不见内容
-    const browseB = await b.callTool('plaza_browse', { server: plazaUrl });
+    // B 先故意用不匹配的圈层条件浏览：应当一个都看不到（圈层过滤真的在跑）
+    const browseFiltered = await b.callTool('plaza_browse', { server: plazaUrl, my_filters: { city: '110000' } });
+    const filteredPayload = extractJsonBlock(browseFiltered.text);
+    check('圈层条件不匹配时看不到任何人', (filteredPayload?.outlines ?? []).length === 0, browseFiltered.text.slice(0, 200));
+    check('圈层过滤原因可解释（城市）', browseFiltered.text.includes('城市'), browseFiltered.text.slice(0, 200));
+    check('圈层过滤计数进 filter_stats', (filteredPayload?.filter_stats?.circle ?? 0) >= 1, JSON.stringify(filteredPayload?.filter_stats));
+
+    // B 浏览：只见轮廓，不见内容（传 {} 清掉圈层声明 = 看全量）
+    const browseB = await b.callTool('plaza_browse', { server: plazaUrl, my_filters: {} });
     const browsePayload = extractJsonBlock(browseB.text);
     check('乙方浏览返回结构化轮廓', browsePayload !== null && Array.isArray(browsePayload.outlines));
     const outlineA = (browsePayload?.outlines ?? []).find((o) => o.fingerprint === fpA);
@@ -549,6 +561,32 @@ async function main() {
       server: plazaUrl,
     });
     check('跨实例投递被拒（v2.1 前不开放）', knockCross.text.includes('跨实例投递未开放'), knockCross.text.slice(0, 140));
+
+    // ---- v2 举报（行为信号，不审内容）+ M4 实例匿名聚合 ----
+    const rep1 = await b.callTool('report_abuse', {
+      action: 'file',
+      target_opaque_id: opaqueA,
+      reason_code: 'spam',
+      server: plazaUrl,
+    });
+    check('举报成功并返回汇总', rep1.text.includes('1 条') && rep1.text.includes('1 个独立举报人'), rep1.text.slice(0, 200));
+    check('举报回执不透露举报人身份', !rep1.text.includes(regB.opaque_id), rep1.text.slice(0, 200));
+    check('举报同时指出本地拉黑这条路', rep1.text.includes('ledger(action="block"'), rep1.text.slice(0, 240));
+    const repSelf = await a.callTool('report_abuse', { action: 'mine', server: plazaUrl });
+    check('被举报者能查自己的汇总', repSelf.text.includes('收到 1 条举报'), repSelf.text.slice(0, 160));
+    const repStats = await a.callTool('report_abuse', { action: 'stats', server: plazaUrl });
+    check('实例匿名聚合可读', repStats.text.includes('"identities": 2'), repStats.text.slice(0, 240));
+    check(
+      '匿名聚合不含任何个体标识',
+      !repStats.text.includes(opaqueA) && !repStats.text.includes(regB.opaque_id),
+    );
+    const repBad = await b.callTool('report_abuse', {
+      action: 'file',
+      target_opaque_id: opaqueA,
+      reason_code: '我不爽',
+      server: plazaUrl,
+    });
+    check('举报事由必须取自受控枚举', repBad.isError === true || repBad.text.includes('枚举'), repBad.text.slice(0, 160));
 
     // A 撤卡：广场池清零（HTTP 直查——哑管道无单卡查询端点）
     const wd = await a.callTool('plaza_publish', { action: 'withdraw', server: plazaUrl });

@@ -20,6 +20,7 @@ import {
   type SealedKeyFile,
 } from '@hongxian/crypto';
 import { toBase64 } from '@hongxian/schema';
+import type { DeclaredFilters } from '@hongxian/schema';
 import type { KeyProvider } from '@hongxian/core';
 import { FsStore, homeExists } from './store-fs.js';
 
@@ -34,12 +35,26 @@ export interface Settings {
   model_tier: 'local' | 'cloud';
   /** 平台服务实例地址（M1.3：月老连哪个自托管/官方实例；显式传入即记住） */
   plaza_instance?: string;
+  /**
+   * 单条姻缘线的代访 token 预算帽（D9；0 = 不设帽）。
+   * 超帽时月老拒绝再发考题包，并给出"提高上限 / 缩短题目"两条路。
+   */
+  token_budget_cap?: number;
+  /**
+   * 拉取条件圈（D8）：主人主动声明过的"我要看谁"。
+   * 缺省不存在 = 不筛（看全量）——月老不替主人决定"只看同城"。
+   */
+  plaza_circle?: DeclaredFilters;
 }
+
+/** 默认预算帽：8000 token/线——够 3–8 轮结构化问答，远不到"无限网聊" */
+export const DEFAULT_TOKEN_BUDGET_CAP = 8000;
 
 const DEFAULT_SETTINGS: Settings = {
   opt_in_counter: false,
   lock_timeout_minutes: 0,
   model_tier: 'local',
+  token_budget_cap: DEFAULT_TOKEN_BUDGET_CAP,
 };
 
 export class Session {

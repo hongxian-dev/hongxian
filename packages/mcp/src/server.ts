@@ -17,7 +17,13 @@ import {
   coachTool,
 } from './tools-exchange.js';
 import { backupTool, restoreTool, wipeTool } from './tools-lifecycle.js';
-import { plazaBrowseTool, plazaPublishTool, sendViaServerTool, mailboxPullTool } from './tools-plaza.js';
+import {
+  plazaBrowseTool,
+  plazaPublishTool,
+  sendViaServerTool,
+  mailboxPullTool,
+  reportAbuseTool,
+} from './tools-plaza.js';
 import { roundTool } from './tools-round.js';
 import { meetingKitTool, debriefTool, viewL3Tool } from './tools-guide.js';
 import { ALL_PROMPTS } from './prompts.js';
@@ -46,7 +52,13 @@ const TOOLS = [
   plazaPublishTool,
   sendViaServerTool,
   mailboxPullTool,
+  // v2 举报（行为信号）+ 实例匿名聚合（M4）
+  reportAbuseTool,
 ] as const;
+
+/** 工具与指引数量由数组本身派生——防止文档/日志与实现脱节（历史上曾写死"12 tools"过期） */
+export const TOOL_COUNT = TOOLS.length;
+export const PROMPT_COUNT = Object.keys(ALL_PROMPTS).length;
 
 const PROMPT_DESCRIPTIONS: Record<string, string> = {
   yuelao_persona: '月老人格与禁令（D2）：温暖克制的靠谱长辈；不做闲聊、不推送、不替主人做主',
@@ -68,8 +80,10 @@ export function createServer(): McpServer {
         '再按用户意图调用工具。建画像走 interview_flow，比对报告走 report_narrative，' +
         '出题走 coach_ethics。一切明文数据只存用户本机（经服务端流转的只有密文）；' +
         '你与另一位月老之间只有结构化握手，没有自由聊天。' +
-        '广场模式（M1.3）：plaza_browse 只看轮廓不见内容，send_via_server 敲门只确认"已入信箱"，' +
-        'mailbox_pull 拉取即删——无在线状态、无已读回执、无推送。',
+        '广场模式（M1.3）：plaza_browse 只看轮廓不见内容（可用 my_filters 声明圈层条件，过滤只在本机算），' +
+        'send_via_server 敲门只确认"已入信箱"，' +
+        'mailbox_pull 拉取即删——无在线状态、无已读回执、无推送。' +
+        '遇到骚扰、诈骗、冒充或垃圾信息，用 report_abuse 上报（受控理由码，举报人身份只存加盐假名）。',
     },
   );
   const session = new Session();

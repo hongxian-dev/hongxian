@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>红线开源工具 · 产品需求文档（PRD）v1.1</title>
+<title>红线开源工具 · 产品需求文档（PRD）v1.2</title>
 <meta name="description" content="红线开源工具 PRD：开源、免费的 AI Agent 婚恋匹配基础设施——客户端月老 Skill + 服务端红线平台 + 红线协议。" />
 <meta name="color-scheme" content="light" />
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjRkRGQkY3Ii8+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iOC41IiBmaWxsPSJub25lIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iMi40Ii8+PGNpcmNsZSBjeD0iMTYiIGN5PSI3LjUiIHI9IjIuNiIgZmlsbD0iI0M4MTAyRSIvPjwvc3ZnPg==" />
@@ -258,7 +258,7 @@ pre.code code{background:none;border:0;padding:0;color:inherit;white-space:pre;f
 <aside class="nav" id="nav">
   <div class="nav-head">
     <div class="nav-mark"><span class="dot"></span>红线开源工具<span class="en">PRD</span></div>
-    <p class="nav-sub">产品需求文档 v1.1 · 2026-10-22</p>
+    <p class="nav-sub">产品需求文档 v1.2 · 2026-10-22</p>
   </div>
   <nav class="nav-scroll" id="navScroll"><ol><li class="lvl2">
   <a href="#s1"><span class="n">01</span><span class="t">1. 产品概述</span></a>
@@ -338,10 +338,10 @@ pre.code code{background:none;border:0;padding:0;color:inherit;white-space:pre;f
         <span><b>19</b>张表</span>
         <span><b>39</b>个小节</span>
       </div>
-      <dl class="meta"><div><dt>版本</dt><dd>v1.1</dd></div><div><dt>日期</dt><dd>2026-10-22</dd></div><div><dt>真源</dt><dd>红线开源工具PRD.md</dd></div><div><dt>阅读</dt><dd>单文件 HTML · 零外部请求 · 可离线</dd></div></dl>
+      <dl class="meta"><div><dt>版本</dt><dd>v1.2</dd></div><div><dt>日期</dt><dd>2026-10-22</dd></div><div><dt>真源</dt><dd>红线开源工具PRD.md</dd></div><div><dt>阅读</dt><dd>单文件 HTML · 零外部请求 · 可离线</dd></div></dl>
     </header>
     <article class="doc">
-<aside class="frontmatter"><b class="fm-label">文档说明</b><p><strong>文档定位</strong>：本文档是红线项目的产品总纲（PRD），整合《定位声明》《月老Skill交互设计方案》《匹配卡Schema规范》《v1产品清单与验收标准》《红线平台服务v2产品设计初稿》《技术详设》六份文档的产品面结论，供新成员快速建立完整心智模型、供开发会话对照验收、供对外合作方理解产品。</p><p><strong>优先级关系</strong>：细节冲突时，以《红线项目定位声明》（宪法）为准 → 各专题文档（D 编号决策）次之 → 本文档为导览与整合。</p><p><strong>状态</strong>：v1.1（2026-10-22，孙超 × 产品合伙人）。配图共 14 张：<code>diagrams/</code> 目录（其中 4 张为本文档新增，自包含样式）。</p><p><strong>可读版</strong>：同目录 <code>红线开源工具PRD.html</code>——由本文件生成，14 张配图内嵌、可离线双击打开（改动后在仓库根执行 <code>npm run prd</code> 重新生成）。</p></aside>
+<aside class="frontmatter"><b class="fm-label">文档说明</b><p><strong>文档定位</strong>：本文档是红线项目的产品总纲（PRD），整合《定位声明》《月老Skill交互设计方案》《匹配卡Schema规范》《v1产品清单与验收标准》《红线平台服务v2产品设计初稿》《技术详设》六份文档的产品面结论，供新成员快速建立完整心智模型、供开发会话对照验收、供对外合作方理解产品。</p><p><strong>优先级关系</strong>：细节冲突时，以《红线项目定位声明》（宪法）为准 → 各专题文档（D 编号决策）次之 → 本文档为导览与整合。</p><p><strong>状态</strong>：v1.2（2026-10-22，孙超 × 产品合伙人）。v1.2 变更：MCP 表面 20 → <strong>21 tools</strong>（新增 <code>report_abuse</code>）、D8 声明式圈层落地（Schema v0.5）、D9 代访预算帽接线、协议规范升至 v1.2。配图共 14 张：<code>diagrams/</code> 目录（其中 4 张为本文档新增，自包含样式）。</p><p><strong>可读版</strong>：同目录 <code>红线开源工具PRD.html</code>——由本文件生成，14 张配图内嵌、可离线双击打开（改动后在仓库根执行 <code>npm run prd</code> 重新生成）。</p></aside>
 <hr />
 <h2 id="s1"><span class="h2-num">01</span><span class="h2-text">产品概述</span></h2>
 <h3 id="h1">1.1 一句话定位</h3>
@@ -401,8 +401,8 @@ pre.code code{background:none;border:0;padding:0;color:inherit;white-space:pre;f
 <h3 id="h15">5.2 功能清单（S1–S7）</h3>
 <div class="table-wrap"><table><thead><tr><th>#</th><th>功能</th><th>说明</th></tr></thead><tbody><tr><td class="nw">S1</td><td class="nw">首次启动知情同意</td><td>一页说明：收集什么、存哪里、可随时删除、云端 LLM 数据流披露、<strong>解锁即无法撤回</strong>明示</td></tr><tr><td class="nw">S2</td><td class="nw">对话建画像</td><td>3 次渐进访谈 + 复述确认（§6.1）</td></tr><tr><td class="nw">S3</td><td class="nw">本地存储</td><td>画像/卡片只落 <code>~/.hongxian/</code>；一键删除全部数据，磁盘无残留</td></tr><tr><td class="nw">S4</td><td class="nw">加密匹配卡</td><td>三层信封签发（§9），格式兼容 v2 零迁移</td></tr><tr><td class="nw">S5</td><td class="nw">名片互换</td><td>扫码（哈希确认码防调包）/ 传文件；v2 起增信箱/广场信道</td></tr><tr><td class="nw">S6</td><td class="nw">本地匹配报告</td><td>五档三区叙事（§6.3），只在本机呈现</td></tr><tr><td class="nw">S7</td><td class="nw">匿名聚合计数</td><td>opt-in 上报，仅聚合无 ID（Worker 端 PoW+限速+无日志）</td></tr></tbody></table></div>
 <h3 id="h16">5.3 MCP 表面（对宿主 Agent 暴露）</h3>
-<p><strong>共 20 tools + 8 prompts</strong>（<code>packages/mcp/src/server.ts</code> 实测口径，v1.1）：</p>
-<ul><li><strong>12 基础 tools</strong>：<code>interview</code> / <code>sign_card</code> / <code>export_card</code> / <code>import_card</code> / <code>compare</code> / <code>send_envelope</code> / <code>receive_envelope</code> / <code>ledger</code> / <code>coach</code> / <code>backup</code> / <code>restore</code> / <code>wipe</code></li><li><strong>4 轮次与见面 tools</strong>（D10 代访循环 / D11 轮次 / D3③④ 复盘与锦囊 / D13 逐字段解锁）：<code>round</code>（开轮·回卷·闭合·历史·毕业建议）/ <code>meeting_kit</code>（见面锦囊）/ <code>debrief</code>（见面复盘校准）/ <code>view_l3</code>（见面层按字段查看）</li><li><strong>4 平台 tools</strong>（v2 接入，已实现）：<code>plaza_browse</code> / <code>plaza_publish</code> / <code>send_via_server</code> / <code>mailbox_pull</code></li><li><strong>8 个 prompts</strong>：<code>yuelao_persona</code>（人格与禁令）/ <code>interview_flow</code>（三次访谈）/ <code>report_narrative</code>（五档三区）/ <code>coach_ethics</code>（选题教练护栏）/ <code>round_flow</code>（轮次流程）/ <code>debrief_guide</code>（复盘引导）/ <code>safety_brief</code>（反诈与安全）/ <code>plaza_flow</code>（广场与信箱）</li></ul>
+<p><strong>共 21 tools + 8 prompts</strong>（<code>packages/mcp/src/server.ts</code> 实测口径，v1.2）：</p>
+<ul><li><strong>12 基础 tools</strong>：<code>interview</code> / <code>sign_card</code> / <code>export_card</code> / <code>import_card</code> / <code>compare</code> / <code>send_envelope</code> / <code>receive_envelope</code> / <code>ledger</code> / <code>coach</code> / <code>backup</code> / <code>restore</code> / <code>wipe</code></li><li><strong>4 轮次与见面 tools</strong>（D10 代访循环 / D11 轮次 / D3③④ 复盘与锦囊 / D13 逐字段解锁）：<code>round</code>（开轮·回卷·闭合·历史·毕业建议）/ <code>meeting_kit</code>（见面锦囊）/ <code>debrief</code>（见面复盘校准）/ <code>view_l3</code>（见面层按字段查看）</li><li><strong>5 平台 tools</strong>（v2 接入，已实现）：<code>plaza_browse</code>（含声明式圈层过滤 D8）/ <code>plaza_publish</code> / <code>send_via_server</code> / <code>mailbox_pull</code> / <code>report_abuse</code>（举报 / 查自己被他人的举报汇总 / 实例匿名聚合）</li><li><strong>8 个 prompts</strong>：<code>yuelao_persona</code>（人格与禁令）/ <code>interview_flow</code>（三次访谈）/ <code>report_narrative</code>（五档三区）/ <code>coach_ethics</code>（选题教练护栏）/ <code>round_flow</code>（轮次流程）/ <code>debrief_guide</code>（复盘引导）/ <code>safety_brief</code>（反诈与安全）/ <code>plaza_flow</code>（广场与信箱）</li></ul>
 <h3 id="h17">5.4 月老人格（D2）与日常互动四件套（D3）</h3>
 <p><strong>人格</strong>：第一人称&quot;月老&quot;，温暖、克制的靠谱长辈。禁令：不做闲聊伙伴、无推送不主动打扰、不做养成游戏（互动必须有信息增量才发生）、涉数据表述诚实（&quot;这条会经过你配置的模型&quot;，不得宣称&quot;只有我知道&quot;）。</p>
 <p><strong>日常互动四件套</strong>（全部纯本地、v1 纳入）：</p>
@@ -534,7 +534,7 @@ pre.code code{background:none;border:0;padding:0;color:inherit;white-space:pre;f
 <hr />
 <p><em>PRD v1.1 · 2026-10-22 · 孙超 × 产品合伙人 · 配图源文件 <code>diagrams/</code>（新增 4 张：prd_product_architecture / prd_data_three_rings / prd_envelope_structure / prd_version_roadmap）</em></p>
       <div class="doc-foot">
-        <b>红线开源工具 · PRD v1.1</b> · 2026-10-22 · 孙超 × 产品合伙人<br />
+        <b>红线开源工具 · PRD v1.2</b> · 2026-10-22 · 孙超 × 产品合伙人<br />
         本文件由 <code>docs/build-prd-html.mjs</code> 从 <code>docs/00-定位与PRD/红线开源工具PRD.md</code> 生成，
         请勿直接编辑；改文档后执行 <code>npm run prd</code> 重新生成。配图源文件在 <code>diagrams/</code>。
       </div>

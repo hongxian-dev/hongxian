@@ -2,7 +2,7 @@
 
 > **文档定位**：本文档是红线项目的产品总纲（PRD），整合《定位声明》《月老Skill交互设计方案》《匹配卡Schema规范》《v1产品清单与验收标准》《红线平台服务v2产品设计初稿》《技术详设》六份文档的产品面结论，供新成员快速建立完整心智模型、供开发会话对照验收、供对外合作方理解产品。
 > **优先级关系**：细节冲突时，以《红线项目定位声明》（宪法）为准 → 各专题文档（D 编号决策）次之 → 本文档为导览与整合。
-> **状态**：v1.1（2026-10-22，孙超 × 产品合伙人）。配图共 14 张：`diagrams/` 目录（其中 4 张为本文档新增，自包含样式）。
+> **状态**：v1.2（2026-10-22，孙超 × 产品合伙人）。v1.2 变更：MCP 表面 20 → **21 tools**（新增 `report_abuse`）、D8 声明式圈层落地（Schema v0.5）、D9 代访预算帽接线、协议规范升至 v1.2。配图共 14 张：`diagrams/` 目录（其中 4 张为本文档新增，自包含样式）。
 > **可读版**：同目录 `红线开源工具PRD.html`——由本文件生成，14 张配图内嵌、可离线双击打开（改动后在仓库根执行 `npm run prd` 重新生成）。
 
 ---
@@ -196,11 +196,11 @@
 
 ### 5.3 MCP 表面（对宿主 Agent 暴露）
 
-**共 20 tools + 8 prompts**（`packages/mcp/src/server.ts` 实测口径，v1.1）：
+**共 21 tools + 8 prompts**（`packages/mcp/src/server.ts` 实测口径，v1.2）：
 
 - **12 基础 tools**：`interview` / `sign_card` / `export_card` / `import_card` / `compare` / `send_envelope` / `receive_envelope` / `ledger` / `coach` / `backup` / `restore` / `wipe`
 - **4 轮次与见面 tools**（D10 代访循环 / D11 轮次 / D3③④ 复盘与锦囊 / D13 逐字段解锁）：`round`（开轮·回卷·闭合·历史·毕业建议）/ `meeting_kit`（见面锦囊）/ `debrief`（见面复盘校准）/ `view_l3`（见面层按字段查看）
-- **4 平台 tools**（v2 接入，已实现）：`plaza_browse` / `plaza_publish` / `send_via_server` / `mailbox_pull`
+- **5 平台 tools**（v2 接入，已实现）：`plaza_browse`（含声明式圈层过滤 D8）/ `plaza_publish` / `send_via_server` / `mailbox_pull` / `report_abuse`（举报 / 查自己被他人的举报汇总 / 实例匿名聚合）
 - **8 个 prompts**：`yuelao_persona`（人格与禁令）/ `interview_flow`（三次访谈）/ `report_narrative`（五档三区）/ `coach_ethics`（选题教练护栏）/ `round_flow`（轮次流程）/ `debrief_guide`（复盘引导）/ `safety_brief`（反诈与安全）/ `plaza_flow`（广场与信箱）
 
 ### 5.4 月老人格（D2）与日常互动四件套（D3）

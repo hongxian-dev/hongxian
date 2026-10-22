@@ -20,6 +20,9 @@ import {
   ledgerView,
   noteResponseReceived,
   noteUpgradeSent,
+  noteTokensUsed,
+  estimateTokens,
+  checkTokenBudget,
   neutralizeTopic,
   blockLine,
   unblockLine,
@@ -68,7 +71,7 @@ import {
 } from './plaza-store.js';
 import { applyAnswer, applyOpenTopic, loadLineRounds, saveLineRounds } from './rounds-store.js';
 import { findContactCard, flattenProfile } from './profile-view.js';
-import type { Session } from './session.js';
+import { DEFAULT_TOKEN_BUDGET_CAP, type Session } from './session.js';
 
 const CARDS_CONTACTS_DIR = 'cards/contacts';
 const LINES_DIR = 'lines';
@@ -242,6 +245,43 @@ export function checkOutboundLeak(
     `  reason: 保持你原来的理由，但不要引用底线原话\n\n` +
     `改好后重发。这不是文字洁癖——出站过滤是代访机制的安全边界。`
   );
+}
+
+// ---------- D9 代访 token 预算帽（出站成本闸门） ----------
+
+/**
+ * 出站考题包的成本闸门（D9：代访 token 预算可预算化）。
+ *
+ * 为什么在这里拦：token 花在"抛给对方的题目"上，而题目是月老生成的——
+ * 不设帽就会出现"两个 AI 聊得很开心，主人月底收到账单"的经典死法。
+ *
+ * 帽按**每条姻缘线**累计（不是全局）：多线并行是主人的权利（D15⑥），
+ * 一条线烧超了不该冻结其他线。
+ */
+export function guardTopicBudget(
+  completedBody: Record<string, unknown>,
+  session: Session,
+  s: ReturnType<typeof store>,
+  recipientOpaqueId: string,
+): { ok: true; tokens: number } | { ok: false; text: string } {
+  const parts = [completedBody.topic, ...((completedBody.followups as unknown[]) ?? []), completedBody.reason].filter(
+    (x): x is string => typeof x === 'string' && x.length > 0,
+  );
+  const estimated = estimateTokens(parts.join('\n'));
+  const line = s.read<FateLine>(`${LINES_DIR}/${dirNameFromKeyId(recipientOpaqueId)}/state.json`);
+  const cap = session.settings().token_budget_cap ?? DEFAULT_TOKEN_BUDGET_CAP;
+  const verdict = checkTokenBudget(line?.tokens_used ?? 0, estimated, cap);
+  if (verdict.ok) return { ok: true, tokens: estimated };
+  return {
+    ok: false,
+    text:
+      `这条线的代访预算要见底了，这一轮先别发。\n\n` +
+      `已用约 ${verdict.used} / 上限 ${verdict.cap} token，本次预计 ${verdict.estimated}。\n\n` +
+      `两条路，你选：\n` +
+      `① 提额——把 settings.token_budget_cap 调高（比如 ${Math.max(verdict.cap * 2, verdict.cap + 4000)}），节奏还是你定；\n` +
+      `② 收窄——这一轮缩到 1 个主题 + 1 个追问再发。\n\n` +
+      `我不会偷偷截断你的问题，也不假装预算还很宽裕：超了就是超了。`,
+  };
 }
 
 // ---------- 共享：消息体补全（v0.4；send_envelope 与 send_via_server 共用） ----------
@@ -450,6 +490,18 @@ export const sendEnvelopeTool = {
     // 出站泄露面审查（D15⑦）：考题会暴露主人自己在意的维度
     const leakWarning = checkOutboundLeak(args.msg_type, completed.body, s);
     if (leakWarning) return text(leakWarning);
+    // D9 代访预算帽：超帽不发（并给出提额/收窄两条路）
+    let budgetTokens = 0;
+    if (args.msg_type === 'topic_pack') {
+      const guard = guardTopicBudget(
+        completed.body,
+        session,
+        s,
+        (theirCard.meta as { owner_key_id: string }).owner_key_id,
+      );
+      if (!guard.ok) return text(guard.text);
+      budgetTokens = guard.tokens;
+    }
     const env = buildSignedEnvelope(
       args.msg_type,
       completed.body,
@@ -466,13 +518,14 @@ export const sendEnvelopeTool = {
     // 手账：升级请求未回应计数（D15④）
     const line = s.read<FateLine>(`${linePath}/state.json`);
     if (line) {
-      const updated =
+      const counted =
         args.msg_type === 'upgrade_request' || args.msg_type === 'topic_pack' || args.msg_type === 'graduation_invite'
           ? noteUpgradeSent(line)
           : args.msg_type === 'grant_l2' || args.msg_type === 'answer_card'
             ? noteResponseReceived(line)
             : line;
-      s.write(`${linePath}/state.json`, updated);
+      // 预算记账：只记考题包（真正的 token 消耗发生在出题与解析上）
+      s.write(`${linePath}/state.json`, budgetTokens > 0 ? noteTokensUsed(counted, budgetTokens) : counted);
     }
     void reportMetric(session.settings().opt_in_counter, 'exchange_initiated', 'none');
     return text(

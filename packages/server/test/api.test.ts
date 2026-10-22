@@ -409,3 +409,173 @@ describe('平台服务 API v1', () => {
     });
   });
 });
+
+// ---------- v2 举报（行为信号）与匿名聚合（M4） ----------
+
+describe('举报与透明聚合', () => {
+  let dir: string;
+  let app: ReturnType<typeof createApp>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'hx-report-'));
+    app = createApp(new ServerStore(dir), { instance: 'test.instance' });
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  function reportRequest(reporter: TestKey, body: Record<string, unknown>, action = 'POST /v2/reports') {
+    return app.request('/v2/reports', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', [AUTH_HEADER]: buildAuthHeader(opaqueOf(reporter), action, reporter.sign) },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it('举报成功：回执只给汇总，不含举报人身份', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+
+    const res = await reportRequest(bob, { target_opaque_id: opaqueOf(alice), reason_code: 'harassment' });
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as { recorded: boolean; summary: Record<string, unknown> };
+    expect(json.recorded).toBe(true);
+    expect(json.summary).toMatchObject({ reports: 1, distinct: 1, flagged: false });
+    // 回执里不得出现举报人任何标识
+    expect(JSON.stringify(json)).not.toContain(bob.pubB64);
+    expect(JSON.stringify(json)).not.toContain(opaqueOf(bob));
+  });
+
+  it('同一人重复举报只算一次（否则一个人刷三次就能标记掉别人）', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+    for (let i = 0; i < 3; i++) {
+      await reportRequest(bob, { target_opaque_id: opaqueOf(alice), reason_code: 'spam' });
+    }
+    const summary = await app.request(`/v2/reports/${enc(opaqueOf(alice))}`, {
+      headers: { [AUTH_HEADER]: buildAuthHeader(opaqueOf(alice), `GET /v2/reports/${opaqueOf(alice)}`, alice.sign) },
+    });
+    const json = (await summary.json()) as { summary: { reports: number; distinct: number; flagged: boolean } };
+    expect(json.summary).toMatchObject({ reports: 1, distinct: 1, flagged: false });
+  });
+
+  it('三个独立举报人越过阈值 → flagged（按独立人数，不按条数）', async () => {
+    const target = genKey();
+    await register(app, target);
+    for (let i = 0; i < 3; i++) {
+      const reporter = genKey();
+      await register(app, reporter);
+      await reportRequest(reporter, { target_opaque_id: opaqueOf(target), reason_code: 'fraud_suspicion' });
+    }
+    const res = await app.request(`/v2/reports/${enc(opaqueOf(target))}`, {
+      headers: { [AUTH_HEADER]: buildAuthHeader(opaqueOf(target), `GET /v2/reports/${opaqueOf(target)}`, target.sign) },
+    });
+    const json = (await res.json()) as { summary: { reports: number; distinct: number; flagged: boolean } };
+    expect(json.summary).toMatchObject({ reports: 3, distinct: 3, flagged: true });
+  });
+
+  it('不能举报自己', async () => {
+    const alice = genKey();
+    await register(app, alice);
+    const res = await reportRequest(alice, { target_opaque_id: opaqueOf(alice), reason_code: 'other' });
+    expect(res.status).toBe(400);
+  });
+
+  it('目标必须在本实例注册', async () => {
+    const alice = genKey();
+    const ghost = genKey();
+    await register(app, alice);
+    const res = await reportRequest(alice, { target_opaque_id: opaqueOf(ghost), reason_code: 'other' });
+    expect(res.status).toBe(404);
+  });
+
+  it('reason_code 必须取自受控枚举（不收自由文本——举报一旦能写字就变成内容审查通道）', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+    const res = await reportRequest(bob, { target_opaque_id: opaqueOf(alice), reason_code: '我觉得他人品不好' });
+    expect(res.status).toBe(400);
+  });
+
+  it('无持钥证明不能举报', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+    const res = await app.request('/v2/reports', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target_opaque_id: opaqueOf(alice), reason_code: 'spam' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('只有本人能查自己的举报汇总（否则举报计数会变成公开羞辱工具）', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+    await reportRequest(bob, { target_opaque_id: opaqueOf(alice), reason_code: 'spam' });
+
+    // 旁人用 alice 的地址 + 自己的签名 → 拒绝
+    const peeking = await app.request(`/v2/reports/${enc(opaqueOf(alice))}`, {
+      headers: { [AUTH_HEADER]: buildAuthHeader(opaqueOf(alice), `GET /v2/reports/${opaqueOf(alice)}`, bob.sign) },
+    });
+    expect(peeking.status).toBe(401);
+
+    // 本人正常查
+    const own = await app.request(`/v2/reports/${enc(opaqueOf(alice))}`, {
+      headers: { [AUTH_HEADER]: buildAuthHeader(opaqueOf(alice), `GET /v2/reports/${opaqueOf(alice)}`, alice.sign) },
+    });
+    expect(own.status).toBe(200);
+  });
+
+  it('/v2/stats：匿名聚合正确且不含任何个体标识', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+    // alice 贴一张广场卡
+    const card = signedCard(alice, { card_type: 'plaza_card' });
+    await app.request('/v2/cards', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', [AUTH_HEADER]: buildAuthHeader(opaqueOf(alice), 'POST /v2/cards', alice.sign) },
+      body: JSON.stringify(card),
+    });
+    // alice 给 bob 投一封信
+    await app.request(`/v2/mailbox/${enc(opaqueOf(bob))}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(signedMsg(alice, card.meta.card_id)),
+    });
+
+    const res = await app.request('/v2/stats');
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json).toMatchObject({ identities: 2, cards: 1, envelopes: 1, reported_targets: 0, flagged_targets: 0 });
+    expect(json.instance).toBe('test.instance');
+    const raw = JSON.stringify(json);
+    expect(raw).not.toContain(opaqueOf(alice));
+    expect(raw).not.toContain(opaqueOf(bob));
+  });
+
+  it('注销即清空"关于我的举报记录"（人走了，挂着别人对他的举报没意义）', async () => {
+    const alice = genKey();
+    const bob = genKey();
+    await register(app, alice);
+    await register(app, bob);
+    await reportRequest(bob, { target_opaque_id: opaqueOf(alice), reason_code: 'spam' });
+
+    const del = await app.request('/v2/identity', {
+      method: 'DELETE',
+      headers: { [AUTH_HEADER]: buildAuthHeader(opaqueOf(alice), 'DELETE /v2/identity', alice.sign) },
+    });
+    expect(del.status).toBe(200);
+
+    const stats = (await (await app.request('/v2/stats')).json()) as { reported_targets: number };
+    expect(stats.reported_targets).toBe(0);
+  });
+});

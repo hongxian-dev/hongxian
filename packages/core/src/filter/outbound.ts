@@ -93,3 +93,40 @@ export function detectLeakRisk(topicText: string, myDealbreakerNotes: string[]):
 export function withinTokenBudget(usedTokens: number, budgetCap: number): boolean {
   return usedTokens <= budgetCap;
 }
+
+/**
+ * token 估算（D9）。月老拿不到宿主的真实 token 账本，只能按文本估算——
+ * 刻意**偏高**：中文约 1 token/字，其余按 1 token/3 字符。
+ * 宁可提前喊停，也不要事后发现预算早就穿了。
+ */
+export function estimateTokens(text: string): number {
+  const cjk = (text.match(/[\u3400-\u9fff\uf900-\ufaff]/g) ?? []).length;
+  const rest = Math.max(0, text.length - cjk);
+  return Math.ceil(cjk + rest / 3);
+}
+
+/** 预算判定结果（给月老可解释的数字，不许含糊其辞） */
+export interface TokenBudgetVerdict {
+  ok: boolean;
+  /** 已用（本条线累计估算） */
+  used: number;
+  /** 本次预计消耗 */
+  estimated: number;
+  /** 上限 */
+  cap: number;
+}
+
+/**
+ * 出站前的预算判定：已用 + 本次预估 vs 上限。
+ * 超帽时返回 ok=false 与三个数字，由调用方给出"提高上限 / 缩短题目"两条路。
+ */
+export function checkTokenBudget(
+  usedTokens: number,
+  estimatedTokens: number,
+  budgetCap: number,
+): TokenBudgetVerdict {
+  const used = Math.max(0, usedTokens);
+  const estimated = Math.max(0, estimatedTokens);
+  if (budgetCap <= 0) return { ok: true, used, estimated, cap: budgetCap }; // 0 = 不设帽
+  return { ok: withinTokenBudget(used + estimated, budgetCap), used, estimated, cap: budgetCap };
+}

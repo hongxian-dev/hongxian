@@ -28,6 +28,7 @@ import { isAbsolute, join, relative, resolve as resolvePath, sep } from 'node:pa
 import { randomBytes } from 'node:crypto';
 import {
   MAILBOX_RETENTION_DAYS,
+  REPORT_FLAG_THRESHOLD,
   canonicalize,
   type MatchCardEnvelope,
   type MsgEnvelope,
@@ -51,6 +52,37 @@ export interface StoredEnvelope {
   delivered_at: string;
 }
 
+/**
+ * 举报记录（v2 初稿 §6：只管行为信号，永不审内容）。
+ *
+ * 举报人身份**不落原值**：存的是 HMAC 式加盐假名 `sha256(实例 secret || opaque_id)`。
+ * 这样仍能去重（同一人举报两次算一次），但服务端数据目录被拖走时，
+ * 无法从报告文件反推出"谁举报了谁"——零知识的最后一段只靠这一层守住。
+ */
+export interface StoredReports {
+  target_opaque_id: string;
+  reports: { reporter_tag: string; reason: string; at: string }[];
+}
+
+export interface ReportSummary {
+  /** 收到的举报条数（同一人多次只算一次） */
+  reports: number;
+  /** 独立举报人数 */
+  distinct: number;
+  /** 是否越过标记阈值（REPORT_FLAG_THRESHOLD 个独立举报人） */
+  flagged: boolean;
+}
+
+export interface InstanceStats {
+  identities: number;
+  cards: number;
+  envelopes: number;
+  /** 被举报的目标数（不含条数——条数容易反推活跃度） */
+  reported_targets: number;
+  flagged_targets: number;
+  generated_at: string;
+}
+
 export interface Page<T> {
   items: T[];
   next_cursor: string | null;
@@ -63,17 +95,21 @@ export function hexOf(b64: string): string {
 
 export class ServerStore {
   readonly root: string;
+  /** 实例秘密（举报人假名盐）——只在本机，不进任何对外响应 */
+  private readonly secret: string;
 
   constructor(root: string) {
     // 归一化为绝对路径：否则默认的 './data' 会让 resolve() 的越界判定恒为真
     // （join('./data', 'x') = 'data/x'，不以 './data' 开头 → 全部写入被误判为越界）
     this.root = resolvePath(root);
-    for (const dir of ['identities', 'cards', 'mailboxes', 'limits']) {
+    for (const dir of ['identities', 'cards', 'mailboxes', 'limits', 'reports']) {
       mkdirSync(join(this.root, dir), { recursive: true });
     }
-    if (!existsSync(join(this.root, 'secret'))) {
-      writeFileSync(join(this.root, 'secret'), randomBytes(32).toString('hex'));
+    const secretPath = join(this.root, 'secret');
+    if (!existsSync(secretPath)) {
+      writeFileSync(secretPath, randomBytes(32).toString('hex'));
     }
+    this.secret = readFileSync(secretPath, 'utf-8').trim();
   }
 
   // ---------- 基础文件操作（原子写 + 防逃逸） ----------
@@ -133,6 +169,11 @@ export class ServerStore {
     if (existsSync(boxDir)) {
       removed += readdirSync(boxDir).length;
       rmSync(boxDir, { recursive: true, force: true });
+    }
+    // 注销即清空"关于我的举报记录"——人走了，还挂着别人对他的举报没有意义
+    if (existsSync(this.resolve(`reports/${hex}.json`))) {
+      removed += 1;
+      rmSync(this.resolve(`reports/${hex}.json`), { force: true });
     }
     for (const f of this.listFiles('limits')) {
       if (f.startsWith(`${hex}-`)) {
@@ -233,6 +274,60 @@ export class ServerStore {
     const next = cur + 1;
     this.writeJson(rel, { count: next });
     return next;
+  }
+
+  // ---------- 举报（行为信号，不涉内容） ----------
+
+  /** 举报人假名（加盐；可去重、不可反查） */
+  private reporterTag(opaqueId: string): string {
+    const bytes = new TextEncoder().encode(`${this.secret}|report|${opaqueId}`);
+    return Buffer.from(sha256(bytes)).toString('hex').slice(0, 32);
+  }
+
+  /**
+   * 记一次举报。同一加盐假名重复举报只算一次——否则一个人刷 3 次就能把人标记掉。
+   * 返回最新汇总（调用方决定怎么呈现，服务端不做裁决）。
+   */
+  addReport(targetOpaqueId: string, reporterOpaqueId: string, reason: string, now: number = Date.now()): ReportSummary {
+    const rel = `reports/${hexOf(targetOpaqueId)}.json`;
+    const cur = this.readJson<StoredReports>(rel) ?? { target_opaque_id: targetOpaqueId, reports: [] };
+    const tag = this.reporterTag(reporterOpaqueId);
+    if (!cur.reports.some((r) => r.reporter_tag === tag)) {
+      cur.reports.push({ reporter_tag: tag, reason, at: new Date(now).toISOString() });
+      this.writeJson(rel, cur);
+    }
+    return this.getReportSummary(targetOpaqueId);
+  }
+
+  getReportSummary(targetOpaqueId: string): ReportSummary {
+    const cur = this.readJson<StoredReports>(`reports/${hexOf(targetOpaqueId)}.json`);
+    if (!cur) return { reports: 0, distinct: 0, flagged: false };
+    const distinct = new Set(cur.reports.map((r) => r.reporter_tag)).size;
+    return { reports: cur.reports.length, distinct, flagged: distinct >= REPORT_FLAG_THRESHOLD };
+  }
+
+  /** 匿名实例聚合（M4 透明度：只有总和，没有任何个体数据） */
+  stats(now: number = Date.now()): InstanceStats {
+    let envelopes = 0;
+    for (const box of safeReaddirs(this.resolve('mailboxes'))) {
+      envelopes += this.listFiles(`mailboxes/${box}`).length;
+    }
+    let reported = 0;
+    let flagged = 0;
+    for (const f of this.listFiles('reports')) {
+      const cur = this.readJson<StoredReports>(`reports/${f}`);
+      if (!cur) continue;
+      reported += 1;
+      if (new Set(cur.reports.map((r) => r.reporter_tag)).size >= REPORT_FLAG_THRESHOLD) flagged += 1;
+    }
+    return {
+      identities: this.listFiles('identities').length,
+      cards: this.listFiles('cards').length,
+      envelopes,
+      reported_targets: reported,
+      flagged_targets: flagged,
+      generated_at: new Date(now).toISOString(),
+    };
   }
 
   // ---------- TTL 清扫 ----------

@@ -31,6 +31,11 @@ export interface FateLine {
   blocked: boolean;
   /** 本地备注（见面复盘等，只存本地） */
   notes: string[];
+  /**
+   * 本条线累计消耗的 token 估算（D9 代访预算帽）。
+   * 只记估算值——月老拿不到宿主真实 token 账本，所以宁可高估、也不假装精确。
+   */
+  tokens_used?: number;
 }
 
 /** D15④ 铁律：3 次未回应 */
@@ -127,5 +132,19 @@ export function ledgerView(lines: FateLine[]): LedgerView {
     block_suggestions: lines
       .filter(shouldSuggestBlock)
       .map((l) => ({ line_id: l.line_id, unresponded: l.unresponded_upgrades })),
+  };
+}
+
+/**
+ * 记录一轮出站消耗（D9 代访 token 预算帽）。
+ * 只累加不减——预算是"这条线最多花多少"，不是可退余额；
+ * 由 mcp 层在发信前用 withinTokenBudget 判断，超帽即拒绝发送。
+ */
+export function noteTokensUsed(line: FateLine, tokens: number): FateLine {
+  const delta = Math.max(0, Math.round(Number.isFinite(tokens) ? tokens : 0));
+  return {
+    ...line,
+    tokens_used: (line.tokens_used ?? 0) + delta,
+    last_activity: new Date().toISOString(),
   };
 }
