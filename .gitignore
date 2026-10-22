@@ -8,5 +8,5 @@ dist/
 # 服务器 SSH 私钥（腾讯云 Lighthouse），永不入库
 .ssh/
 
-# 整理待确认删除（2026-10-21 夜建；孙超确认后清空即可）
-_archive-待确认删除/
+# 内部工作记忆（含服务器地址、Cloudflare 账号/Zone/KV ID、备案材料）——不入公开仓库
+.workbuddy/
