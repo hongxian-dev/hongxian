@@ -61,12 +61,14 @@ npx vitest run packages/mcp/test/counter.test.ts  # 3 项：零出网 / 词表�
 | 资源 | 值 |
 |---|---|
 | Worker 名 | `hongxian-counter` |
-| Cloudflare 账户 | `<ACCOUNT_ID>`（<EMAIL>） |
-| Zone | `hongxian.dev` / `<ZONE_ID>` |
-| KV 命名空间 | `hongxian-counter-kv` / `<KV_NAMESPACE_ID>` |
-| 自定义域 | `count.hongxian.dev`（Workers Domains id `<WORKER_DOMAIN_ID>`） |
-| 机密 | `RL_SALT`（32 字节随机 hex，已通过 secrets API 上传，未入库） |
-| 关键设置 | **Browser Integrity Check 已关闭**（zone 级）——否则非浏览器 UA 的程序化上报会被 CF 以 1010 拦截 |
+| Cloudflare 账户 | 使用自有账号（`<ACCOUNT_ID>`，不入库） |
+| Zone | `hongxian.dev` / `<ZONE_ID>`（不入库） |
+| KV 命名空间 | `hongxian-counter-kv` / `<KV_NAMESPACE_ID>`（自建后替换） |
+| 自定义域 | `count.hongxian.dev` |
+| 机密 | `RL_SALT`（32 字节随机 hex，经 secrets API 上传，**不入库**） |
+| 关键设置 | **Browser Integrity Check 必须关闭**（zone 级）——否则非浏览器 UA 的程序化上报会被 CF 以 1010 拦截 |
+
+> 自托管说明：以下 `<ACCOUNT_ID>` / `<ZONE_ID>` / `<KV_NAMESPACE_ID>` 均需替换为你自己的值，`$CF_TOKEN` 通过环境变量注入、绝不写进仓库。
 
 ### 本次部署方式（wrangler 不可用时的 REST 直推，可复用）
 

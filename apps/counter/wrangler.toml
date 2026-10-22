@@ -2,7 +2,9 @@ name = "hongxian-counter"
 main = "src/index.js"
 compatibility_date = "2026-10-15"
 
-# KV 命名空间：hongxian-counter-kv（2026-10-21 经 Cloudflare API 创建）
+# KV 命名空间：hongxian-counter-kv
+# ⚠️ 公开仓库里保持占位符。自建后执行 `npx wrangler kv namespace create hongxian-counter-kv`
+#    把返回的 id 填到这里（本地部署用，注意别把真实 id 提交上去）。
 [[kv_namespaces]]
 binding = "COUNTER"
 id = "<KV_NAMESPACE_ID>"
