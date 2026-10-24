@@ -31,10 +31,14 @@ M1 三个识别特征：**额印 AI 星芒**（两眼正上方，月老的"AI �
 |---|---|---|
 | `avatar-512.png` | 512×512 | **组织/账号头像**（GitHub、社交平台）。纸白底，M1 居中缩放 0.94，圆形裁剪安全 |
 | `avatar-1024.png` | 1024×1024 | 头像高清版（印刷、大尺寸展示） |
-| `social-preview-1280x640.png` | 1280×640 | **仓库社交预览图**（GitHub Social preview / Open Graph 卡片） |
-| `avatar-source.svg` / `social-preview-source.svg` | — | 上两者的生成源（内嵌 M1 图形 + 版式参数） |
+| `social-preview-1280x640.png` | 1280×640 | **主库 `hongxian` 的社交预览图**：三件套总述 + 定位句 |
+| `social-preview-org-1280x640.png` | 1280×640 | **组织主页仓库 `.github`**：组织身份 + 「不提供撮合服务」宣言（该行用主色红，与正文拉开层次） |
+| `social-preview-site-1280x640.png` | 1280×640 | **网站仓库 `hongxian-dev.github.io`**：网站可信性（零外部请求 / 可自证的首页） |
+| `avatar-source.svg`、`social-preview*-source.svg` | — | 上列各 PNG 的生成源（内嵌 M1 图形 + 版式参数） |
 
-渲染方式：`sharp` 从 SVG 直出，`density: 720`，无位图缩放损失。
+三张社交预览图**共用同一版式**（左 M1 `scale 2.05` + 竖分隔线 + 右侧四级文字 + 底部 8px 红线），只换文案，保证三仓库在信息流里一眼同源。改文案时改 `-source.svg` 的 `<text>` 即可。
+
+渲染方式：`sharp` 从 SVG 直出（`density: 144`，再缩放到目标尺寸），无位图缩放损失。
 
 > 关于头像取 M1 而非 M4：M4 的心形外框在 32px 下会糊成红色轮廓，内部脸看不清；M1 的大红球 + 白眼睛在 32px 仍可辨认，因此在头像场景用 M1。favicon 仍按规范用 M4。
 
