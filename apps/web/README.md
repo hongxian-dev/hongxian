@@ -8,7 +8,7 @@
 ## 目录
 
 ```
-apps/web/                     # 部署产物（GitHub Pages / 境内 Nginx 直接托管）
+apps/web/                     # 部署产物（nginx 直接托管，境外机）
 ├── index.html                # 单文件整站：HTML + 内联 CSS + 内联 JS + 内联 SVG
 ├── og-cover.png              # 1200×630 分享封面（og:image / twitter:image）
 ├── sponsor-qr.png            # 微信赞赏码（480×480，28KB，页脚赞助区）
@@ -57,8 +57,18 @@ node verify.mjs                   # 静态验收（36 项）
 
 ### 境外主站（已上线，免 ICP 备案）
 
-仓库 `hongxian-dev/hongxian-dev.github.io`，Pages 自定义域 `hongxian.dev` + Enforce HTTPS。
-更新流程：把 `index.html` / `og-cover.png` / `404.html` 三件同步到该仓库根目录即可（无需构建）。
+**2026-10-24 起由 GitHub Pages 迁至自有服务器**（首尔，nginx 静态托管 + Let's Encrypt 证书），
+`hongxian.dev` / `www.hongxian.dev` 均在证书内，HTTP 一律 301 到 HTTPS。
+迁移目的是国内加载提速（Pages 1–3 秒 → 数百毫秒）。
+
+更新流程：把 `index.html` / `og-cover.png` / `sponsor-qr.png` / `404.html` 四个文件
+打包上传到服务器 `/var/www/hongxian/`（无需构建）。完整命令与坑见
+[部署与运维手册](../../docs/20-技术设计/部署与运维.md) §3。
+
+> 只发这 4 个文件：`README.md` 与 `verify.mjs` 是开发文件，不上线。
+
+GitHub Pages 仓库（`hongxian-dev/hongxian-dev.github.io`）保留未动，作为回滚路径：
+把 apex 的 A 记录改回四条 Pages IP 即可（详见手册 §5）。
 
 ### 境内镜像（待 ICP 备案通过）
 
