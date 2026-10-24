@@ -1,6 +1,6 @@
 # @hongxian/schema
 
-红线协议的机器可读形态（Zod）。协议全文见 [protocol-v1-spec.md](https://github.com/hongxian-dev/hongxian/blob/main/docs/protocol-v1-spec.md)。
+红线协议的机器可读形态（Zod）。协议全文见 [protocol-v1-spec.md](https://github.com/hongxian-dev/hongxian/blob/main/spec/protocol-v1-spec.md)。
 
 当前对应 **协议 v1.4 / Schema v0.5**。
 

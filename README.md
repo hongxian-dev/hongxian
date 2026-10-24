@@ -102,25 +102,23 @@ npm run verify  # 372 单测 + 125 MCP E2E + 21 server E2E + 21 宿主冒烟
 
 ## 协议与文档
 
-- [协议规范 v1](docs/protocol-v1-spec.md) —— 匹配卡格式、加密信封、消息家族、广场流、信箱语义、寻址（CC-BY-SA 4.0；[v0 草案](docs/protocol-v0-spec.md)为历史版本）
-- [宿主兼容性矩阵](docs/host-compatibility.md) —— 已验证宿主列表
-- [安装与信任指南](docs/install-and-trust.md) —— 安装排错、数据目录说明、删除与备份
+- [协议规范 v1](spec/protocol-v1-spec.md) —— 匹配卡格式、加密信封、消息家族、广场流、信箱语义、寻址（CC-BY-SA 4.0；[v0 草案](spec/protocol-v0-spec.md)为历史版本）
+- [宿主兼容性矩阵](spec/host-compatibility.md) —— 已验证宿主列表
+- [安装与信任指南](spec/install-and-trust.md) —— 安装排错、数据目录说明、删除与备份
 - [schema 包](packages/schema) —— 协议 v0 的机器可读形态（独立 npm：`@hongxian/schema`）
-- 设计文档（中文）：[项目定位声明](docs/00-定位与PRD/红线项目定位声明.md) · [产品 PRD](docs/00-定位与PRD/红线开源工具PRD.md) · [交互设计方案](docs/10-产品设计/月老Skill交互设计方案.md) · [技术详设](docs/20-技术设计/技术详设.md) —— 完整索引见 [docs/README.md](docs/README.md)
+- 定位声明、产品 PRD、交互设计方案、技术详设等设计文档为本项目内部文档，不随公开仓库分发
 
 ## 仓库结构
 
 ```
 packages/        协议契约 schema · 密钥体系 crypto · 领域逻辑 core · 月老本体 mcp · 平台服务 server
 apps/            产品网站 web · 匿名计数器 counter
-docs/            全部文档（00-定位与PRD / 10-产品设计 / 20-技术设计 + 对外规范）
-diagrams/        设计图（SVG，文档内引用）
-brand/           品牌资产：主标 M1「线球小月老」家族 + 规范页 + 标识使用规则
+spec/            对外规范：协议规范 v1 / v0 草案 / 宿主兼容性 / 安装与信任
 ```
 
 ## License
 
-代码 [Apache-2.0](LICENSE) · 协议文档 [CC-BY-SA 4.0](docs/protocol-v1-spec.md) · 品牌标识不适用代码许可，使用规则见 [brand/README.md](brand/README.md)
+代码 [Apache-2.0](LICENSE) · 协议文档 [CC-BY-SA 4.0](spec/protocol-v1-spec.md) · 品牌标识不适用代码许可，使用规则由作者保留
 
 ---
 

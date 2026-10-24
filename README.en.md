@@ -94,15 +94,15 @@ Reports and cards prominently state "profile content is self-reported by the use
 
 ## Protocol & docs
 
-- [Protocol spec v1](docs/protocol-v1-spec.md) — match card format, encrypted envelopes, message family, plaza flow, mailbox semantics, addressing (CC-BY-SA 4.0; [v0 draft](docs/protocol-v0-spec.md) is the historical version)
-- [Host compatibility matrix](docs/host-compatibility.md) — verified hosts
-- [Install & trust guide](docs/install-and-trust.md) — install troubleshooting, data directory, deletion & backup
+- [Protocol spec v1](spec/protocol-v1-spec.md) — match card format, encrypted envelopes, message family, plaza flow, mailbox semantics, addressing (CC-BY-SA 4.0; [v0 draft](spec/protocol-v0-spec.md) is the historical version)
+- [Host compatibility matrix](spec/host-compatibility.md) — verified hosts
+- [Install & trust guide](spec/install-and-trust.md) — install troubleshooting, data directory, deletion & backup
 - [schema package](packages/schema) — the machine-readable form of protocol v0 (standalone npm: `@hongxian/schema`)
-- Design docs (Chinese): [positioning statement](docs/00-定位与PRD/红线项目定位声明.md), [product PRD](docs/00-定位与PRD/红线开源工具PRD.md), [interaction design](docs/10-产品设计/月老Skill交互设计方案.md), [technical design](docs/20-技术设计/技术详设.md) — full index in [docs/README.md](docs/README.md)
+- The positioning statement, product PRD, interaction design and technical design are internal documents and are not distributed with this public repository.
 
 ## License
 
-Code [Apache-2.0](LICENSE) · Protocol docs [CC-BY-SA 4.0](docs/protocol-v0-spec.md)
+Code [Apache-2.0](LICENSE) · Protocol docs [CC-BY-SA 4.0](spec/protocol-v1-spec.md)
 
 ---
 

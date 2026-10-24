@@ -78,7 +78,7 @@ Windows 上 `npx` 不能直接 exec，要套一层：
 
 ## 协议与许可
 
-协议规范 [v1.4](https://github.com/hongxian-dev/hongxian/blob/main/docs/protocol-v1-spec.md)（CC-BY-SA 4.0），
+协议规范 [v1.4](https://github.com/hongxian-dev/hongxian/blob/main/spec/protocol-v1-spec.md)（CC-BY-SA 4.0），
 Schema v0.5。代码 Apache-2.0。
 
 零收入公益项目，也**不打算靠它赚钱**——增值层和 B 端工具将来可能收费，数据层与撮合层永不收费。

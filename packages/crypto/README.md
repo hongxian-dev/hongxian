@@ -37,4 +37,4 @@ const sealed = sealLayer(keys.layers.L2, JSON.stringify(payload));
 Apache-2.0。
 
 - 源码：https://github.com/hongxian-dev/hongxian/tree/main/packages/crypto
-- 理论说明：https://github.com/hongxian-dev/hongxian/blob/main/docs/protocol-v1-spec.md
+- 理论说明：https://github.com/hongxian-dev/hongxian/blob/main/spec/protocol-v1-spec.md
