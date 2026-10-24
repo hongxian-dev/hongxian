@@ -1,10 +1,11 @@
 # 红线平台服务 · 一键自托管（docker compose）
 #
 # 用法：
+#   mkdir -p data && sudo chown 1000:1000 data   # 首次必须先建目录并交出属主，见下方说明
 #   docker compose up -d
 #   curl http://127.0.0.1:8787/healthz
 #
-# 数据全部在 ./data 卷（密文 + opaque ID + 公钥）。删卷即删库。
+# 数据全部在 ./data 目录（密文 + opaque ID + 公钥）。删目录即删库。
 # 本服务不出网、不追踪、无日志外发；零知识——运营者改代码也只能拿到密文。
 
 services:
@@ -17,6 +18,9 @@ services:
     ports:
       - "127.0.0.1:8787:8787"
     volumes:
+      # 容器以非 root 的 node 用户（uid 1000）运行，bind mount 会覆盖镜像内
+      # /data 的属主，所以宿主机目录必须先 chown 1000:1000 并建好，
+      # 否则启动即报 EACCES: mkdir '/data/identities'。
       - ./data:/data
     environment:
       # 实例域名：客户端寻址 opaque_id@instance 用（自托管可填自己的域名或 IP）

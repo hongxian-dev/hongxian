@@ -20,6 +20,7 @@
     "e2e": "node packages/mcp/e2e/run-e2e.mjs",
     "e2e:server": "node packages/server/e2e/run-e2e.mjs",
     "smoke": "node packages/mcp/e2e/host-smoke.mjs",
+    "smoke:deployed": "node packages/server/e2e/smoke-remote.mjs",
     "verify:web": "node apps/web/verify.mjs",
     "verify": "npm run build && npm test && npm run e2e && npm run e2e:server && npm run smoke && npm run verify:web",
     "prd": "node docs/build-prd-html.mjs"

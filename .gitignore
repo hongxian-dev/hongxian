@@ -13,3 +13,8 @@ dist/
 
 # 临时工作目录（图像渲染中间产物等）
 .tmp-gh/
+
+# 部署配置与数据（.env 可能含实例域名/盐值，data/ 是密文库）
+.env
+.env.local
+packages/server/data/
