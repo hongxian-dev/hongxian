@@ -14,20 +14,51 @@
 
 不需要：账号、注册、手机号、API Key、信用卡。
 
-## 2. 安装（当前只有一种方式能跑通）
+## 2. 安装（两条路，产物完全相同）
 
-> **`@hongxian/mcp` 尚未发布到 npm**。方式 A 是现在唯一可用的路径；方式 B / C 要等包发布后才成立——先写在这里，是为了让你知道最终形态，不是让你现在去试。
+### 方式 A：npx 一行（推荐）
 
-### 方式 A：从源码构建（推荐，也是当前唯一可用方式）
+```bash
+npx -y @hongxian/mcp
+```
+
+宿主配置：
+
+```jsonc
+{
+  "mcpServers": {
+    "yuelao": {
+      "command": "npx",
+      "args": ["-y", "@hongxian/mcp"]
+    }
+  }
+}
+```
+
+首次调用会把包装进 npm 缓存，之后启动约几百毫秒。想先确认它能跑起来：
+
+```bash
+npx -y @hongxian/mcp < /dev/null   # 打印「月老已上线（STDIO，零服务端依赖）。21 件工具 + 8 条指引就绪。」即成功
+```
+
+### 方式 B：全局安装（调用频繁，省一次 npx 解析）
+
+```bash
+npm install -g @hongxian/mcp
+```
+
+宿主配置改为 `command: "hongxian-mcp"`（不带参数）。
+
+### 方式 C：从源码构建（不想跑一个自己没编译过的二进制）
 
 ```bash
 git clone https://github.com/hongxian-dev/hongxian.git
 cd hongxian
 npm ci          # 严格按 lockfile 安装
 npm run build   # 一步 tsc，无打包器
-npm test        # 283 个单元测试（25 个文件）
-npm run e2e     # 123 项 MCP 端到端断言
-npm run smoke   # 20 项宿主级冒烟：真子进程 + 真 STDIO JSON-RPC
+npm test        # 372 个单元测试（31 个文件）
+npm run e2e     # 125 项 MCP 端到端断言
+npm run smoke   # 21 项宿主级冒烟：真子进程 + 真 STDIO JSON-RPC
 ```
 
 跑完这些，你就用自己的机器验证了「这套代码确实能起来、确实只做它说的事」。
@@ -44,35 +75,6 @@ npm run smoke   # 20 项宿主级冒烟：真子进程 + 真 STDIO JSON-RPC
   }
 }
 ```
-
-### 方式 B：npx 直接跑（待 npm 发布后可用）
-
-宿主配置里写：
-
-```jsonc
-{
-  "mcpServers": {
-    "yuelao": {
-      "command": "npx",
-      "args": ["-y", "@hongxian/mcp"]
-    }
-  }
-}
-```
-
-首次调用会下载依赖到 npm 缓存，之后启动约几百毫秒。可先手动预热：
-
-```bash
-npx -y @hongxian/mcp --version   # 打印 0.1.0 即成功；不会启动服务
-```
-
-### 方式 C：全局安装（待 npm 发布后可用，适合调用频繁、想省冷启动）
-
-```bash
-npm install -g @hongxian/mcp
-```
-
-宿主配置改为 `command: "hongxian-mcp"`（不带参数）。
 
 ## 3. 首次启动：知情同意与恢复短语
 
@@ -178,7 +180,7 @@ docker compose up -d        # 起在 127.0.0.1:8787，数据在 ./data
 |---|---|---|
 | 1 | **源码可信** | 全仓库可读：[schema](../packages/schema)（协议契约）、[crypto](../packages/crypto)（密钥体系）、[core](../packages/core)（领域逻辑）、[mcp](../packages/mcp)（月老本体）。构建只有一步 `tsc`，无打包混淆——"读到的即运行的" |
 | 2 | **出网为零** | 安装后断网，除 opt-in 计数（默认关）外全部功能完整可用。想抓包佐证：关掉计数器后运行全程，除本地回环外无任何连接 |
-| 3 | **产物与源码对得上** | 现在不需要信任任何发布物：`npm ci && npm run build` 在你本机编译，产物来自你眼前的这份源码，中间没有第三方。`npm run verify` 一条命令跑完单测 + MCP E2E + server E2E + 宿主冒烟。包发布到 npm 后会补 `SHA256SUMS.txt` 与 provenance（构建出处可独立验证） |
+| 3 | **产物与源码对得上** | 想完全不信任发布物就走方式 C：`npm ci && npm run build` 在你本机编译，产物来自你眼前的源码，中间没有第三方。`npm run verify` 一条命令跑完单测 + MCP E2E + server E2E + 宿主冒烟。走 npx 的话，`npm view @hongxian/mcp` 可查版本；**provenance 自 0.1.1 起才有**（0.1.0 首发是维护者本地发布的，这一点不粉饰） |
 | 4 | **删除彻底** | `wipe` 工具返回删除清单；或手动删目录后全局搜索 `.hongxian-card`、`hongxian-backup` 均无残留 |
 | 5 | **密码学实现** | 只用可审计的纯 JS/WASM 库（@noble 系 + hash-wasm）：Ed25519 签名、X25519 密钥封装、AES-256-GCM、Argon2id(t=3, m=64MB, p=4)。算法与参数在 [协议规范 §6](protocol-v0-spec.md) 公开，欢迎同业复算 |
 

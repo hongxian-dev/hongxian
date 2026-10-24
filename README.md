@@ -17,31 +17,39 @@
 
 **1. 安装**（Node 20+）
 
-> `@hongxian/mcp` **尚未发布到 npm**，所以现在没有一行安装。请从源码构建——顺带这也最符合本项目的信任原则：编译过程你自己跑一遍。
+一行，不需要克隆仓库：
+
+```bash
+npx -y @hongxian/mcp
+```
+
+接进你的 Agent（Claude Desktop / WorkBuddy / 任何标准 MCP 宿主）：
+
+```jsonc
+// mcpServers 配置
+{
+  "mcpServers": {
+    "yuelao": {
+      "command": "npx",
+      "args": ["-y", "@hongxian/mcp"]
+    }
+  }
+}
+```
+
+**或者从源码构建**——如果你不愿意跑一个自己没编译过的二进制，这条路更符合本项目的信任原则：
 
 ```bash
 git clone https://github.com/hongxian-dev/hongxian.git
 cd hongxian
 npm ci          # 严格按 lockfile 安装
 npm run build   # 一步 tsc，无打包器
-npm run verify  # 283 单测 + 123 MCP E2E + 21 server E2E + 20 宿主冒烟
+npm run verify  # 372 单测 + 125 MCP E2E + 21 server E2E + 21 宿主冒烟
 ```
 
-宿主配置示例（把月老接进你的 Agent，`args` 填**绝对路径**）：
+宿主配置里把 `args` 换成**绝对路径**：`["/绝对路径/hongxian/packages/mcp/dist/index.js"]`，`command` 用 `node`。
 
-```jsonc
-// Claude Desktop / WorkBuddy / 其他标准 MCP 宿主 —— mcpServers 配置
-{
-  "mcpServers": {
-    "yuelao": {
-      "command": "node",
-      "args": ["/绝对路径/hongxian/packages/mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-> 包发布到 npm 后，这段会简化成 `npx @hongxian/mcp` 一行。首发未定日期，见 [Issues](https://github.com/hongxian-dev/hongxian/issues)。
+> 两条路的产物完全相同，只是来源不同。`npm view @hongxian/mcp` 可以看到已发布版本。
 
 **2. 和月老聊三次**（每次 15–20 分钟，可跨天）
 
@@ -61,7 +69,7 @@ npm run verify  # 283 单测 + 123 MCP E2E + 21 server E2E + 20 宿主冒烟
 |---|---|---|
 | 1 | **读源码** | 全仓库开源：[schema 协议契约](packages/schema)、[crypto 密钥体系](packages/crypto)、[core 领域逻辑](packages/core)、[mcp 月老本体](packages/mcp)。无打包混淆，构建只有一步 tsc。 |
 | 2 | **抓包** | 运行全程出网流量仅有一条可选的匿名计数（默认关闭）。关闭后出网为零。断网状态下除计数外一切功能完整可用。 |
-| 3 | **核对哈希** | 每次 Release 附 `SHA256SUMS.txt`：`sha256sum -c SHA256SUMS.txt`。npm 包固定 provenance（构建出处可验证）。 |
+| 3 | **核对哈希** | 每次 Release 附 `SHA256SUMS.txt`：`sha256sum -c SHA256SUMS.txt`。npm 包**自 0.1.1 起**由 GitHub Actions 发布并带 provenance（构建出处可验证）；**0.1.0 首发是维护者本地发布的，没有 provenance**——这条如实写出来，免得有人以为首发也是可验证构建。 |
 | 4 | **一键删除** | 对 Agent 说："月老，删除我的全部数据"（`wipe` 工具）。整个数据目录删净，磁盘无残留；若你连过自托管服务端（广场/信箱），会先尽力注销服务端身份（级联删服务端密文）再删本地。 |
 | 5 | **（v2）自托管** | v2 的消息服务支持联邦自托管（`packages/server`，docker 一键起）——平台无作恶能力是信任的数学基础；服务端只见密文，零知识有测试断言。 |
 

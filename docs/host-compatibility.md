@@ -30,15 +30,21 @@
 
 ## 2. 各宿主接入步骤
 
-> **当前统一用「node + 绝对路径」接入**：`@hongxian/mcp` 尚未发布到 npm，`npx` 与全局安装暂不可用。
-> 先按 [安装与信任指南](install-and-trust.md) §2 方式 A 从源码构建，记下 `packages/mcp/dist/index.js` 的绝对路径。
+> **推荐统一用 `npx -y @hongxian/mcp` 接入**——不用克隆仓库：
+>
+> ```
+> command: npx
+> args:    -y  @hongxian/mcp
+> ```
+>
+> 不想跑一个自己没编译过的二进制，就按 [安装与信任指南](install-and-trust.md) §2 方式 C 从源码构建，改成：
 >
 > ```
 > command: node
 > args:    /绝对路径/hongxian/packages/mcp/dist/index.js
 > ```
 >
-> 下面各宿主讲的只是"这条命令填到哪个入口"的差异。包发布后再统一换成 `npx -y @hongxian/mcp`。
+> 两条路产物相同。下面各宿主讲的只是"这条命令填到哪个入口"的差异。
 
 ### 2.1 Claude Desktop / Claude Code
 

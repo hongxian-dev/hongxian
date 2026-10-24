@@ -7,14 +7,15 @@
 
 ## 1. 现状
 
+**✅ 已发布（2026-10-24 22:55）**：`@hongxian/schema` / `crypto` / `core` / `mcp` 四包 `0.1.0`，registry 可下载，`npx -y @hongxian/mcp` 实测跑通（干净目录 `npm i` + bin 启动均验证）。
+
 | 项 | 状态 |
 |---|---|
-| registry 上 `@hongxian` scope | **不存在**（`Scope not found`，名字未被占） |
-| 包名 `@hongxian/mcp` 等 | 未发布，registry 404 |
-| 发布物（元数据 / LICENSE / README / 守卫 / 工作流） | ✅ 全部就绪，tarball 体检 4/4 合格 |
-| 阻断项 | 只有一件：**org 还没建** |
-
-包名没有被占这件事是运气，不是保证——**先去建，别拖**。
+| `@hongxian` org | ✅ 已建（owner: `sunchaooo`） |
+| 四个包 | ✅ 0.1.0 已上线，`latest` 指向 0.1.0 |
+| provenance | ⚠ **首发没有**（本地发布生成不了），0.1.1 起走 CI 补齐 |
+| `@hongxian/server` | 仍不发（AGPL 署名主体未定 + `exports` 待拆，见 §9） |
+| 残留 | 每个包多一个 `0.0.0-stage` 占位版本（npm 新包首次发布的副作用，无害，见 §10） |
 
 ---
 
@@ -183,3 +184,110 @@ scripts/bump-version.mjs   npm run bump —— 版本与相互依赖一起改
   要发之前先把 `exports` 拆开（`.` → `dist/app.js`，`./app` 显式导出）。
 
 要发时把 `scripts/packages.mjs` 里的 `NOT_YET` 挪进 `PACKAGES` 末尾即可，其余不用改。
+
+---
+
+## 10. 首发实录（2026-10-24）：四个真实坑
+
+这一节是事后写的，全部来自当晚实际失败，不是推演。下次换机器或换人发版会再遇到。
+
+### 10.1 token 必须勾对三项，缺一项报的是「404 包不存在」
+
+症状：
+
+```
+npm publish -w @hongxian/schema --access public
+npm error code E404
+npm error 404 Not Found - PUT https://registry.npmjs.org/@hongxian%2fschema
+npm error 404 The requested resource '@hongxian/schema@0.1.0' could not be found or you do not have permission to access it.
+```
+
+**npm 用 404 掩盖 403**，所以措辞看着像"包不存在/包名有问题"，实际是**权限不足**。当晚在这个措辞上白花了一轮。
+
+比 `npm whoami` 有效的诊断命令：
+
+```bash
+npm access list packages --//registry.npmjs.org/:_authToken=<token>
+# 403 → token 的组织授权段是空的（就是本条）
+# 200 → 权限正常
+```
+
+Granular token 四项必须同时满足：
+
+| 字段 | 必须的值 | 备注 |
+|---|---|---|
+| Permissions | **Read and write** | 只读发不了 |
+| Packages and scopes | **@hongxian**（scope 级） | **不能选单个包**——首发时包里还不存在，列表里根本没有，选了个空 |
+| Organizations | **hongxian → Read and write** | **最容易漏的一项**，两次 token 都缺在这里 |
+| Bypass 2FA | 账号开了 2FA 就**必须勾** | 不勾会卡在一次性 OTP |
+
+嫌麻烦：Classic Token → 类型 **Automation**，等价于账号全部权限、自动绕过 2FA，用完 revoke。
+
+### 10.2 `npm profile get` 报 403 是正常的
+
+`GET /-/npm/v1/user` 不在 granular token 的授权范围里，403 与发布权限无关。**别拿它判断能不能发。**
+
+### 10.3 `PUT 202` + 随后 `GET 404` ≠ 失败
+
+首发一个全新 scope 会看到三个「看起来像失败」的现象：
+
+1. `npm publish` 结尾是 `+ @hongxian/xxx@0.1.0` 加一句「being processed and may take a few minutes」——**`+` 号就是成功**；
+2. HTTP 是 **202 Accepted**，不是 201；
+3. 紧接着 `npm view` 仍然 404。
+
+因为 registry 先建一个 `0.0.0-stage` 的 stub 占位版本，真实版本随后才落。**唯一可靠的完成判据**：
+
+```bash
+curl -s https://registry.npmjs.org/@hongxian%2fschema \
+  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(Object.keys(j.versions).join(", "))})'
+# 看到 0.0.0-stage, 0.1.0 且 0.1.0 的 dist.tarball 存在 = 完成
+```
+
+本次实测：schema/crypto/core 约 1 分钟内落地，**mcp 最慢，约 2 分半**。四个包串行发，最后一个落地时第一个可能还没完全就绪——**不用重发**（重发会 409）。
+
+### 10.4 本地发布必须加 `--no-provenance`
+
+`package.json` 里 `publishConfig.provenance: true` 只在云 CI 成立。本地 `npm publish` 带它会直接失败。所以：
+
+```bash
+# 本地（一次性妥协，无 provenance）
+node scripts/publish-all.mjs --no-provenance
+
+# CI（release.yml 里，永远不要加这个参数）
+node scripts/publish-all.mjs
+```
+
+代价要如实写进 README 与 install-and-trust：**0.1.0 没有 provenance，0.1.1 起补齐**。不要为了好看把这句话删掉——被问到"你们的包可验证构建吗"时，答案必须是准的。
+
+### 10.5 本次实际执行的完整命令序列
+
+```bash
+# 0. 前置：org 已建、token 四项勾对
+npm whoami --//registry.npmjs.org/:_authToken=<token>        # sunchaooo
+npm run build && npx vitest run                              # 372/372
+node scripts/pack-check.mjs                                  # 4/4 合格
+node scripts/publish-all.mjs --dry-run --no-provenance        # 演练
+
+# 1. 真发（四个包，schema→crypto→core→mcp）
+NODE_AUTH_TOKEN=<token> node scripts/publish-all.mjs --no-provenance
+
+# 2. 判完成（不要只看 npm publish 的退出码）
+curl -s https://registry.npmjs.org/@hongxian%2fmcp | grep -o '"versions":{[^}]*'
+
+# 3. 干净目录验收（这一步才是"发布成功"的真正含义）
+mkdir -p /tmp/npm-real && cd /tmp/npm-real && npm init -y && npm i @hongxian/mcp
+./node_modules/.bin/hongxian-mcp < /dev/null
+# [yuelao] 月老已上线（STDIO，零服务端依赖）。21 件工具 + 8 条指引就绪。
+
+# 4. 承诺级验收：npx 一行
+npx -y @hongxian/mcp < /dev/null
+```
+
+### 10.6 遗留：`0.0.0-stage`
+
+四个包各多一个 stub 版本 `0.0.0-stage`，`latest` 不指向它，不影响安装。它由 registry 在创建新包时自动写入，正常发版途径删不掉。**不要试图为此重发或 unpublish**——收益为零，风险是版本号被永久占用。
+
+### 10.7 未做但该做的两件
+
+1. **GitHub Actions 首发**（有 provenance）：把 `NPM_TOKEN` 加进 repo Secrets，打 tag 触发 `release.yml`。首发没走这条路只因为当时 `git push` 被本地代理掐断（`CONNECT tunnel 502`），改用本地直发。
+2. **Trusted Publishing 迁移**：包已在 registry 上，现在可以去包的 Settings → Trusted Publisher 绑定 `hongxian-dev/hongxian` + `release.yml`，之后彻底不需要 `NPM_TOKEN`。注意 GitHub changelog 已明确：**bypass-2FA 的 token 将在 2027 年 1 月失去直接发布能力**，只剩 stage 能力——所以这条不是可选项。
