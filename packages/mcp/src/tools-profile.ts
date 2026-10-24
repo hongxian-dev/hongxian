@@ -23,14 +23,16 @@ import {
   decryptLayer,
   signMatchCard,
   verifyMatchCard,
+  safetyAckBlock,
   type InterviewState,
 } from '@hongxian/core';
 import { CARD_FILE_EXT, L3_FIELD_NAMES, fromBase64, toBase64 } from '@hongxian/schema';
 import type { Session } from './session.js';
 import { CONSENT_TEXT, needsConsent, readConsent, writeConsent } from './consent.js';
+import { needsSafetyAck, writeSafetyAck } from './ack.js';
 import { reportMetric } from './counter.js';
 import { store } from './context.js';
-import { LockedError, ConsentError } from './errors.js';
+import { LockedError, ConsentError, SafetyAckError } from './errors.js';
 
 const PROFILE_DIR = 'profile';
 const CARDS_MINE_DIR = 'cards/mine';
@@ -53,15 +55,15 @@ export const interviewTool = {
   name: 'interview',
   description:
     '渐进式建画像（三次会话：硬事实→偏好生活方式→价值观故事）。每次会话结束必须复述确认，' +
-    '用户确认后才写入。首次调用返回知情同意书（含 ≥18 周岁声明）。' +
+    '用户确认后才写入。**第一次进门先读风险提示**（ack 确认），再走知情同意书（含 ≥18 周岁声明）。' +
     '画像修订走 action="update"（D3① 续访）：同样要复述确认，确认后可重签名片（sign_card resign_of）。',
   inputSchema: {
     action: z
-      .enum(['start', 'consent', 'confirm_mnemonic', 'unlock', 'submit', 'update', 'confirm', 'reject', 'status'])
+      .enum(['start', 'ack', 'consent', 'confirm_mnemonic', 'unlock', 'submit', 'update', 'confirm', 'reject', 'status'])
       .describe(
-        'start=开始/查看当前状态；consent=确认知情同意与年龄；confirm_mnemonic=确认已抄写恢复短语；' +
-          'unlock=用恢复短语解锁；submit=提交本次会话答案；update=修订已确认阶段的画像（续访）；' +
-          'confirm=确认复述稿；reject=否决复述稿重聊',
+        'start=开始/查看当前状态（未确认风险提示时返回全文）；ack=确认已读完风险提示；consent=确认知情同意与年龄；' +
+          'confirm_mnemonic=确认已抄写恢复短语；unlock=用恢复短语解锁；submit=提交本次会话答案；' +
+          'update=修订已确认阶段的画像（续访）；confirm=确认复述稿；reject=否决复述稿重聊',
       ),
     age_attested: z.boolean().optional().describe('consent 时必填：确认已年满 18 周岁'),
     mnemonic: z.string().optional().describe('24 词中文恢复短语（confirm_mnemonic/unlock 时）'),
@@ -77,7 +79,28 @@ export const interviewTool = {
   }, session: Session) => {
     const s = store();
 
+    // 防护一（D7 / C2①）：风险提示未确认时，任何进入建画像的动作都不放行。
+    // 例外只有两个：ack（确认本身）、unlock（只解锁已有身份，不产生任何新数据）。
+    // 返回的是**可继续的中间态**，不是错误——所以走正常文本通道，不抛异常。
+    if (args.action !== 'ack' && args.action !== 'unlock' && needsSafetyAck(s)) {
+      return text(safetyAckBlock());
+    }
+
     switch (args.action) {
+      case 'ack': {
+        const rec = writeSafetyAck(s);
+        if (!needsConsent(s)) {
+          // 老用户（已有知情同意记录）确认完风险提示就直接回去干活
+          return text(`风险提示已确认（版本 ${rec.version}）。${statusLine(loadState(s))}`);
+        }
+        return text(
+          '风险提示已确认。接下来还有一页要读——关于你的数据存在哪里、会经过什么，' +
+            '以及一件无法回头的事。\n\n' +
+            CONSENT_TEXT +
+            '\n\n（确认以上条款并已年满 18 周岁，请调用 interview(action="consent", age_attested=true)）',
+        );
+      }
+
       case 'start': {
         if (!session.initialized) {
           return text(CONSENT_TEXT + '\n\n（确认以上条款并已年满 18 周岁，请调用 interview(action="consent", age_attested=true)）');
@@ -375,6 +398,8 @@ function requireUnlocked(session: Session): void | string {
 }
 
 function requireConsent(s: { exists: (p: string) => boolean }): void {
+  // 顺序不能换：先风险提示，再知情同意
+  if (needsSafetyAck(s as never)) throw new SafetyAckError();
   if (needsConsent(s as never)) throw new ConsentError();
 }
 

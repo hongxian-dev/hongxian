@@ -15,5 +15,6 @@ export * from './rounds/machine.js';
 export * from './ledger/lines.js';
 export * from './filter/outbound.js';
 export * from './guard/injection.js';
+export * from './guard/safety.js';
 export * from './guide/meeting-kit.js';
 export * from './guide/debrief.js';

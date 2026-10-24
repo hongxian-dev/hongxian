@@ -123,7 +123,48 @@ ok('握手区用品牌红密虚线', /stroke="#C8102E" stroke-width="3" stroke-d
 ok('prefers-reduced-motion 显式暂停 SMIL（CSS 无法接管）', html.includes('pauseAnimations'));
 ok('Hero 无渐变无投影', !/(linear|radial)-gradient|filter=|drop-shadow|feGaussianBlur/.test(hero));
 
-/* ---------- 11. 体积 ---------- */
+/* ---------- 11. 发布验证页（C17：广场贴卡的发布确认） ----------
+ * 这一页是"平台唯一接收明文个人信息"的入口，验收重点不是好看，是**把话说清**：
+ * 明确不是实名认证、明确拒绝也能用产品、明确收不到信怎么办。
+ * 说少了会造成两种误解：以为要实名（吓走人）、或以为已验证身份（虚假安全感）。
+ */
+const pvPath = join(here, 'publish-verify', 'index.html');
+let pv = '';
+try {
+  pv = readFileSync(pvPath, 'utf8');
+} catch {
+  pv = '';
+}
+ok('发布验证页存在', pv.length > 1500, pv ? `${pv.length} 字符` : '缺失');
+ok('发布验证页自包含（无外部样式/脚本/字体）', !/rel=["']stylesheet|<script[^>]+src=|@font-face/.test(pv));
+ok('发布验证页无渐变无投影无毛玻璃', !/(linear|radial)-gradient|box-shadow|text-shadow|backdrop-filter/.test(pv));
+ok('发布验证页不被搜索引擎收录', /<meta name="robots" content="noindex">/.test(pv));
+ok('发布验证页明示「不是实名认证」', pv.includes('不是实名认证'));
+ok('发布验证页明示「不想验证也完全可以」', pv.includes('不想验证') && pv.includes('完全可以'));
+ok('发布验证页给出垃圾箱与换 Gmail 的建议', pv.includes('垃圾箱') && pv.includes('Gmail'));
+ok('发布验证页提示许可码无 0/O/1/I/L（抄错的主因）', pv.includes('没有 0、O、1、I、L'));
+ok('发布验证页三步齐全（邮箱 → 验证码 → 许可码）', pv.includes('/v2/publish/otp') && pv.includes('/v2/publish/verify') && pv.includes('action=claim'));
+ok('发布验证页失败不静默（逐状态码给人话）', pv.includes('humanError') && pv.includes('429'));
+ok('发布验证页链接不完整时给出重来路径', pv.includes('这个链接不完整') && pv.includes('action=verify'));
+
+/* 防护三（C2③）：披露声明必须在这一页可读——不装工具、不跑 JS 也能读完。
+ * 判据是"那段边界有没有写"：不写就等于隐含承诺"绝对不可关联"，
+ * 出事那天这句话会被原文引用为虚假宣传。 */
+ok('发布验证页含披露声明全文（不装工具也能读）', pv.includes('贴到广场，会多出一条连接') && pv.includes('先说清楚'));
+ok('发布验证页写明「存的是哈希、不可逆」', pv.includes('单向、不可逆'));
+ok('发布验证页写明平台不知道你是谁', pv.includes('不验证你是谁') && pv.includes('不声称做到了'));
+ok(
+  '发布验证页写出边界（承认理论上可关联，不做绝对承诺）',
+  pv.includes('边界在哪') && pv.includes('不是"绝对不可能"') && pv.includes('哈希防的是'),
+);
+ok('发布验证页给出「不贴广场」这条替代路径', pv.includes('只在认识的人之间换卡') && pv.includes('什么都不会多出来'));
+ok(
+  '发布验证页有勾选行且默认未勾',
+  /<input type="checkbox" id="ackbox">/.test(pv) && !/id="ackbox"[^>]*\schecked/.test(pv),
+);
+ok('发布验证页未勾选前不发验证码（sendBtn.disabled）', pv.includes("sendBtn.disabled = true"));
+
+/* ---------- 12. 体积 ---------- */
 const kb = statSync(join(here, 'index.html')).size / 1024;
 ok('首页 < 80KB（单文件 + 一张赞赏码）', kb < 80, `${kb.toFixed(1)}KB`);
 

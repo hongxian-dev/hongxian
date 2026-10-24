@@ -30,7 +30,10 @@ export interface ServerRegistration {
   registered_at: string;
 }
 
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number };
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  /** `code` 是服务端的机器可读错误码（不是所有错误都有）——客户端据它分支，不做字符串匹配 */
+  | { ok: false; error: string; status?: number; code?: string };
 
 export class PlazaApiError extends Error {
   constructor(
@@ -82,7 +85,7 @@ export function buildAuthHeaderValue(
 // ---------- HTTP 薄层 ----------
 
 async function apiRequest<T>(
-  method: 'GET' | 'POST' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
   opts: { body?: unknown; auth?: string } = {},
 ): Promise<ApiResult<T>> {
@@ -106,8 +109,9 @@ async function apiRequest<T>(
       return { ok: false, error: `服务端返回了非 JSON（HTTP ${res.status}）`, status: res.status };
     }
     if (!res.ok) {
-      const msg = (json as { error?: string }).error ?? `HTTP ${res.status}`;
-      return { ok: false, error: msg, status: res.status };
+      const payload = json as { error?: string; code?: string };
+      const msg = payload.error ?? `HTTP ${res.status}`;
+      return { ok: false, error: msg, status: res.status, code: payload.code };
     }
     return { ok: true, data: json as T };
   } catch (e) {
@@ -273,6 +277,90 @@ export async function deleteServerIdentity(instance: string, session: Session): 
   const key = session.keyProvider();
   const auth = buildAuthHeaderValue(session.keyIdB64, 'DELETE /v2/identity', key.sign);
   return apiRequest('DELETE', `${instance}/v2/identity`, { auth });
+}
+
+// ---------- 发布许可（D1 方案 B：只对"贴到广场"要求载体验证） ----------
+
+export interface ServerHealthDto {
+  ok: boolean;
+  service?: string;
+  instance?: string;
+  publish?: {
+    required: boolean;
+    available: boolean;
+    verify_base: string | null;
+  };
+}
+
+/**
+ * 问实例"要不要发布确认、通道通不通、验证页在哪"。
+ *
+ * 为什么要问而不是猜：自托管实例可以完全不要求验证（私有小圈子没必要发信），
+ * 官方实例则要求。客户端如果硬编码"一定要验证"，会把自托管用户挡在门外。
+ */
+export function fetchServerHealth(instance: string): Promise<ApiResult<ServerHealthDto>> {
+  return apiRequest<ServerHealthDto>('GET', `${instance}/healthz`);
+}
+
+export interface PublishCredentialDto {
+  verified: boolean;
+  verified_at?: string;
+}
+
+/**
+ * 披露声明（防护三 / C2③）。
+ *
+ * 从服务端取全文而不是本地硬编码：措辞是最常被要求修改的东西，
+ * 一旦写死在客户端，改一句话就要发一版 Skill。
+ */
+export interface PublishDisclosureDto {
+  version: string;
+  full: string;
+  brief: string;
+  ack_label: string;
+  require_ack: boolean;
+}
+
+export function fetchPublishDisclosure(instance: string): Promise<ApiResult<PublishDisclosureDto>> {
+  return apiRequest<PublishDisclosureDto>('GET', `${instance}/v2/publish/disclosure`);
+}
+
+/** 认领发布许可（持钥证明；这一步才把"验证过的载体"与"这把密钥"绑在一起） */
+export async function claimPublishCredential(
+  instance: string,
+  nonce: string,
+  permit: string,
+  session: Session,
+  disclosureVersion?: string,
+): Promise<ApiResult<{ verified: boolean; verified_at: string }>> {
+  const key = session.keyProvider();
+  const auth = buildAuthHeaderValue(session.keyIdB64, 'PUT /v2/publish/credential', key.sign);
+  return apiRequest<{ verified: boolean; verified_at: string }>('PUT', `${instance}/v2/publish/credential`, {
+    // disclosure_version 一起交上去：让"这个人贴卡时看到的是哪一版丑话"留在服务端可追溯，
+    // 而不是只留在本机（本机的记录重装就没了）
+    body: { nonce, permit, disclosure_version: disclosureVersion },
+    auth,
+  });
+}
+
+/** 查自己有没有发布许可（只回答有没有） */
+export async function fetchPublishCredential(
+  instance: string,
+  session: Session,
+): Promise<ApiResult<PublishCredentialDto>> {
+  const key = session.keyProvider();
+  const auth = buildAuthHeaderValue(session.keyIdB64, 'GET /v2/publish/credential', key.sign);
+  return apiRequest<PublishCredentialDto>('GET', `${instance}/v2/publish/credential`, { auth });
+}
+
+/** 解绑（失去贴卡能力；历史卡不追溯——别人存证过的卡撤不回来） */
+export async function unbindPublishCredential(
+  instance: string,
+  session: Session,
+): Promise<ApiResult<{ unbound: boolean; note: string }>> {
+  const key = session.keyProvider();
+  const auth = buildAuthHeaderValue(session.keyIdB64, 'DELETE /v2/publish/credential', key.sign);
+  return apiRequest<{ unbound: boolean; note: string }>('DELETE', `${instance}/v2/publish/credential`, { auth });
 }
 
 // ---------- 本地历史状态（已浏览 / 已拉取） ----------

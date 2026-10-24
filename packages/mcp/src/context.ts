@@ -5,7 +5,8 @@
  */
 
 import { FsStore } from './store-fs.js';
-import { LockedError, ConsentError } from './errors.js';
+import { LockedError, ConsentError, SafetyAckError } from './errors.js';
+import { safetyAckBlock } from '@hongxian/core';
 
 let instance: FsStore | null = null;
 
@@ -22,6 +23,10 @@ export async function guard<T>(
   try {
     return await fn();
   } catch (e) {
+    // 风险提示未确认：把全文和确认方式一起交回宿主，让用户读（可继续的中间态）
+    if (e instanceof SafetyAckError) {
+      return onError(safetyAckBlock());
+    }
     if (e instanceof LockedError || e instanceof ConsentError) {
       return onError(e.message);
     }

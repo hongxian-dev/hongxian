@@ -37,6 +37,12 @@ function codeOf(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
+/** 绝对路径 → 文件名（断言里只关心"是哪个文件"） */
+function basename(p: string): string {
+  const parts = p.split(/[\\/]/);
+  return parts[parts.length - 1] ?? p;
+}
+
 describe('零知识审计（server）', () => {
   const files = listSourceFiles(SRC_DIR);
   const sources = files.map((f) => ({ name: f, text: readFileSync(f, 'utf-8') }));
@@ -70,9 +76,34 @@ describe('零知识审计（server）', () => {
     }
   });
 
-  it('服务端零出网：源码不得含任何 URL', () => {
-    for (const s of sources) {
-      expect(s.text, s.name).not.toMatch(/https?:\/\//);
+  /**
+   * C17 之后，「零出网」这条军规不再成立——验证一个邮箱能收信，物理上必须往外发一封信。
+   * 军规因此收紧成**「只有一个出网点」**，并且这个出网点只认识"地址 + 验证码"：
+   * 三条断言分别守住"只有它"、"只打一个域"、"它什么内容都不认识"。
+   */
+  it('唯一出网点 = mailer.ts，且只打 api.resend.com', () => {
+    const withUrl = sources.filter((s) => /https?:\/\//.test(s.text)).map((s) => basename(s.name));
+    expect(withUrl).toEqual(['mailer.ts']);
+    const urls = sources.flatMap((s) => s.text.match(/https?:\/\/[^\s'"`)]+/g) ?? []);
+    expect(urls.length).toBeGreaterThan(0);
+    for (const u of urls) {
+      expect(new URL(u).hostname, u).toBe('api.resend.com');
+    }
+  });
+
+  it('只有 mailer.ts 允许调用 fetch（其他文件想联网会红灯）', () => {
+    const fetching = sources
+      .filter((s) => /(^|[^.\w])fetch\s*\(/.test(codeOf(s.text)))
+      .map((s) => basename(s.name));
+    expect(fetching).toEqual(['mailer.ts']);
+  });
+
+  it('mailer 什么内容都不认识：不得引用身份/载体/信封字段', () => {
+    const src = sources.find((s) => basename(s.name) === 'mailer.ts');
+    expect(src).toBeTruthy();
+    const code = codeOf(src!.text);
+    for (const forbidden of ['opaque_id', 'owner_key_id', 'carrier_hmac', 'payload', 'nonce']) {
+      expect(code.includes(forbidden), `mailer.ts 代码含 ${forbidden}`).toBe(false);
     }
   });
 

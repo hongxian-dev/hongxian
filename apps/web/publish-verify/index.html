@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布确认 · 红线开源工具</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#C8102E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cpath d='M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z' fill='none' stroke='%23C8102E' stroke-width='16' stroke-linejoin='round'/%3E%3Ccircle cx='120' cy='124' r='44' fill='%23C8102E'/%3E%3Ccircle cx='106' cy='120' r='9' fill='%23FDFBF7'/%3E%3Ccircle cx='134' cy='120' r='9' fill='%23FDFBF7'/%3E%3C/svg%3E">
+<style>
+  :root{--red:#C8102E;--deep:#A60F26;--orange:#F08200;--ink:#1F2937;--muted:#6B7280;--line:#E5E1D8;--paper:#FDFBF7;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+    --serif:Georgia,'Times New Roman',serif;--mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.75;
+    -webkit-font-smoothing:antialiased;padding:40px 20px 72px}
+  .wrap{max-width:560px;margin:0 auto}
+  .mark{width:52px;height:52px;display:block;margin-bottom:22px}
+  .kicker{font-family:var(--serif);font-style:italic;font-size:13px;letter-spacing:2px;color:var(--red)}
+  h1{font-size:clamp(23px,4.4vw,29px);font-weight:900;letter-spacing:.5px;margin:8px 0 14px}
+  .lede{font-size:15px;color:var(--muted);margin-bottom:8px}
+  .lede strong{color:var(--ink);font-weight:700}
+  .card{border:1px solid var(--line);border-radius:4px;padding:26px 24px;margin-top:26px;background:var(--paper)}
+  .step{display:flex;gap:12px;margin-bottom:24px}
+  .step:last-child{margin-bottom:0}
+  .num{flex:0 0 22px;height:22px;border-radius:50%;background:var(--orange);color:#fff;font-size:12px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;margin-top:2px}
+  .num.off{background:var(--line);color:var(--muted)}
+  .body{flex:1;min-width:0}
+  .body h2{font-size:15px;font-weight:800;letter-spacing:.3px;margin-bottom:6px}
+  .body p{font-size:13.5px;color:var(--muted);margin-bottom:12px}
+  label{display:block;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:6px}
+  input{width:100%;font:inherit;font-size:15px;padding:11px 13px;border:1px solid var(--line);border-radius:4px;
+    background:#fff;color:var(--ink)}
+  input:focus{outline:2px solid var(--red);outline-offset:-1px;border-color:var(--red)}
+  input[inputmode="numeric"]{font-family:var(--mono);letter-spacing:6px;font-size:18px;text-align:center}
+  button{font:inherit;font-size:14px;font-weight:700;border:0;border-radius:4px;padding:11px 20px;cursor:pointer;
+    background:var(--red);color:#fff}
+  button:hover:not(:disabled){background:var(--deep)}
+  button:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:600}
+  button.ghost:hover:not(:disabled){color:var(--ink);background:transparent}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  /* 输入框在宽屏与按钮同行，窄屏自然换行——不要为了对齐把输入框压窄到看不清 */
+  .row input{flex:1 1 200px;width:auto;min-width:0}
+  .row button{flex:0 0 auto}
+  .msg{font-size:13px;margin-top:12px;padding:10px 12px;border-left:3px solid var(--line);color:var(--muted)}
+  .msg.err{border-left-color:var(--red);color:var(--deep)}
+  .msg.ok{border-left-color:#2F7D4F;color:#2F7D4F}
+  .msg:empty{display:none}
+  .permit{margin:14px 0 6px;padding:18px;border:1px dashed var(--red);border-radius:4px;text-align:center;
+    font-family:var(--mono);font-size:clamp(26px,7vw,34px);font-weight:800;letter-spacing:.16em;color:var(--red);
+    user-select:all;-webkit-user-select:all}
+  .permit small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:1px;color:var(--muted);
+    font-weight:600;margin-top:8px;user-select:none}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:10px}
+  .hint b{color:var(--ink)}
+  .notes{margin-top:30px;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .notes dt{font-weight:800;color:var(--ink);margin-top:14px;font-size:13px}
+  .notes dd{margin-top:3px}
+  .notes dt:first-child{margin-top:0}
+  a{color:var(--red)}
+  .hidden{display:none}
+  /* 贴卡前披露声明（防护三）：不装工具也能读全文，且不依赖 JS */
+  .dis{border:1px solid var(--line);border-left:3px solid var(--red);border-radius:4px;padding:22px 20px;margin-top:26px}
+  .dis h2{font-size:15px;font-weight:800;letter-spacing:.3px;margin-bottom:12px}
+  .dis pre{white-space:pre-wrap;word-break:break-word;font-family:var(--sans);font-size:13.5px;
+    color:var(--ink);line-height:1.85}
+  .ack{display:flex;gap:9px;align-items:flex-start;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+    font-size:13px;color:var(--ink);cursor:pointer}
+  .ack input{width:15px;height:15px;flex:0 0 15px;margin-top:3px;accent-color:var(--red);cursor:pointer}
+  @media (max-width:420px){.card{padding:20px 16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <svg class="mark" viewBox="0 0 240 240" aria-hidden="true">
+    <path d="M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z" fill="none" stroke="#C8102E" stroke-width="14" stroke-linejoin="round"/>
+    <circle cx="120" cy="122" r="44" fill="#C8102E"/>
+    <path d="M88 106 C106 94 134 94 152 106" fill="none" stroke="#A60F26" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="106" cy="120" r="10" fill="#FDFBF7"/><circle cx="134" cy="120" r="10" fill="#FDFBF7"/>
+    <circle cx="108" cy="122" r="5" fill="#1F2937"/><circle cx="132" cy="122" r="5" fill="#1F2937"/>
+    <path d="M112 138 Q120 146 128 138" fill="none" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="kicker">Publish Confirmation</div>
+  <h1>贴卡前的最后一步</h1>
+  <p class="lede">红线广场是一份<strong>公开可见的列表</strong>。为了不让人一个人刷满它，也为了出事时有一个处置入口，贴卡前要确认一个邮箱能收到信。</p>
+  <p class="lede"><strong>这不是实名认证，我们也不假装是。</strong>不收密码、不能用来登录、不能找回账号，也不会出现在任何一张卡里——平台只存一个加盐哈希。</p>
+
+  <!-- 披露声明（防护三）：全文在此，不装工具、不跑 JS 也能读完 -->
+  <section class="dis" id="disclosure" aria-labelledby="dis-h">
+    <h2 id="dis-h">先说清楚：贴卡会多出一条连接</h2>
+    <pre>贴到广场，会多出一条连接。你得先看清楚。
+
+到现在为止，平台只知道"某个公钥做了什么"，不知道这个人是谁。
+贴卡这件事，会让你名下的两条记录第一次连起来：
+
+    你的假名公钥  ←→  你的邮箱哈希
+
+也就是说：从这一刻起，平台能确认"这个假名背后的人，有一个能
+收到信的邮箱"。四环里，这是唯一一次交叉。
+
+具体存什么：
+· 存的是哈希——单向、不可逆，拿到它也算不出邮箱。
+· 验证那一瞬间，邮箱明文会在服务器内存里存在几秒，发完信立刻
+  丢弃。不写日志，不入库。
+· 这个邮箱不能登录、不能找回密码、不会出现在任何卡片里、
+  不会展示给任何人、不能用来搜到你。
+· 我们不验证你是谁。不知道你的姓名、身份证、住址、工作单位。
+  这一层我们做不到——所以不声称做到了。
+
+边界在哪（这段不写，前面的承诺就是假的）：
+· 哈希防的是"平台拿着自己的数据库反查邮箱"。它不防"已经知道你
+  邮箱的人，拿到数据库后确认你贴过卡"。
+· 如果有人同时掌握了你的邮箱和平台的数据，理论上能确认这件事。
+  我们不会主动做，但技术上不是"绝对不可能"。
+· 所以我们不写"绝对不可关联"。只写我们真做到的部分。
+
+你有两条路：
+· 贴广场 —— 需要验证邮箱（就是接下来这一步）
+· 只在认识的人之间换卡 —— 全程不需要邮箱，什么都不会多出来
+
+贴出去了，随时可以删。删卡的时候，那条连接一起消失。</pre>
+    <label class="ack" for="ackbox">
+      <input type="checkbox" id="ackbox">
+      <span>我明白平台会保存一个与我假名关联的邮箱哈希</span>
+    </label>
+  </section>
+
+  <div class="card" id="app">
+    <!-- 步骤 1 -->
+    <div class="step" id="step1">
+      <div class="num" id="n1">1</div>
+      <div class="body">
+        <h2>填一个你能收到信的邮箱</h2>
+        <p>建议用 Gmail、Outlook 这类。QQ / 163 也能收，但约两三成会进垃圾箱。</p>
+        <label for="email">邮箱</label>
+        <div class="row">
+          <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" spellcheck="false">
+          <button id="send">发送验证码</button>
+        </div>
+        <div class="msg" id="msg1"></div>
+      </div>
+    </div>
+
+    <!-- 步骤 2 -->
+    <div class="step" id="step2">
+      <div class="num off" id="n2">2</div>
+      <div class="body">
+        <h2>填邮件里的 6 位验证码</h2>
+        <p>邮件主题是「红线 · 发布确认码」，5 分钟内有效，只能用一次。</p>
+        <label for="code">验证码</label>
+        <div class="row">
+          <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+          <button id="verify">确认</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="ghost" id="resend" disabled>重新发送</button>
+        </div>
+        <div class="msg" id="msg2"></div>
+      </div>
+    </div>
+
+    <!-- 步骤 3 -->
+    <div class="step hidden" id="step3">
+      <div class="num" id="n3">3</div>
+      <div class="body">
+        <h2>把这串发布许可码交给月老</h2>
+        <p>回到你的月老，执行 <b style="font-family:var(--mono);font-size:12.5px">plaza_publish action=claim</b>，把下面这 8 位填进去。10 分钟内有效，只能用一次。</p>
+        <div class="permit" id="permit"><small>发布许可码</small></div>
+        <div class="hint">空格、横杠、大小写都不影响，我会自动处理。<b>字母表里没有 0、O、1、I、L</b>——所以如果你觉得自己抄出了一个 O 或 0，那一定是看错了，对照屏幕上的原文再确认一次；实在不确定，就重新走一遍这一步。</div>
+      </div>
+    </div>
+  </div>
+
+  <dl class="notes">
+    <dt>这一步到底验证了什么</dt>
+    <dd>只验证「这个邮箱能收到信」。它证明不了你是谁，平台也不会因此知道你是谁。</dd>
+    <dt>没收到邮件</dt>
+    <dd>先翻垃圾箱；一分钟内没到可以点「重新发送」。仍然收不到就换一个邮箱——Gmail 最稳。</dd>
+    <dt>不想验证</dt>
+    <dd>完全可以。出卡、导卡、点对点投递、收卡、比对、深聊、见面，全都不需要这一步。唯一的区别是：不验证就贴不到公开广场，只能和已经认识的人换卡。</dd>
+    <dt>这个页面为什么会打开失败</dt>
+    <dd>它是从月老给的链接进来的，链接里带着一次性的验证标识（30 分钟有效）。自己打开本站首页是找不到它的。</dd>
+  </dl>
+</div>
+
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var nonce = q.get('n') || '';
+  var key = q.get('k') || '';
+  // 接口基地址：默认同源（官网与平台同域时最省事）；跨域时可用 ?api=https://… 覆盖
+  var api = (q.get('api') || location.origin).replace(/\/+$/, '');
+
+  var $ = function (id) { return document.getElementById(id); };
+  var email = $('email'), code = $('code'), permitBox = $('permit');
+  var sendBtn = $('send'), verifyBtn = $('verify'), resendBtn = $('resend');
+  var msg1 = $('msg1'), msg2 = $('msg2');
+  var step2 = $('step2'), step3 = $('step3'), n2 = $('n2');
+  var cooldown = 0, timer = null;
+  var ackBox = $('ackbox');
+
+  // 披露声明未勾选前不发验证码（防护三）。JS 挂掉时按钮照常可用——
+  // 真正拦得住的是月老那边的 disclosure_ack，这页只是把丑话说在前面。
+  if (ackBox) {
+    sendBtn.disabled = true;
+    ackBox.addEventListener('change', function () {
+      sendBtn.disabled = !ackBox.checked;
+      if (ackBox.checked) sendBtn.focus();
+    });
+  }
+
+  function say(el, text, kind) {
+    el.textContent = text || '';
+    el.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  /** 把服务端/网络错误翻成"现在该做什么"。静默失败是最不可接受的一种。 */
+  function humanError(status, payload, fallback) {
+    if (payload && payload.error) return payload.error;
+    if (status === 404) return '这个地址没有接上发布确认接口——多半是实例还没开放这一层。请回月老确认，或稍后再试。';
+    if (status === 429) return '操作太频繁，请稍等一会儿再试。';
+    if (status >= 500) return '服务端暂时出问题了（HTTP ' + status + '）。请一两分钟后再试。';
+    return fallback || ('请求失败（HTTP ' + status + '）');
+  }
+
+  function post(path, body) {
+    return fetch(api + path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.text().then(function (t) {
+        var json = {};
+        try { json = t ? JSON.parse(t) : {}; } catch (e) { json = {}; }
+        return { ok: res.ok, status: res.status, json: json };
+      });
+    });
+  }
+
+  function startCooldown(sec) {
+    cooldown = sec;
+    resendBtn.disabled = true;
+    resendBtn.textContent = '重新发送（' + cooldown + 's）';
+    clearInterval(timer);
+    timer = setInterval(function () {
+      cooldown -= 1;
+      if (cooldown <= 0) {
+        clearInterval(timer);
+        resendBtn.disabled = false;
+        resendBtn.textContent = '重新发送';
+      } else {
+        resendBtn.textContent = '重新发送（' + cooldown + 's）';
+      }
+    }, 1000);
+  }
+
+  function sendCode() {
+    var addr = (email.value || '').trim();
+    if (!addr) { say(msg1, '先填一个邮箱地址。', 'err'); email.focus(); return; }
+    sendBtn.disabled = true;
+    sendBtn.textContent = '发送中…';
+    say(msg1, '');
+    post('/v2/publish/otp', { nonce: nonce, carrier: addr }).then(function (r) {
+      sendBtn.disabled = false;
+      sendBtn.textContent = '发送验证码';
+      if (!r.ok) { say(msg1, humanError(r.status, r.json, '验证码没能发出去。'), 'err'); return; }
+      say(msg1, '已发出。去看收件箱——主题是「红线 · 发布确认码」。没看到就翻一下垃圾箱。', 'ok');
+      n2.className = 'num';
+      startCooldown(60);
+      code.focus();
+    }).catch(function () {
+      sendBtn.disabled = false;
+      sendBtn.textContent = '发送验证码';
+      say(msg1, '网络不通：这台设备可能连不上这个实例。换网络或稍后再试。', 'err');
+    });
+  }
+
+  function verifyCode() {
+    var c = (code.value || '').replace(/\D/g, '');
+    if (c.length !== 6) { say(msg2, '验证码是 6 位数字。', 'err'); code.focus(); return; }
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = '确认中…';
+    say(msg2, '');
+    post('/v2/publish/verify', { nonce: nonce, code: c }).then(function (r) {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = '确认';
+      if (!r.ok) {
+        say(msg2, humanError(r.status, r.json, '验证码不对。'), 'err');
+        code.select();
+        return;
+      }
+      var permit = String(r.json.permit || '');
+      // 4-4 分段显示：更好抄，月老那边会自动去掉空格
+      permitBox.innerHTML = (permit.slice(0, 4) + ' ' + permit.slice(4)) + '<small>发布许可码</small>';
+      step3.className = 'step';
+      $('n3').className = 'num';
+      step3.scrollIntoView({ block: 'center' });
+      email.disabled = true; code.disabled = true;
+      sendBtn.disabled = true; verifyBtn.disabled = true; resendBtn.disabled = true;
+      say(msg2, '验证通过。这封邮件里的验证码已经作废——它只能用一次。', 'ok');
+    }).catch(function () {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = '确认';
+      say(msg2, '网络不通：请检查连接后重试。', 'err');
+    });
+  }
+
+  sendBtn.addEventListener('click', sendCode);
+  resendBtn.addEventListener('click', sendCode);
+  verifyBtn.addEventListener('click', verifyCode);
+  email.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendCode(); });
+  code.addEventListener('input', function () { code.value = code.value.replace(/\D/g, '').slice(0, 6); });
+  code.addEventListener('keydown', function (e) { if (e.key === 'Enter') verifyCode(); });
+
+  // 链接不完整：与其让人对着一个空表单发呆，不如直接说清楚怎么重来
+  if (!nonce || !key) {
+    $('app').innerHTML = '<div class="msg err" style="margin:0">这个链接不完整（缺少一次性的验证标识）。' +
+      '请回到月老，执行 <b style="font-family:var(--mono);font-size:12.5px">plaza_publish action=verify</b>，' +
+      '用新生成的链接重新打开。自己打开本站首页是找不到这一页的。</div>';
+  } else {
+    email.focus();
+  }
+})();
+</script>
+</body>
+</html>

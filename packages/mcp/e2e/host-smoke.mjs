@@ -140,11 +140,19 @@ async function main() {
     const prompts = await host.request('prompts/list', {});
     check('prompts/list 返回 8 条指引', (prompts.result?.prompts ?? []).length === 8, `实际 ${(prompts.result?.prompts ?? []).length}`);
 
-    // 4. 真调用一通：未同意前必须拒绝（S1 的协议面证据）
-    const consent = await host.request('tools/call', { name: 'interview', arguments: { action: 'start' } });
-    const consentText = consent.result?.content?.[0]?.text ?? '';
-    check('未同意前先给同意书（S1 知情同意）', /知情同意|18 周岁/.test(consentText), consentText.slice(0, 200));
-    check('拒绝理由是"人话"而非堆栈', !/at .*\.js:\d+|TypeError|undefined is not/.test(consentText), consentText.slice(0, 160));
+    // 4. 真调用一通：未进门之前必须先把丑话说清（S1 + 防护一）
+    //    顺序是「风险提示 → 知情同意」：先知道会出什么事，再决定要不要开始
+    const first = await host.request('tools/call', { name: 'interview', arguments: { action: 'start' } });
+    const firstText = first.result?.content?.[0]?.text ?? '';
+    check(
+      '未进门先给风险提示（防护一 / C2①）',
+      /红线是工具，不是婚介/.test(firstText) && /interview\(action="ack"\)/.test(firstText),
+      firstText.slice(0, 160),
+    );
+    const acked = await host.request('tools/call', { name: 'interview', arguments: { action: 'ack' } });
+    const consentText = acked.result?.content?.[0]?.text ?? '';
+    check('确认风险提示后给知情同意书（S1）', /知情同意|18 周岁/.test(consentText), consentText.slice(0, 200));
+    check('提示是"人话"而非堆栈', !/at .*\.js:\d+|TypeError|undefined is not/.test(consentText), consentText.slice(0, 160));
 
     // 5. 未知工具 → 明确报错，不是静默
     const unknown = await host.request('tools/call', { name: 'no_such_tool', arguments: {} });

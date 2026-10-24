@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "月老 Yuelao MCP Server：寄生在宿主 Agent 里的红线工具包（21 tools + 8 prompts，STDIO，零服务端依赖）",
   "license": "Apache-2.0",
+  "author": "Hongxian contributors (https://hongxian.dev)",
+  "homepage": "https://hongxian.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hongxian-dev/hongxian.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/hongxian-dev/hongxian/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,11 +25,14 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "node ../../scripts/guard-publish.mjs"
   },
   "dependencies": {
     "@hongxian/core": "0.1.0",
@@ -27,7 +40,11 @@
     "@hongxian/schema": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.12.0"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
+    "access": "public",
     "provenance": true
   }
 }

@@ -1,13 +1,20 @@
 # Hongxian Protocol v1 (Spec)
 
 > Machine-readable form: [`@hongxian/schema`](../packages/schema) (Zod).
-> Status: **v1.2, public for review** (2026-10-22). Supersedes [protocol v0 draft](protocol-v0-spec.md).
+> Status: **v1.4, public for review** (2026-10-24). Supersedes [protocol v0 draft](protocol-v0-spec.md).
 > v1.1 change (non-breaking): the meeting layer (`payload_L3`) is a *sealed container* with per-field
 > subkeys, and `grant_l3` may carry `container_key` — see §3.3. Readers must keep accepting the v1.0
 > whole-layer shape.
 > v1.2 change (non-breaking, opt-in): plaza cards may carry `declared_filters` — four coarse,
 > self-declared retrieval conditions in plaintext meta (§2.1, §5). Plus anti-abuse reports (§6.1)
 > and the anonymous instance aggregate (§6.2). Cards without `declared_filters` remain valid.
+> v1.3 change (opt-in, instance policy): **publish credential** (§5.2) — an instance may require a
+> one-time reachable-carrier check before a card enters the public list. Envelope format unchanged;
+> instances that do not require it behave exactly as v1.2.
+> v1.4 change (non-breaking, safety floor): a report now takes effect **immediately and
+> symmetrically** — the reporting pair cannot deliver to each other from that moment (§6.1.1).
+> A second addition is a **pre-publish disclosure** the instance must serve as data, not as
+> client copy (§5.3). Neither changes any envelope byte; a v1.3 reader keeps working.
 > License: [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — the protocol itself must stay open; the code is Apache-2.0.
 
 ---
@@ -235,6 +242,112 @@ Rules:
 
 ---
 
+### 5.2 publish credential — the one place identity touches publishing (v1.3)
+
+A plaza is a **publicly visible list**. That single fact is what triggers publication-side
+identity obligations in most jurisdictions, and pretending otherwise would put the whole
+instance at risk of being blocked. The protocol therefore splits the ladder once more, at the
+narrowest possible point:
+
+> **Everything is anonymous except the act of putting a card on the public list.**
+> Verifying a reachable carrier proves *"this mailbox can receive mail"* — nothing else.
+> It is **not** authentication, **not** an account, and **not** a login factor.
+
+An instance **MAY** require a publish credential. It advertises the requirement and the
+verification page location in `GET /healthz`:
+
+```json
+{ "ok": true, "publish": { "required": true, "available": true,
+                           "verify_base": "https://<instance>/publish-verify/" } }
+```
+
+Clients MUST read this instead of assuming: a self-hosted private instance may run with
+`required: false` (identical to v1.2 behaviour), and a public instance that requires
+verification but has no outbound mail channel is **misconfigured**, not "verification-free".
+
+#### 5.2.1 Flow
+
+```
+1. CHALLENGE   client generates a 128-bit `nonce` locally (base64url, 22-43 chars)
+               ── never leaves the device except inside the URL handed to its own owner
+2. OTP         POST /v2/publish/otp     { nonce, carrier }
+               ── unauthenticated by design: a browser holds no key.
+                  The carrier is normalised (lowercase, trimmed) and immediately HMAC'd;
+                  only the HMAC is stored. Replies 503 if no channel is configured.
+3. VERIFY      POST /v2/publish/verify  { nonce, code }
+               ── 6-digit code, 5 min, single use, at most 5 wrong attempts.
+                  Success returns an 8-character `permit` (alphabet excludes 0/O/1/I/L).
+4. CLAIM       PUT  /v2/publish/credential   { nonce, permit }   [signed auth header]
+               ── **ownership is established here**, by proof of key possession.
+                  Writes the credential and burns both nonce and permit.
+5. PUBLISH     POST /v2/cards — requires a credential for `meta.owner_key_id`,
+               otherwise 403 `publish_requires_verification`.
+```
+
+Steps 2–3 are unauthenticated on purpose, and that is safe **because ownership is not
+decided there**: claiming needs both the nonce (only the owner's machine has it) and the
+permit (only shown in the browser that completed the flow), plus a signature by the key
+being bound. Verifying on someone else's behalf therefore requires all three.
+
+Additional endpoints: `GET /v2/publish/credential` (answers *whether* the caller has one,
+never *which* carrier) and `DELETE /v2/publish/credential` (unbind; historical cards are not
+retroactively withdrawn, and the protocol does not pretend they can be).
+
+#### 5.2.2 Hard constraints
+
+1. **Not in the login path.** The carrier can never log in, recover an account, or replace
+   the recovery phrase. Keys remain the only identity.
+2. **No plaintext at rest.** Only `carrier_hmac = HMAC-SHA256(instance_secret, "carrier|" + normalised)`
+   is stored. Plaintext lives in the request body and the outbound mail call, nowhere else —
+   no logs, no error messages.
+3. **Never displayed.** Not in any envelope, report, plaza card, or API response to third
+   parties. There is no endpoint that maps a pseudonym to a carrier.
+4. **Only at publish time.** Install, interview, sign, compare, mail, L2/L3 — none require it.
+   Clients MUST say this out loud when asking, and MUST offer the alternative (point-to-point
+   exchange keeps working without any verification).
+
+#### 5.2.3 One-to-one constraints
+
+One carrier maps to one key, and one key to one carrier (`409 publish_carrier_already_bound`
+/ `409 publish_owner_already_bound`). Aliases are **not** expanded (`a+x@…` and `a@…` are
+distinct carriers) — expanding them would let a single mailbox mint unlimited identities and
+defeat the anti-sybil purpose entirely. Disposable-mailbox domains are rejected from a short
+high-frequency list only; a maximal list would misfire on real users.
+
+#### 5.2.4 What this is not
+
+A publish credential **MUST NOT** be treated as identity verification, and clients MUST NOT
+infer, display, or rank by it. Protocol-level prohibition: it may not be used for sorting,
+recommendation, or profiling. Where the law requires a legally recognised real-name check
+(the enumerated services in China's Cybersecurity Law art. 26), a mailbox does not satisfy it
+— this specification says so plainly rather than implying otherwise.
+
+### 5.3 Pre-publish disclosure served as data (v1.4)
+
+The link created in §5.2 is the only junction between the content ring and the credential
+ring. Telling a user about it in client copy is not enough: copy drifts from behaviour, and
+someone reading stale copy has no way to know. So the disclosure is **protocol data**:
+
+```
+GET /v2/publish/disclosure
+  → { version, full, brief, ack_label, require_ack }
+```
+
+| Rule | Requirement |
+|---|---|
+| Who serves it | the instance, **publicly and without authentication** — readable by anyone who can reach the instance, no client install required |
+| `version` | a string the instance bumps whenever the wording changes; clients **MUST** re-show `full` when the locally acknowledged version differs |
+| Where the acknowledgement lives | client-local (for the reading experience) **and** on the credential as `disclosure_version` (for later accountability). The credential record is the one that survives a reinstall |
+| Content floor (binding on the reference instance) | it MUST state what is stored (a salted hash, not the mailbox), that the mailbox cannot log in, be searched or be shown, that the instance does not verify who the user is, **and the boundary** — a hash does not stop someone who already knows the mailbox from correlating it. A disclosure promising "unlinkable" is a false statement |
+| Gate | `require_ack: true`. A client MUST NOT enter §5.2's flow before the user acknowledges the current version |
+| Wording prohibition | no "real-name verification" (实名认证/实名验证), no "safe", "guaranteed", "absolute", "100%" |
+
+The client-side counterpart — a first-use risk notice that blocks profile creation until
+acknowledged — never touches the wire and is specified in the product design doc. It shares
+the same rule: **every sentence must be something the platform can actually do.**
+
+---
+
 ## 6. Mailbox semantics
 
 | Rule | Value | Rationale |
@@ -268,6 +381,28 @@ GET  /v2/reports/:id      → { reports, distinct, flagged }     (signed by the 
 | Who can read a summary | the target only | a public report count becomes a shaming tool |
 | Effect of `flagged` | "worth an operator's look" — throttling/banning is an instance decision | the protocol never adjudicates; federation is the user's exit |
 | Self-report / unknown target | rejected (400 / 404) | — |
+
+#### 6.1.1 Reports take effect immediately and symmetrically (v1.4)
+
+`flagged` is *not* a verdict and **MUST NOT** change what the plaza shows. What protects a
+reporter right away is narrower and purely structural: from the moment a report is accepted,
+**neither party may deliver to the other**. Any envelope type, either direction, until the
+identity is deleted.
+
+```
+A reports B  ⇒  isBlocked(A → B) = true  ∧  isBlocked(B → A) = true
+```
+
+| Rule | Requirement |
+|---|---|
+| Nature | a **receiver-side declaration**, not a platform judgement. The instance reads no content, evaluates nothing, and adjudicates nothing |
+| Indistinguishability | a blocked delivery **MUST** be byte-for-byte indistinguishable from a successful one: same status code, same id, same `entered_mailbox`, same quota consumption, no artificial delay. Any observable difference tells the reported party that a report happened and helps them infer who filed it |
+| No notification | the instance **MUST NOT** notify the blocked party, and **MUST NOT** disclose the reason or the counterpart |
+| Scope | delivery only. Identity keys, mailbox reads/deletes, and delivery to any third party are unaffected |
+| Storage | the block list **MUST NOT** store peer identifiers in recoverable form — store salted tags (`HMAC(instance_secret, "block\|owner\|peer")`), same discipline as the reporter pseudonym. A stolen data directory must not yield a "who cut off whom" graph |
+| Effect on the plaza list | none. Removing a card on report count would be the instance adjudicating content it cannot read |
+| Deletion | deleting an identity removes its own block list; the counterpart's entry stays until it is deleted too |
+| Revocation | not defined in v1.4. There is no unblock endpoint — "report, then take it back and keep receiving" has no coherent contract yet |
 
 ### 6.2 Anonymous instance aggregate (transparency)
 
@@ -352,5 +487,7 @@ Any future field added under these slots MUST follow the §10.2 rule.
 ## 12. Changelog
 
 - **v0 draft (2026-10-19)**: first public draft. Envelope structure, three-tier fields, nine message types, key system, validation rules, reserved slots.
+- **v1.4 (2026-10-24)**: safety floor. ① Reports take effect **immediately and symmetrically** (§6.1.1) — the reporting pair can no longer deliver to each other, and a blocked delivery is indistinguishable from a successful one (same status, same id, same quota, no delay) so the reported party gains no signal; blocks are stored as salted tags, never as recoverable peer IDs; the plaza list is untouched (`flagged` is not a verdict). ② Pre-publish disclosure is **protocol data** (§5.3) — `GET /v2/publish/disclosure` returns `{version, full, brief, ack_label, require_ack}` so a wording change needs no client release, and the acknowledged version is recorded on the credential. No envelope byte changes.
+- **v1.3 (2026-10-24)**: publish credential (§5.2) — the narrowest possible identity touch point: only the act of placing a card on the public list requires a one-time reachable-carrier check, established by a nonce + permit + proof of key possession. One carrier ↔ one key, no alias expansion, HMAC-only at rest, never displayed, never usable for ranking. Explicitly *not* identity verification. Envelope format and all v1.2 semantics unchanged; `required: false` instances are byte-identical in behaviour to v1.2.
 - **v1.2 (2026-10-22)**: declared circles without server bucketing — `declared_filters` in plaintext meta on plaza cards only (§2.1, §5.1), reciprocal direction check, signature-covered. Anti-abuse reports on behaviour signals with salted reporter pseudonyms (§6.1). Anonymous instance aggregate (§6.2). All additive: v1.0/v1.1 cards remain valid.
 - **v1 (2026-10-19)**: platform-service layer formalized. `key_l1` carriage split by card variant (plaza cards carry none — zero-knowledge hard rule, §2.2/§10.5); `grant_l1` message and the plaza flow (§5); mailbox semantics (§6); `opaque_id@instance` addressing with federation reserved (§7); `upgrade_request` gains required `requester_kx_public`. Message family is now nine + `grant_l1`.

@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "红线协议 v0 的机器可读形态：三层匹配卡信封、九类消息、受控词表（Zod）",
   "license": "Apache-2.0",
+  "author": "Hongxian contributors (https://hongxian.dev)",
+  "homepage": "https://hongxian.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hongxian-dev/hongxian.git",
+    "directory": "packages/schema"
+  },
+  "bugs": {
+    "url": "https://github.com/hongxian-dev/hongxian/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,15 +22,22 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "node ../../scripts/guard-publish.mjs"
   },
   "dependencies": {
     "zod": "^3.24.1"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
+    "access": "public",
     "provenance": true
   }
 }

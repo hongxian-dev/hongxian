@@ -121,6 +121,8 @@ async function bootstrap(client) {
 
 /** 完整建画像（三阶段） */
 async function buildProfile(client) {
+  // 防护一：每个新身份都要先读一遍风险提示（版本号变了也会重来）
+  await client.callTool('interview', { action: 'ack' });
   let r = await client.callTool('interview', { action: 'consent', age_attested: true });
   const mnemonic = r.text.match(/：\*\*\s*\n\n([^\n]+)\n\n/)?.[1]?.trim();
   r = await client.callTool('interview', { action: 'confirm_mnemonic', mnemonic });
@@ -193,10 +195,18 @@ async function main() {
       check(`prompt 存在: ${p}`, prompts.includes(p));
     }
 
-    // ---- S1 知情同意 + 身份 ----
-    console.log('\n■ S1 知情同意与身份');
+    // ---- S1 风险提示 + 知情同意 + 身份 ----
+    console.log('\n■ S1 风险提示与知情同意');
     const startRes = await a.callTool('interview', { action: 'start' });
-    check('首次启动返回知情同意书', startRes.text.includes('年满 18 周岁'));
+    // 防护一（C2①）：第一次进门先给风险提示，且是「可继续的中间态」不是报错
+    check(
+      '首次启动先给风险提示（工具·不是婚介·不是担保）',
+      startRes.text.includes('红线是工具，不是婚介，也不是担保') && startRes.text.includes('不是报错'),
+      startRes.text.slice(0, 120),
+    );
+    check('风险提示给出确认入口', startRes.text.includes('interview(action="ack")'));
+    const ackRes = await a.callTool('interview', { action: 'ack' });
+    check('确认风险提示后转进知情同意书', ackRes.text.includes('年满 18 周岁'), ackRes.text.slice(0, 120));
     const mnemonicA = await buildProfile(a);
     check('24 词恢复短语已生成', typeof mnemonicA === 'string' && mnemonicA.split(' ').length === 24);
     await buildProfile(b);
@@ -437,6 +447,7 @@ async function main() {
     const c = new McpClient(homeC);
     await bootstrap(c);
     await c.callTool('interview', { action: 'start' });
+    await c.callTool('interview', { action: 'ack' });
     await c.callTool('interview', { action: 'consent', age_attested: true });
     const restoreRes = await c.callTool('restore', { archive: JSON.stringify(archive), mnemonic: mnemonicA });
     check('档案恢复到新设备（密钥由短语重建）', restoreRes.text.includes('恢复完成'), restoreRes.text.slice(0, 140));
@@ -569,7 +580,7 @@ async function main() {
       reason_code: 'spam',
       server: plazaUrl,
     });
-    check('举报成功并返回汇总', rep1.text.includes('1 条') && rep1.text.includes('1 个独立举报人'), rep1.text.slice(0, 200));
+    check('举报成功并返回汇总', rep1.text.includes('1 条举报') && rep1.text.includes('1 个独立的人'), rep1.text.slice(0, 200));
     check('举报回执不透露举报人身份', !rep1.text.includes(regB.opaque_id), rep1.text.slice(0, 200));
     check('举报同时指出本地拉黑这条路', rep1.text.includes('ledger(action="block"'), rep1.text.slice(0, 240));
     const repSelf = await a.callTool('report_abuse', { action: 'mine', server: plazaUrl });

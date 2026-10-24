@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod';
+import { randomBytes } from 'node:crypto';
 import { cardFingerprint, filterPlazaPool, noteResponseReceived, noteTokensUsed, noteUpgradeSent, toPlazaCard } from '@hongxian/core';
 import {
   DeclaredFilters,
@@ -19,6 +20,7 @@ import {
   REPORT_REASONS,
   canonicalBytes,
   fromBase64,
+  normalizePermit,
   MsgEnvelope,
   parseAddress,
   type MatchCardEnvelope,
@@ -32,17 +34,22 @@ import { loadMyProfile } from './profile-view.js';
 import {
   appendHistory,
   browsePlaza,
+  claimPublishCredential,
   deliverEnvelope,
   deleteMailboxItem,
   ensureRegistered,
   fetchInstanceStats,
+  fetchPublishCredential,
+  fetchPublishDisclosure,
   fetchReportSummary,
+  fetchServerHealth,
   loadHistory,
   loadRegistration,
   normalizeInstanceUrl,
   publishPlazaCard,
   pullMailbox,
   reportAbuse,
+  unbindPublishCredential,
   withdrawPlazaCard,
   PULLED_PATH,
   SEEN_CARDS_PATH,
@@ -276,18 +283,104 @@ export const plazaBrowseTool = {
   },
 };
 
-// ---------- plaza_publish（贴卡 / 撤卡 / 状态） ----------
+// ---------- plaza_publish（贴卡 / 撤卡 / 状态 / 发布许可） ----------
+
+/**
+ * 认领失败的人话。服务端的错误码是稳定的，文案会改——所以按码分支，不按字符串匹配。
+ * 每一句都要回答"我现在该做什么"，因为用户此时正卡在这一步。
+ */
+function describeClaimFailure(code: string | undefined, fallback: string): string {
+  switch (code) {
+    case 'publish_permit_invalid':
+      return (
+        `许可码没对上：${fallback}\n\n` +
+        `最可能是抄错了。许可码是 8 位，字母表里**没有 0/O/1/I/L**（避免和数字混淆），` +
+        `所以看到 O 就是 0 抄错、看到 I 就是 1 抄错。空格和横杠可以不管，我这边会自动去掉。\n` +
+        `还有一个可能：许可码只有 10 分钟有效期，过期就得重新走一遍 verify。`
+      );
+    case 'publish_carrier_already_bound':
+      return (
+        `这个邮箱已经绑过另一个身份了。${fallback}\n\n` +
+        `一个邮箱只能确认一个身份——这是为了防一个人用同一个邮箱刷满广场。你可以：` +
+        `① 换一个邮箱重走 verify；② 如果你有两个身份且确实需要，让原来那个先解绑。`
+      );
+    case 'publish_owner_already_bound':
+      return (
+        `这个身份已经确认过另一个邮箱了。${fallback}\n\n` +
+        `一个身份也只绑一个邮箱，防囤积。要换邮箱请先 \`plaza_publish action=unbind\` 再重走 verify。`
+      );
+    case 'publish_rate_limited':
+      return `发码太频繁了。${fallback}`;
+    default:
+      return `认领失败：${fallback}\n\n如果反复失败，先执行 \`plaza_publish action=verify\` 重新拿一个链接再试（nonce 会换新）。`;
+  }
+}
+
+
+// ---------- 防护三 · 贴卡前披露声明（D7 / C2③） ----------
+
+/**
+ * 确认已读过披露声明；没读过就把全文交出来。
+ *
+ * 三条设计决定：
+ * ① 文案**从服务端取**（`GET /v2/publish/disclosure`），本地不硬编码——
+ *    措辞是最常被要求改的东西，写死就要为改一句话发一版 Skill。
+ * ② 取不到声明就**不放行**。贴卡前的丑话不能靠"服务端连不上"这条缝溜过去。
+ * ③ 按版本号判定而非"确认过一次就永久算数"：文案改了必须重新看。
+ */
+async function requireDisclosure(
+  instance: string,
+  session: Session,
+  ackGiven: boolean | undefined,
+): Promise<{ ok: true; version: string; brief: string } | { ok: false; block: string }> {
+  const d = await fetchPublishDisclosure(instance);
+  if (!d.ok) {
+    return {
+      ok: false,
+      block:
+        `读不到实例的披露声明（${d.error}）。\n\n` +
+        `**声明必须在贴卡前给你看，所以这次先不放行。** 稍后重试；` +
+        `如果你知道实例地址，也可以在浏览器里直接看：${instance}/v2/publish/disclosure。`,
+    };
+  }
+  const seen = session.settings().publish_disclosure_version;
+  if (seen === d.data.version) return { ok: true, version: d.data.version, brief: d.data.brief };
+  if (ackGiven !== true) {
+    return {
+      ok: false,
+      block:
+        d.data.full +
+        '\n\n' +
+        `[ ] ${d.data.ack_label}\n\n` +
+        `（读完了、也明白这条连接确实会存在，就在同一条命令上加一个参数重跑：\`disclosure_ack=true\`。\n` +
+        `这不是收藏夹式的"同意条款"——它是这套工具里唯一一处会把你的两条记录连起来的地方，所以必须当面说清。）`,
+    };
+  }
+  session.updateSettings({ publish_disclosure_version: d.data.version });
+  return { ok: true, version: d.data.version, brief: d.data.brief };
+}
 
 export const plazaPublishTool = {
   name: 'plaza_publish',
   description:
     '管理本方广场卡：publish（把匹配卡派生为广场卡变体贴上服务端——自动剥离 key_l1，零知识军规）/' +
-    'withdraw（撤卡）/ status（查看注册与贴卡状态）。贴卡即同意"陌生人能看见你在（仅轮廓）"。',
+    'withdraw（撤卡）/ status（查看注册、发布许可与贴卡状态）/' +
+    'verify（要贴卡但实例要求发布确认时，先做这一步：给出一个网页链接，主人在浏览器里确认邮箱能收信）/' +
+    'claim（把网页显示的 8 位发布许可码回填，完成绑定）/ unbind（解绑，失去贴卡能力）。' +
+    '发布确认不是实名认证——它只防刷广场、留一个处置入口，不验证你是谁。',
   inputSchema: {
-    action: z.enum(['publish', 'withdraw', 'status']).default('publish'),
+    action: z.enum(['publish', 'withdraw', 'status', 'verify', 'claim', 'unbind']).default('publish'),
     server: z.string().optional().describe('服务端地址；缺省用已配置实例'),
     my_card_id: z.string().optional().describe('publish 的本方匹配卡 ID（缺省最新一张）'),
     fingerprint: z.string().optional().describe('withdraw 的卡指纹（缺省撤最新一张）'),
+    permit: z.string().optional().describe('claim 的 8 位发布许可码（验证网页最后一步显示的，不含 0/O/1/I/L）'),
+    disclosure_ack: z
+      .boolean()
+      .optional()
+      .describe(
+        '确认已读完「贴卡前披露声明」（防护三）。首次贴卡必经一步：不加这个参数会返回声明全文，' +
+          '读完后带 disclosure_ack=true 重跑同一条命令。声明全文也可在实例的 /v2/publish/disclosure 读到',
+      ),
     declared_filters: z
       .record(z.unknown())
       .optional()
@@ -298,10 +391,12 @@ export const plazaPublishTool = {
   },
   handler: async (
     args: {
-      action: 'publish' | 'withdraw' | 'status';
+      action: 'publish' | 'withdraw' | 'status' | 'verify' | 'claim' | 'unbind';
       server?: string;
       my_card_id?: string;
       fingerprint?: string;
+      permit?: string;
+      disclosure_ack?: boolean;
       declared_filters?: Record<string, unknown>;
     },
     session: Session,
@@ -316,6 +411,24 @@ export const plazaPublishTool = {
       const reg = loadRegistration(s);
       const mine = listOwnPlazaCards(s);
       const sameInstance = reg?.instance === instance;
+      // 许可状态与实例策略都要问一下——"能不能贴卡"取决于这两者的组合，
+      // 让主人在 status 里一次看清，而不是等到贴卡被拒才知道。
+      let publishRequired: boolean | null = null;
+      let publishAvailable: boolean | null = null;
+      let publishVerified: boolean | null = null;
+      let verifiedAt: string | undefined;
+      const health = await fetchServerHealth(instance);
+      if (health.ok && health.data.publish) {
+        publishRequired = health.data.publish.required;
+        publishAvailable = health.data.publish.available;
+      }
+      if (sameInstance && session.unlocked) {
+        const cred = await fetchPublishCredential(instance, session);
+        if (cred.ok) {
+          publishVerified = cred.data.verified;
+          verifiedAt = cred.data.verified_at;
+        }
+      }
       return text(
         '本方平台状态：\n\n```json\n' +
           JSON.stringify(
@@ -323,6 +436,10 @@ export const plazaPublishTool = {
               instance,
               registered: sameInstance,
               opaque_id: sameInstance ? reg?.opaque_id : undefined,
+              publish_required: publishRequired,
+              publish_available: publishAvailable,
+              publish_verified: publishVerified,
+              publish_verified_at: verifiedAt,
               published_cards: mine.map((c) => ({
                 card_id: c.meta.card_id,
                 fingerprint: cardFingerprint(c),
@@ -333,12 +450,103 @@ export const plazaPublishTool = {
             null,
             2,
           ) +
-          '\n```',
+          '\n```\n\n' +
+          (publishRequired && publishVerified === false
+            ? '要贴卡还差一步发布确认：执行 `plaza_publish action=verify`，我带你走一遍（大约两分钟）。'
+            : ''),
+      );
+    }
+
+    // verify：只读实例策略 + 生成本地 nonce，不需要先注册（opaque_id 是公开信息）
+    if (args.action === 'verify') {
+      if (!session.unlocked) {
+        return text('需要先解锁身份（恢复短语）才能开始发布确认——这一步最终要把"验证过的邮箱"绑到你的密钥上。');
+      }
+      const health = await fetchServerHealth(instance);
+      if (!health.ok) return text(`连不上服务端（${instance}）：${health.error}`);
+      const info = health.data.publish;
+      if (!info) {
+        return text(
+          '这个实例没有声明发布许可策略——多半是旧版本服务端。直接 `plaza_publish action=publish` 试试；' +
+            '如果被拒，说明实例其实要求验证，请让实例运营者贴出验证页地址。',
+        );
+      }
+      if (!info.required) {
+        return text('这个实例不要求发布确认（自托管私有实例可以自己关掉这一层）。直接 `action=publish` 贴卡就行，不用验证。');
+      }
+      if (!info.available) {
+        return text(
+          '这个实例要求发布确认，但没配置发信通道——**这是实例运营方的配置问题，不是你的问题**。' +
+            '现在贴卡会失败。你可以：① 换一个实例；② 告诉实例运营方补上发信通道；③ 先用点对点投递（send_via_server）跟认识的人换卡，那条路不需要这一步。',
+        );
+      }
+      const disclosure = await requireDisclosure(instance, session, args.disclosure_ack);
+      if (!disclosure.ok) return text(disclosure.block);
+      const nonce = randomBytes(16).toString('base64url');
+      session.updateSettings({ publish_nonce: nonce });
+      const base = (info.verify_base ?? `${instance}/publish-verify/`).replace(/\/?$/, '/');
+      const url = `${base}?n=${encodeURIComponent(nonce)}&k=${encodeURIComponent(session.keyIdB64)}`;
+      return text(
+        `要把卡贴到广场，差最后一步。**广场是一个公开可见的列表**——为了防止一个人刷满广场，` +
+          `也为了出事时有一个处置入口，贴卡前要确认一个邮箱能收到信。\n\n` +
+          `这**不是注册**：不收密码、不能用来登录、不能找回账号，也不验证你是谁。\n\n` +
+          `请在你的浏览器打开这个地址（**30 分钟内有效**）：\n\n    ${url}\n\n` +
+          `网页上做三件事：填邮箱 → 收一封「发布确认码」的邮件 → 填 6 位验证码。` +
+          `完成后网页会显示一串 **8 位发布许可码**（不含 0/O/1/I/L，方便你抄）。\n\n` +
+          `把它填回来：\`plaza_publish action=claim permit=<那 8 位>\`。\n\n` +
+          `**没收到邮件？** 先看垃圾箱（QQ / 163 约 15%～30% 会进垃圾箱，Gmail 基本不会）。` +
+          `一分钟内没到可以点"重新发送"；急的话换个 Gmail 更稳。\n\n` +
+          `**不想验证也完全没关系**——这就是一个可选的动作，不是门槛：` +
+          `出卡、导卡、点对点投递（send_via_server）、收卡、比对、深聊、见面，全都照旧。` +
+          `唯一的区别是：不验证就贴不到公开广场，你只能和已经认识的人换卡。\n\n` +
+          `（${disclosure.brief}）`,
       );
     }
 
     const regRes = await ensureRegistered(instance, session);
     if (!regRes.ok) return text(`服务端注册失败：${regRes.error}`);
+
+    if (args.action === 'claim') {
+      // 客户端也做一次标准化（去空格/连字符、转大写）：用户会抄成 4-4 分段，
+      // 服务端虽然也归一，但请求体保持规范形态能让抓包和日志里的东西可读
+      const permit = normalizePermit(args.permit ?? '');
+      if (!permit) {
+        return text(
+          '请把验证网页最后一步显示的 **8 位发布许可码** 填进 permit 参数。\n' +
+            '（如果你手边没有网页链接了，执行 `plaza_publish action=verify` 重新开始一次。）',
+        );
+      }
+      const nonce = session.settings().publish_nonce;
+      if (!nonce) {
+        return text(
+          '本机没有进行中的发布验证——可能已经完成过，或者换过设备/重装过。\n' +
+            '请先执行 `plaza_publish action=verify` 拿一个新的网页链接（nonce 只存在这台机器上）。',
+        );
+      }
+      const res = await claimPublishCredential(
+        instance,
+        nonce,
+        permit,
+        session,
+        session.settings().publish_disclosure_version,
+      );
+      if (!res.ok) return text(describeClaimFailure(res.code, res.error));
+      session.updateSettings({ publish_nonce: undefined });
+      return text(
+        `发布确认完成（${res.data.verified_at.slice(0, 10)}）。这个密钥现在可以贴卡了。\n\n` +
+          `再说一遍这里发生了什么，别被"验证"两个字吓到：平台只知道"某个假名公钥做过一次载体验证"，` +
+          `**不知道你是谁**。它存的是加盐哈希，不是邮箱；这个哈希不能用来登录、不能找回账号、` +
+          `也不会出现在任何一张卡或任何一封信里。\n\n` +
+          `现在执行 \`plaza_publish action=publish\` 贴卡吧。`,
+      );
+    }
+
+    if (args.action === 'unbind') {
+      const res = await unbindPublishCredential(instance, session);
+      if (!res.ok) return text(`解绑失败：${res.error}`);
+      return text(res.data.note);
+    }
+
     if (args.action === 'withdraw') {
       const mine = listOwnPlazaCards(s);
       const target = args.fingerprint ? mine.find((c) => cardFingerprint(c) === args.fingerprint) : mine[mine.length - 1];
@@ -364,8 +572,38 @@ export const plazaPublishTool = {
     if (plaza.key_l1 !== undefined) {
       return text('内部错误：广场卡变体携带了 key_l1，已阻止上传（零知识军规 §10.5）。这不该发生——请报告。');
     }
+    // 防护三（C2③）：贴卡前必须看过披露声明。
+    // 只在实例**明确要求发布确认**时才拦——自托管私有实例不收邮箱，
+    // 对它讲"平台会保存你的邮箱哈希"是假话，比不讲更糟。
+    const preHealth = await fetchServerHealth(instance);
+    if (preHealth.ok && preHealth.data.publish?.required === true) {
+      const disclosure = await requireDisclosure(instance, session, args.disclosure_ack);
+      if (!disclosure.ok) return text(disclosure.block);
+    }
     const res = await publishPlazaCard(instance, plaza, session);
-    if (!res.ok) return text(`贴卡失败：${res.error}`);
+    if (!res.ok) {
+      // 三种失败要分开说：需要验证（有明确下一步）、通道不可用（不是用户的问题）、其余（原样转述）
+      if (res.code === 'publish_requires_verification') {
+        return text(
+          `这个实例要求先做发布确认，才能把卡贴到广场。\n\n` +
+            `**这不是你的卡有问题**——卡是好的，签名、圈层声明都过了服务端的检查。\n\n` +
+            `下一步：执行 \`plaza_publish action=verify\`，我给你一个网页链接。` +
+            `在网页里填一个邮箱、收验证码，拿到 8 位发布许可码，再执行 ` +
+            `\`plaza_publish action=claim permit=<那 8 位>\`，然后回来重新贴卡。全程大约两分钟。\n\n` +
+            `再说一次：这**不是实名认证**。它只证明"这个邮箱能收信"，用来防一个人刷满广场、` +
+            `并在出事时留一个处置入口。平台不接受、也不保存明文邮箱。\n\n` +
+            `不想做也完全没关系——出卡、导卡、点对点投递、收卡、比对、深聊、见面都照旧，` +
+            `只是贴不到公开广场。`,
+        );
+      }
+      if (res.code === 'publish_verification_unavailable') {
+        return text(
+          `贴卡失败：${res.error}\n\n这是实例侧的配置问题，不是你的操作问题。` +
+            `可以先走点对点投递（send_via_server）跟认识的人换卡，那条路不需要发布确认。`,
+        );
+      }
+      return text(`贴卡失败：${res.error}`);
+    }
     saveOwnPlazaCard(s, plaza);
     void reportMetric(session.settings().opt_in_counter, 'plaza_published', 'none');
     return text(
@@ -493,10 +731,11 @@ export const reportAbuseTool = {
   name: 'report_abuse',
   description:
     '举报一个广场上的人（行为信号，不上传任何信件内容——服务端读不到你的信，也无从审核证据，只能数独立举报人）。' +
+    '**举报立即生效，且双向闭合**：从那刻起他投不到你，你也投不到他（对方看不到任何提示，不会知道是谁举报的）。' +
     'action=file 举报（需 target_card_id 或 target_opaque_id + reason_code）/' +
     'mine 查看自己被举报的汇总（只有本人能查）/' +
     'stats 看本实例的匿名聚合（身份数/贴卡数/信封数，无个体数据）。' +
-    '举报不等于裁决：真正保护你自己的开关是本地拉黑（ledger action=block）。',
+    '举报不等于裁决：平台不会因此封禁任何人、也不会摘他的卡，只会切断你们之间这条通道。',
   inputSchema: {
     action: z.enum(['file', 'mine', 'stats']).default('file'),
     server: z.string().optional().describe('服务端地址；缺省用已配置实例'),
@@ -573,20 +812,31 @@ export const reportAbuseTool = {
     const res = await reportAbuse(instance, target, args.reason_code, session);
     if (!res.ok) return text(`举报失败：${res.error}`);
 
-    // 本地联动：举报之后仍建议拉黑（举报作用于实例，拉黑作用于你自己）
+    // 本地联动：举报作用于实例（切断通道），拉黑作用于你自己（他不再出现在你眼前）
     const lineDir = dirNameFromKeyId(target);
     const line = s.read<FateLine>(`${LINES_DIR}/${lineDir}/state.json`);
     const blockHint = line
-      ? `想让这个人从此不再出现在你眼前？那是你本地的开关，不用等平台：ledger(action="block", line_id="${line.line_id}")。`
-      : `想让这个人从此不再出现在你眼前？等你和他之间建了姻缘线，就能用 ledger(action="block") 本地拉黑。`;
+      ? `想让他从此不再出现在你眼前（连广场上都不显示）？那是你本地的开关：ledger(action="block", line_id="${line.line_id}")。`
+      : `想让他从此不再出现在你眼前（连广场上都不显示）？等你和他之间建了姻缘线，就能用 ledger(action="block") 本地拉黑。`;
 
     return text(
-      `已记录对 ${target.slice(0, 8)}… 的举报（${args.reason_code}）：当前 ${res.data.summary.reports} 条、` +
-        `${res.data.summary.distinct} 个独立举报人。\n\n` +
-        `说清楚边界：\n` +
-        `· 服务端读不到你们的信件，所以**无法审核证据**——它只能数"多少个不同的人独立举报了同一个 ID"；\n` +
-        `· 这份回执只告诉你汇总数字，不告诉你是谁举报的（也许其中一个就是你）；\n` +
-        `· 越过阈值（${REPORT_FLAG_THRESHOLD} 个独立举报人）也只是"值得运营者看一眼"，不是平台裁决。\n\n` +
+      `已收到，**立即生效**。\n\n` +
+        `从现在起，他不能再向你投递任何东西——卡片、追问、升级请求，全部。你们之间这条线已经断了。\n` +
+        `（这是双向的：你也发不到他那里。留单向会变成"举报后还能继续试探"的漏洞。）\n\n` +
+        `接下来会发生什么：\n` +
+        `· 这个假名被记了一次举报。**这个记录只有他自己能查到，不带任何关于你的信息。**\n` +
+        `· 同一个假名被 ${REPORT_FLAG_THRESHOLD} 个不同的人举报后，进入人工复核。在那之前，` +
+        `平台不会自动封禁任何人，也不会把他的卡从广场摘掉。宁可慢，也不错杀。\n` +
+        `· 如果复核确认他在骗人，会从广场摘掉他的卡，并要求他下次发布时重新验证。` +
+        `我们不会公开指认任何人——没有这个权力，也不该有。\n\n` +
+        `你现在该做三件事：\n` +
+        `· **停止转账。** 已经转出去的，立刻打 96110 或 110，带着聊天记录和转账凭证去报案。` +
+        `我们追不回钱，警察能冻结。\n` +
+        `· 保留证据：聊天记录、他的卡片、转账截图。别删。\n` +
+        `· 如果他知道你的真实地址或身份，先保证自己安全，再处理别的。\n\n` +
+        `你不用向我们证明什么。举报不需要理由，也不需要证据。\n\n` +
+        `（当前汇总：这个假名共收到 ${res.data.summary.reports} 条举报、来自 ${res.data.summary.distinct} 个独立的人。` +
+        `越过阈值也只是"值得运营者看一眼"，不是平台裁决。）\n\n` +
         blockHint,
     );
   },
