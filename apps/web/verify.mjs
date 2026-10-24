@@ -69,12 +69,13 @@ ok('含 v1/v2 路线区分', html.includes('v2 · 参考实现已完成'));
 /* ---------- 5. 透明数据区：键名与 Worker 契约一致 ---------- */
 const keys = [...html.matchAll(/data-k="([a-z_]+)"/g)].map((m) => m[1]);
 ok(
-  '四个计数器键 = cards/active/env/plaza',
-  keys.length === 4 && ['cards', 'active', 'env', 'plaza'].every((k) => keys.includes(k)),
+  '四个计数器键 = cards/imports/env/plaza',
+  keys.length === 4 && ['cards', 'imports', 'env', 'plaza'].every((k) => keys.includes(k)),
   keys.join(','),
 );
-ok('兼容 Worker 的 site / counters 两代返回结构', /d\.site\|\|d\.counters/.test(html));
-ok('计数器失败静默（catch 空处理）', /\.catch\(function\(\)\{\}\)/.test(html));
+ok('兼容 Worker 的 site / counters 两代返回结构', /\(d&&d\.site\)/.test(html) && /\(d&&d\.counters\)/.test(html));
+ok('计数器取不到时标注「数据源暂不可达」，不静默', /数据源暂不可达/.test(html));
+ok('透明数据区不写死示例值（防假数据回潮）', !/SAMPLE=/.test(html));
 
 /* ---------- 6. 外链白名单 ---------- */
 const hosts = new Set([...html.matchAll(/https?:\/\/([^/"'\s]+)/g)].map((m) => m[1]));

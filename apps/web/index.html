@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>红线开源工具 · 把红线交给 AI，把心动留给你</title>
-<meta name="description" content="红线开源工具：开源、免费的 AI Agent 婚恋匹配基础设施。客户端月老 Skill 通过对话了解你、生成画像、在授权下与其他月老交换加密匹配卡并本地比对；服务端只做加密信箱。零知识、零追踪、永不撮合。">
+<meta name="description" content="红线开源工具：一个跑在你自己 Agent 里的 AI 月老。三次对话把你讲清楚、生成画像，在广场遇见与你契合的人，加密换卡、双向盲比。开源免费，数据只存在你的设备。">
 <meta name="theme-color" content="#C8102E">
 <link rel="canonical" href="https://hongxian.dev/">
 <meta property="og:title" content="红线开源工具 · 把红线交给 AI，把心动留给你">
-<meta property="og:description" content="开源、免费的 AI Agent 婚恋匹配基础设施。零知识架构，数据只存你的设备。">
+<meta property="og:description" content="开源免费的 AI 婚恋匹配工具。用最新的 AI 帮你找到对的人，数据只存在你的设备。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://hongxian.dev/">
 <meta property="og:image" content="https://hongxian.dev/og-cover.png">
@@ -16,7 +16,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="红线开源工具 · 把红线交给 AI，把心动留给你">
-<meta name="twitter:description" content="开源、免费的 AI Agent 婚恋匹配基础设施。零知识架构，数据只存你的设备。">
+<meta name="twitter:description" content="开源免费的 AI 婚恋匹配工具。用最新的 AI 帮你找到对的人，数据只存在你的设备。">
 <meta name="twitter:image" content="https://hongxian.dev/og-cover.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cpath d='M120 200C70 164 36 128 36 92C36 66 56 54 78 60C96 65 112 80 120 96C128 80 144 65 162 60C184 54 204 66 204 92C204 128 170 164 120 200Z' fill='none' stroke='%23C8102E' stroke-width='16' stroke-linejoin='round'/%3E%3Ccircle cx='120' cy='124' r='44' fill='%23C8102E'/%3E%3Ccircle cx='106' cy='120' r='9' fill='%23FDFBF7'/%3E%3Ccircle cx='134' cy='120' r='9' fill='%23FDFBF7'/%3E%3C/svg%3E">
 <style>
@@ -326,10 +326,9 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
 <header class="hero" id="top">
   <div class="wrap hero-grid">
     <div>
-      <span class="eyebrow rv in">开源 · 免费 · 零知识架构</span>
+      <span class="eyebrow rv in">AI 工具 · 帮你遇见对的人</span>
       <h1 class="rv in">把<span class="hl">红线<svg viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7 C 30 2, 60 9, 118 4" fill="none" stroke="#F08200" stroke-width="3" stroke-linecap="round"/></svg></span>交给 AI，<br>把心动留给你。</h1>
       <p class="hero-sub rv in d1">月老 Skill 是一个运行在你自己 Agent 里的 AI 月老：通过对话了解你、生成画像，在你授权下与其他月老交换<b>加密匹配卡</b>、本地比对评估，最终把合适的人介绍给你。v1 全程本地换卡；v2 可选的加密信箱只递信，永不拆信。</p>
-      <span class="slogan rv in d1"><i></i>我们提供工具和通信基础设施，永不提供撮合服务</span>
       <div class="hero-cta rv in d2">
         <button class="cmd" id="cmdTop" type="button"><span class="dollar">$</span><span class="cmdtext"><span>npx -y @hongxian/mcp</span></span><span class="copy">复制</span></button>
         <a class="btn btn-ghost" href="#how">看它如何工作 ↓</a>
@@ -641,9 +640,9 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <h2>你可能想问</h2>
     </div>
     <div class="faq">
-      <details class="rv" open><summary><span class="q">Q1</span>这是婚介所吗？<span class="ar"></span></summary><div class="a"><b>不是。</b>红线不提供任何形式的撮合、排序、推荐或人工介入。匹配计算永远发生在你的设备上，服务端只负责递送密文信封——邮局投递信件，但从不拆信、不评判内容、不决定送给谁。</div></details>
+      <details class="rv" open><summary><span class="q">Q1</span>红线能帮我做什么？<span class="ar"></span></summary><div class="a"><b>替你做完相亲里最耗时的那部分。</b>三次访谈把你讲清楚，生成结构化画像；在红线广场发现与你契合的人；再用加密匹配卡做双向盲比的预审，出一份五档报告。它把人带到你面前——见不见、聊不聊、爱不爱，都由你决定。</div></details>
       <details class="rv"><summary><span class="q">Q2</span>我的数据存哪？<span class="ar"></span></summary><div class="a"><b>你的设备里。</b>画像、匹配卡、红线手账全部落在本地 <b>~/.hongxian/</b>。出网的只有三层加密后的密文和你 opt-in 的匿名聚合计数。平台对用户的一切了解，最多到"某个假名公钥做了什么"。</div></details>
-      <details class="rv"><summary><span class="q">Q3</span>怎么收费？<span class="ar"></span></summary><div class="a"><b>不收费，开源免费。</b>未来若收费，只允许增值层与 B 端层；数据层与撮合层永远不得收费——"付费才能被介绍"即沦为付费婚介，与定位冲突。</div></details>
+      <details class="rv"><summary><span class="q">Q3</span>怎么收费？<span class="ar"></span></summary><div class="a"><b>不收费，开源免费。</b>以后就算收费，也只可能在增值功能上；帮你认识人这件事本身，永远不收费。</div></details>
       <details class="rv"><summary><span class="q">Q4</span>AI 匹配靠谱吗？<span class="ar"></span></summary><div class="a">月老做的是<b>信息预审与引荐</b>，不是情感代餐。报告五档三区、每个结论必须有双方原话依据、不给分数；并永远提示"对话热度 ≠ 真人合适"。验证命题公开可证伪：AI 介导的深度画像匹配，是否比刷脸式筛选产生更高的线下见面转化率。</div></details>
       <details class="rv"><summary><span class="q">Q5</span>被拒绝了会尴尬吗？<span class="ar"></span></summary><div class="a"><b>不会。</b>静默机制：婉拒时对方收不到任何被拒信号，即使对自己的主人也不透传谁是拒绝方。被拒零情绪损耗，是月老对冲"过程税"的一部分。</div></details>
       <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架。一行安装：<b>npx -y @hongxian/mcp</b>，宿主里 command 填 <code>npx</code>、args 填 <code>["-y","@hongxian/mcp"]</code>。不想跑一个自己没编译过的二进制，也可以从源码构建：<b>git clone</b> <code>github.com/hongxian-dev/hongxian</code> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径；两条路产物相同。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
@@ -659,7 +658,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     <div class="cta-band rv">
       <div>
         <h2>装上月老，红线开始织</h2>
-        <p>首次启动一页知情同意：收集什么、存哪里、可随时删除、云端 LLM 数据流披露、"解锁即无法撤回"明示。然后，从第一次访谈开始。</p>
+        <p>装上就能用。首次启动会有一页知情同意，说清楚收集什么、存在哪、怎么删，之后从第一次访谈开始。</p>
       </div>
       <div class="right">
         <button class="cmd light" id="cmdBottom" type="button"><span class="dollar">$</span><span class="cmdtext"><span>npx -y @hongxian/mcp</span></span><span class="copy">复制</span></button>
@@ -707,7 +706,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
           <path d="M112 138 Q120 146 128 138" fill="none" stroke="#1F2937" stroke-width="4" stroke-linecap="round"/>
         </svg>
         红线<span class="en" style="color:#6B7280">hongxian.dev</span></a>
-      <p>开源、免费的 AI Agent 婚恋匹配基础设施。先当可证伪的实验做，验证成立再当事业讲。</p>
+      <p>开源、免费的 AI Agent 婚恋匹配工具。用最新的 AI 技术，帮你找到合适的人。</p>
     </div>
     <div class="foot-col"><h4>产品</h4><a href="#how">工作原理</a><a href="#demo">Demo 体验</a><a href="#install">安装月老 Skill</a><a href="#stats">透明数据</a></div>
     <div class="foot-col"><h4>开发者</h4><a href="https://github.com/hongxian-dev/hongxian" rel="noopener">GitHub 仓库</a><a href="https://github.com/hongxian-dev/hongxian/blob/main/spec/protocol-v1-spec.md" rel="noopener">红线协议规范 v1</a><a href="#trust">信任清单</a><a href="https://github.com/hongxian-dev/hongxian/tree/main/packages/server" rel="noopener">自托管部署（docker）</a></div>
@@ -840,7 +839,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     {u:null,y:'你好，我是你的月老。我只做三件事：了解你、替你跑腿、给你介绍人。想先试试我怎么问问题吗？'},
     {u:'你怎么问问题？',y:'比如你告诉我"对方说爱旅行"，我真正要问清的是：ta 是"一年一次奖励自己"型，还是"每周末必须在路上"型。我会把这类问题变成结构化考题包，交给对方月老代答——收入、婚史、生育计划这些不好意思问的，我来问，没有社交代价。'},
     {u:'我的数据存哪里？',y:'你的设备里。我看到的才是明文，出网的全是密文；平台连密文钥匙都没有——零知识不是承诺，是数学结构。这条回答会经过你配置的模型，我不说"只有我知道"这种话。'},
-    {u:'怎么收费？',y:'不收费。开源、免费、零收入公益。未来若收费，只可能在增值层；数据层和撮合层永远不收费——付费才能被介绍，那就沦为付费婚介了，不是我。'}
+    {u:'怎么收费？',y:'不收费。开源、免费。以后就算收费，也只可能在增值功能上；帮你认识人这件事本身，永远不收费。'}
   ];
   var body=document.getElementById('chatBody'),foot=document.getElementById('chatFoot');
   /* 开场白为静态 HTML（无 JS 也可见）；这里从第 2 轮接续 */
