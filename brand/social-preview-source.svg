@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <pattern id="dots" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.6" fill="#1F2937" opacity="0.07"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="640" fill="#FDFBF7"/>
+  <rect x="600" y="0" width="680" height="640" fill="url(#dots)"/>
+
+  <!-- 分区竖线（1px 线面差，不做投影/渐变） -->
+  <line x1="600" y1="80" x2="600" y2="560" stroke="#E5E1D8" stroke-width="1"/>
+
+  <!-- 左：M1 主标 -->
+  <g transform="translate(46,76) scale(2.05)">
+    <g transform="translate(120,120) scale(0.94) translate(-117,-123)">
+  
+  <!-- 毛线球身体 -->
+  <circle cx="104" cy="128" r="66" fill="#C8102E"/>
+  <!-- 甩出轮廓的 loose 线头（毛线球关键识别符） -->
+  <path d="M 148 78 C 158 64 174 62 179 72 C 183 81 174 90 165 85" fill="none" stroke="#C8102E" stroke-width="6" stroke-linecap="round"/>
+  <!-- 缠线两笔（v3 减噪：4 笔交叉 → 2 笔，全部让出面部与额头带；与规范 §7 骨架一致） -->
+  <path d="M 152 92 C 174 106 178 130 166 148" fill="none" stroke="#EF8A97" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 52 170 C 84 192 132 190 166 166" fill="none" stroke="#EF8A97" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- 额印 · AI 星芒（月老的 AI 之心；M8 星芒眼 = 心动时刻变体） -->
+  <path d="M 104 93 L 106.5 101.5 L 115 104 L 106.5 106.5 L 104 115 L 101.5 106.5 L 93 104 L 101.5 101.5 Z" fill="#F08200"/>
+  <!-- 脸 -->
+  <circle cx="82" cy="140" r="14" fill="#FDFBF7"/>
+  <circle cx="126" cy="140" r="14" fill="#FDFBF7"/>
+  <circle cx="85" cy="142" r="6.5" fill="#1F2937"/>
+  <circle cx="123" cy="142" r="6.5" fill="#1F2937"/>
+  <circle cx="87" cy="139" r="2.2" fill="#FDFBF7"/>
+  <circle cx="125" cy="139" r="2.2" fill="#FDFBF7"/>
+  <path d="M 94 162 Q 104 172 114 162" fill="none" stroke="#FDFBF7" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="62" cy="156" rx="8" ry="5" fill="#F08200" opacity="0.55"/>
+  <ellipse cx="146" cy="156" rx="8" ry="5" fill="#F08200" opacity="0.55"/>
+  <!-- 线头"手"递出爱心 -->
+  <path d="M 166 142 C 186 146 196 138 199 126" fill="none" stroke="#C8102E" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 204 124 C 194 117 189 110 189 104 C 189 98 194 95 199 97 C 202 98 203.5 101 204 103.5 C 204.5 101 206 98 209 97 C 214 95 219 98 219 104 C 219 110 214 117 204 124 Z" fill="#C8102E"/>
+</g>
+  </g>
+
+  <!-- 右：文字块 -->
+  <text x="664" y="152" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="23"
+        fill="#C8102E" letter-spacing="6" font-weight="600">HONGXIAN</text>
+  <text x="664" y="192" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="21"
+        fill="#6B7280" letter-spacing="8">红 线</text>
+
+  <text x="664" y="278" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="52"
+        fill="#1F2937" font-weight="700">开源、免费的</text>
+  <text x="664" y="346" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="52"
+        fill="#1F2937" font-weight="700">AI Agent 婚恋匹配</text>
+  <text x="664" y="414" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="52"
+        fill="#1F2937" font-weight="700">基础设施</text>
+
+  <rect x="664" y="452" width="72" height="3" fill="#C8102E"/>
+
+  <text x="664" y="500" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="21"
+        fill="#4B5563">月老 MCP Skill · 红线协议 v1.2 · 可自托管平台</text>
+  <text x="664" y="536" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="21"
+        fill="#4B5563">提供工具与通信基础设施，永不提供撮合服务。</text>
+
+  <text x="664" y="592" font-family="Microsoft YaHei, Segoe UI, sans-serif" font-size="19"
+        fill="#9CA3AF" letter-spacing="1">hongxian.dev</text>
+
+  <!-- 底部红线 -->
+  <rect x="0" y="632" width="1280" height="8" fill="#C8102E"/>
+</svg>

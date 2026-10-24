@@ -10,3 +10,6 @@ dist/
 
 # 内部工作记忆（含服务器地址、Cloudflare 账号/Zone/KV ID、备案材料）——不入公开仓库
 .workbuddy/
+
+# 临时工作目录（图像渲染中间产物等）
+.tmp-gh/
