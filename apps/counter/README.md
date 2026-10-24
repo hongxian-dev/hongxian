@@ -119,6 +119,30 @@ curl -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCT/workers/domains
 
 `apps/web/assets/js/main.js` 的 `STATS_URL` 无需改动，网站数据区已自动接上真实端点。
 
+### 新版部署（✅ 2026-10-25，wrangler 路径，透明数据区口径修正）
+
+改动：`site` 块加 `imports`、移除无上报来源的 `cards_active_30d`（详见 §已知近似与边界）。
+
+```bash
+export CLOUDFLARE_API_TOKEN="<token>"        # 环境变量注入，绝不入任何文件
+export CLOUDFLARE_ACCOUNT_ID="<account-id>"
+
+# 部署配置放 .tmp-gh/wrangler.deploy.toml（git 忽略），与 apps/counter/wrangler.toml
+# 的区别只有：KV id 填真实值、main 相对 .tmp-gh/ 上跳、带 custom domain routes。
+npx wrangler deploy -c .tmp-gh/wrangler.deploy.toml
+```
+
+**本次踩坑（下次直接读这条）**：
+
+1. **线上绑定是 Custom Domain，不是 routes 也不是 workers.dev 子域**。不带 `routes = [{ pattern = "count.hongxian.dev", custom_domain = true }]` 部署会报 `register a workers.dev subdomain`。
+2. **wrangler 3.114 + "Edit Cloudflare Workers" 模板 token 下，带 custom_domain 的部署仍报同样的错，但脚本已经上传生效**（wrangler 先传脚本、后配触发器，报错退出时脚本已在线）。判断成功的标准是 `GET /stats` 的返回结构，不是命令退出码。
+3. **脚本上传不等于绑定丢失**：custom domain 是 script 之外的独立资源，重新部署不会解绑；`RL_SALT` secret 同样与脚本分离存储，重部署不丢。
+4. 真实 KV id / account id / token 一律走环境变量和 `.tmp-gh/`，`apps/counter/wrangler.toml` 永远保持占位符。
+
+**验收实测（2026-10-25）**：`/stats` 返回新 `site` 块（cards/imports/envelopes/plaza 四键）✅；PoW 解出后 `POST /bump` 返回 200 且 `/stats` 同步 +1 ✅；测试计数已删（`wrangler kv key delete` 删 `t:cards:total` 与当日日桶），归零后官网四格显示 0 + 绿色「实时数据」pill ✅。
+
+> 网站侧消费逻辑（`apps/web/index.html`）：优先读新版 `d.site`，回退旧版 `d.counters` 扁平键；四键全取不到才标「数据源暂不可达」并显示 0。
+
 ## 已知近似与边界（诚实清单）
 
 1. **KV 最终一致性**：免费额度下读-改-写非原子，极端并发可能少计。对「生态健康数据」口径可接受；若数字成为战略资产，可升级 Durable Objects（付费）。

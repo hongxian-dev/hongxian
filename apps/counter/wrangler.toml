@@ -2,6 +2,12 @@ name = "hongxian-counter"
 main = "src/index.js"
 compatibility_date = "2026-10-15"
 
+# 线上绑定方式是 Custom Domain（count.hongxian.dev → 本 Worker），不是 routes、
+# 也不是 workers.dev 子域。直接 `wrangler deploy` 会因缺 routes 报
+# "register a workers.dev subdomain"——虽然此时脚本其实已上传生效。
+# 完整部署流程与踩坑记录见 README「新版部署」节。
+# 真实 KV id 走 .tmp-gh/wrangler.deploy.toml（git 忽略），本文件保持占位符。
+
 # KV 命名空间：hongxian-counter-kv
 # ⚠️ 公开仓库里保持占位符。自建后执行 `npx wrangler kv namespace create hongxian-counter-kv`
 #    把返回的 id 填到这里（本地部署用，注意别把真实 id 提交上去）。
