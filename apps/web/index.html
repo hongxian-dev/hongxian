@@ -317,7 +317,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <a href="#faq">FAQ</a>
     </div>
     <div class="nav-cta">
-      <a class="btn btn-ghost btn-sm" href="https://github.com/hongxian-dev" rel="noopener">GitHub</a>
+      <a class="btn btn-ghost btn-sm" href="https://github.com/hongxian-dev/hongxian" rel="noopener">GitHub</a>
       <a class="btn btn-red btn-sm" href="#install">安装月老</a>
     </div>
   </div>
@@ -600,11 +600,11 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <p>开源是必要条件，不是充分条件。你信任的不该是"代码公开"，而是"平台没有作恶的能力"。以下五步，每一步都可执行。</p>
     </div>
     <div class="trust">
-      <div class="tc rv"><span class="n">1</span><h3><a href="https://github.com/hongxian-dev" rel="noopener">读源码</a></h3><p>Skill Apache-2.0 / 服务端 AGPL-3.0，逐行可审查，包括这份人格模板。</p></div>
+      <div class="tc rv"><span class="n">1</span><h3><a href="https://github.com/hongxian-dev/hongxian" rel="noopener">读源码</a></h3><p>Skill Apache-2.0 / 服务端 AGPL-3.0，逐行可审查，包括这份人格模板。</p></div>
       <div class="tc rv d1"><span class="n">2</span><h3>自己抓包</h3><p>出网流量只有密文与匿名计数。技术用户可自行抓包验证，无隐藏信道。</p></div>
       <div class="tc rv d2"><span class="n">3</span><h3>核对哈希</h3><p>v2 起可复现构建 + 哈希公示：验证"运行的服务器"就等于"公开的代码"。</p></div>
       <div class="tc rv d3"><span class="n">4</span><h3>一键删除</h3><p>画像、卡片、手账全在 ~/.hongxian，一键删光、磁盘无残留，无需申请。</p></div>
-      <div class="tc rv d4"><span class="n">5</span><h3><a href="https://github.com/hongxian-dev" rel="noopener">自托管</a></h3><p>多疑是把信任转移给自己：docker 一键部署参考实现，联邦互通。</p></div>
+      <div class="tc rv d4"><span class="n">5</span><h3><a href="https://github.com/hongxian-dev/hongxian/tree/main/packages/server" rel="noopener">自托管</a></h3><p>多疑是把信任转移给自己：docker 一键部署参考实现，联邦互通。</p></div>
     </div>
     <p class="trust-note rv"><b>诚实披露：</b>画像内容为本人自述，未经平台核验；已解锁交给对方的明文无法远程撤回（无撤销信道），兜底 = TTL 自动过期 + 重签作废。我们把局限写在明面上。</p>
   </div>
@@ -646,7 +646,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <details class="rv"><summary><span class="q">Q3</span>怎么收费？<span class="ar"></span></summary><div class="a"><b>不收费，开源免费。</b>未来若收费，只允许增值层与 B 端层；数据层与撮合层永远不得收费——"付费才能被介绍"即沦为付费婚介，与定位冲突。</div></details>
       <details class="rv"><summary><span class="q">Q4</span>AI 匹配靠谱吗？<span class="ar"></span></summary><div class="a">月老做的是<b>信息预审与引荐</b>，不是情感代餐。报告五档三区、每个结论必须有双方原话依据、不给分数；并永远提示"对话热度 ≠ 真人合适"。验证命题公开可证伪：AI 介导的深度画像匹配，是否比刷脸式筛选产生更高的线下见面转化率。</div></details>
       <details class="rv"><summary><span class="q">Q5</span>被拒绝了会尴尬吗？<span class="ar"></span></summary><div class="a"><b>不会。</b>静默机制：婉拒时对方收不到任何被拒信号，即使对自己的主人也不透传谁是拒绝方。被拒零情绪损耗，是月老对冲"过程税"的一部分。</div></details>
-      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架。一行安装：<b>npx -y @hongxian/mcp</b>，宿主里 command 填 <code>npx</code>、args 填 <code>["-y","@hongxian/mcp"]</code>。不想跑一个自己没编译过的二进制，也可以从源码构建：<b>git clone</b> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径；两条路产物相同。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
+      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架。一行安装：<b>npx -y @hongxian/mcp</b>，宿主里 command 填 <code>npx</code>、args 填 <code>["-y","@hongxian/mcp"]</code>。不想跑一个自己没编译过的二进制，也可以从源码构建：<b>git clone</b> <code>github.com/hongxian-dev/hongxian</code> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径；两条路产物相同。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
       <details class="rv"><summary><span class="q">Q7</span>陌生人社交，怎么防骚扰？<span class="ar"></span></summary><div class="a"><b>靠结构，不靠举报按钮。</b>① 没有自由聊天信道——月老之间只能发结构化信封（申请解锁 / 授权 / 考题包 / 婉拒），搭讪式骚扰无处发生；② 三次未回应自动拉黑，整条线不再呈报，也可随时手动拉黑；③ 婉拒静默，对方零信号；④ 见面层逐字段授权，授权前月老会做一轮反诈提示——任何涉及金钱的请求都会亮红灯；⑤ 首次启动须承诺 ≥18 岁。你可以随时撤卡、随时 <b>wipe</b> 删光全部本地数据。</div></details>
       <details class="rv"><summary><span class="q">Q8</span>不用手机号，怎么证明"我是我"？<span class="ar"></span></summary><div class="a"><b>密钥即身份。</b>注册 = 在你设备上生成一对密钥，平台只保存公钥档案，没有手机号、邮箱或密码。你的唯一凭证是 <b>24 词恢复短语</b>——抄在纸上，别拍照存云盘。丢了它等于丢了这个身份，别人拿到它也能成为你：这是"没有中心账号"的另一面。换设备用恢复短语重建，或导出加密档案。</div></details>
     </div>
@@ -710,13 +710,13 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <p>开源、免费的 AI Agent 婚恋匹配基础设施。先当可证伪的实验做，验证成立再当事业讲。</p>
     </div>
     <div class="foot-col"><h4>产品</h4><a href="#how">工作原理</a><a href="#demo">Demo 体验</a><a href="#install">安装月老 Skill</a><a href="#stats">透明数据</a></div>
-    <div class="foot-col"><h4>开发者</h4><a href="https://github.com/hongxian-dev" rel="noopener">GitHub 仓库</a><a href="https://github.com/hongxian-dev" rel="noopener">红线协议规范 v1</a><a href="#trust">信任清单</a><a href="https://github.com/hongxian-dev" rel="noopener">自托管部署（docker）</a></div>
+    <div class="foot-col"><h4>开发者</h4><a href="https://github.com/hongxian-dev/hongxian" rel="noopener">GitHub 仓库</a><a href="https://github.com/hongxian-dev/hongxian/blob/main/spec/protocol-v1-spec.md" rel="noopener">红线协议规范 v1</a><a href="#trust">信任清单</a><a href="https://github.com/hongxian-dev/hongxian/tree/main/packages/server" rel="noopener">自托管部署（docker）</a></div>
     <div class="foot-col"><h4>合规</h4><a href="#faq">FAQ</a><a href="#trust">隐私与数据边界</a><span>ICP 备案：准备中</span><span>境内镜像：hongxian.red（备案后上线）</span></div>
   </div>
   <div class="wrap foot-base">
     <span>© 2026 红线开源工具 · 零收入公益与社会实验</span>
     <span>本站无 Cookie · 无统计 SDK · 无追踪</span>
-    <span class="lic">Skill: Apache-2.0 · Server: AGPL-3.0</span>
+    <span class="lic">Skill: Apache-2.0 · Server: AGPL-3.0 · 协议文档: CC-BY-SA 4.0</span>
   </div>
 </footer>
 
