@@ -11,6 +11,8 @@
 apps/web/                     # 部署产物（nginx 直接托管，境外机）
 ├── index.html                # 单文件整站：HTML + 内联 CSS + 内联 JS + 内联 SVG
 ├── og-cover.png              # 1200×630 分享封面（og:image / twitter:image）
+│                               # 改文案后重绘：npm run og:cover（生成到 .tmp-gh/ 预览），
+│                               # 满意后 node scripts/gen-og-cover.mjs --out apps/web/og-cover.png
 ├── sponsor-qr.png            # 微信赞赏码（480×480，28KB，页脚赞助区）
 ├── 404.html                  # 自包含 404 页（同规范、无外部依赖）
 ├── verify.mjs                # 静态验收（零依赖：node verify.mjs）
