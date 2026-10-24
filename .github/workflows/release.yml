@@ -1,0 +1,84 @@
+name: Release to npm
+
+# 只在推 tag 时发布。手推一个 tag 是不可逆动作，别用 workflow_dispatch 直接发；
+# 想演练就用下面的 dry_run（会把所有包打包一遍、跑完守卫，但不传任何字节）。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只演练，不上传'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # 生成 provenance 必需（Sigstore 用 GitHub 的 OIDC 换短期证书）
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          # 刻意不启用依赖缓存：发布构建不应受缓存状态影响，
+          # 缓存被污染时产物与 provenance 记录会不一致
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 编译
+        run: npm run build
+
+      - name: 全量回归（不绿不发）
+        run: npm run verify
+
+      - name: tarball 体检
+        run: npm run pack:check
+
+      - name: 核对 tag 与包版本一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./packages/schema/package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag $GITHUB_REF_NAME 与 package.json 版本 $PKG 不一致"
+            exit 1
+          fi
+          echo "tag 与版本一致：$PKG"
+
+      - name: 发布
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            node scripts/publish-all.mjs --dry-run
+          else
+            node scripts/publish-all.mjs
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 结果写进 job summary
+        if: always()
+        run: |
+          {
+            echo "## npm 发布结果"
+            echo ""
+            echo "| 包 | 本地版本 |"
+            echo "|---|---|"
+            for d in schema crypto core mcp; do
+              printf "| @hongxian/%s | %s |\n" "$d" "$(node -p "require('./packages/$d/package.json').version")"
+            done
+            echo ""
+            echo "registry: https://www.npmjs.com/org/hongxian"
+          } >> "$GITHUB_STEP_SUMMARY"
