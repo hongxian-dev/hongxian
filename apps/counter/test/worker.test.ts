@@ -110,7 +110,7 @@ describe('计数器 Worker：事件名 → 计数家族', () => {
   it('/stats 的 site 块给出网站四个格子的稳定键名', async () => {
     const e = env();
     const s0 = await stats(e);
-    expect(s0.site).toEqual({ cards: 0, cards_active_30d: 0, envelopes: 0, plaza: 0 });
+    expect(s0.site).toEqual({ cards: 0, imports: 0, envelopes: 0, plaza: 0 });
 
     const salt = 'q';
     await bump({ metric: 'plaza_published', bucket: 'none', salt, nonce: solvePow(salt, 'plaza_published', 'none') }, e);

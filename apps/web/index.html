@@ -620,11 +620,11 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     </div>
     <div class="stats-grid">
       <div class="stat rv"><div class="v" data-k="cards">0</div><div class="k">匹配卡签发（张）</div></div>
-      <div class="stat rv d1"><div class="v" data-k="active">0</div><div class="k">近 30 天活跃月老（位）</div></div>
-      <div class="stat rv d2"><div class="v" data-k="env">0</div><div class="k">加密信封投递（封）</div></div>
+      <div class="stat rv d1"><div class="v" data-k="imports">0</div><div class="k">导入他人卡（张）</div></div>
+      <div class="stat rv d2"><div class="v" data-k="env">0</div><div class="k">交换发起（次）</div></div>
       <div class="stat rv d3"><div class="v" data-k="plaza">0</div><div class="k">红线广场贴卡（张）</div></div>
     </div>
-    <div class="stats-src rv"><span class="pill" id="srcPill">示例数据</span>数据源：count.hongxian.dev/stats（PoW + 限速 + 无日志）· 计数器部署后自动切换为实时数据 · 本站无 Cookie、无统计 SDK</div>
+    <div class="stats-src rv"><span class="pill" id="srcPill">读取中</span>数据源：count.hongxian.dev/stats（PoW + 限速 + 无日志）· 计数只来自自愿开启 opt-in 的用户，默认关闭、关闭时零出网 · 本站无 Cookie、无统计 SDK</div>
     <div class="rings">
       <div class="ring r1 rv"><b>第一环 · 内容环（零知识）</b>信件、画像、偏好只存你的设备；平台只见密文。永不放松。</div>
       <div class="ring r2 rv d1"><b>第二环 · 聚合环（匿名指标）</b>建卡数、信件流量、广场热度、男女比——对外形态就是上面这块透明页。</div>
@@ -861,8 +861,10 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   }
   renderChips();
 
-  /* counters + live stats fetch（失败保持示例值） */
-  var SAMPLE={cards:1284,active:326,env:3562,plaza:216};
+  /* counters + live stats fetch
+     纪律：透明数据区不播示例值。取不到就显示 0 并标注数据源状态——
+     宁可显示"从零开始"，也绝不编一个好看的数字。 */
+  var ZERO={cards:0,imports:0,env:0,plaza:0};
   var LIVE=null;
   function fmt(n){return n.toLocaleString('zh-CN');}
   function countUp(elm,to){
@@ -873,7 +875,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   var statsDone=false;
   function runStats(){
     if(statsDone)return;statsDone=true;
-    var data=LIVE||SAMPLE;
+    var data=LIVE||ZERO;
     document.querySelectorAll('.stat .v').forEach(function(v){countUp(v,data[v.dataset.k]||0);});
   }
   var sio=('IntersectionObserver' in window)?new IntersectionObserver(function(es){
@@ -881,17 +883,29 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   },{threshold:.3}):null;
   var statsSec=document.getElementById('stats');
   if(sio&&statsSec){sio.observe(statsSec);}else{runStats();}
-  /* 拉取真实计数器：优先 d.site（站点友好块），回退 d.counters 原始键；未部署时静默保持示例值 */
+  /* 拉取真实计数器：优先新版 d.site（站点友好块），回退旧版 d.counters 扁平键 */
+  function setPill(text,border,color){
+    var p=document.getElementById('srcPill');
+    if(p){p.textContent=text;p.style.borderColor=border;p.style.color=color;}
+  }
   try{
     fetch('https://count.hongxian.dev/stats',{mode:'cors'}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){
-      var c=d&&(d.site||d.counters);
-      if(c&&typeof c.cards==='number'){
-        LIVE={cards:c.cards||0,env:c.envelopes||0,plaza:c.plaza||0,active:c.cards_active_30d||0};
-        var p=document.getElementById('srcPill');p.textContent='实时数据';p.style.borderColor='#2E7D32';p.style.color='#7CE0A0';
-        if(statsDone){document.querySelectorAll('.stat .v').forEach(function(v){v.textContent=fmt(LIVE[v.dataset.k]||0);});}
+      var s=(d&&d.site)||{},c=(d&&d.counters)||{};
+      function pick(friendly,flat){
+        if(typeof s[friendly]==='number')return s[friendly];
+        if(typeof c[flat]==='number')return c[flat];
+        return null;
       }
-    }).catch(function(){});
-  }catch(e){}
+      var cards=pick('cards','cards_total'),
+          imports=pick('imports','imports_total'),
+          env=pick('envelopes','envelopes_total'),
+          plaza=pick('plaza','plaza_total');
+      if(cards===null&&imports===null&&env===null&&plaza===null)throw 0;
+      LIVE={cards:cards||0,imports:imports||0,env:env||0,plaza:plaza||0};
+      setPill('实时数据','#2E7D32','#7CE0A0');
+      if(statsDone){document.querySelectorAll('.stat .v').forEach(function(v){v.textContent=fmt(LIVE[v.dataset.k]||0);});}
+    }).catch(function(){setPill('数据源暂不可达','#B45309','#F5B461');});
+  }catch(e){setPill('数据源暂不可达','#B45309','#F5B461');}
 })();
 </script>
 </body>

@@ -187,10 +187,13 @@ async function handleStats(env) {
     counters.cards_active_30d = active30;
   }
 
-  /* 站点友好块：网站透明数据区四个格子的稳定键名（与 index.html 的 data-k 一一对应） */
+  /* 站点友好块：网站透明数据区四个格子的稳定键名（与 index.html 的 data-k 一一对应）
+     口径纪律：只放 Skill 真实会上报的事件。
+     原 cards_active_30d 已从 site 移除——没有任何 Skill 事件写 d:cards:active 日桶，
+     留着就是一个永远为 0 的假指标；counters 里仍保留该字段供旧客户端兼容。 */
   const site = {
     cards: counters.cards_total || 0,
-    cards_active_30d: counters.cards_active_30d || 0,
+    imports: counters.imports_total || 0,
     envelopes: counters.envelopes_total || 0,
     plaza: counters.plaza_total || 0
   };
