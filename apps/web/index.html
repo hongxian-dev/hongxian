@@ -77,6 +77,9 @@ h1 .hl svg{position:absolute;left:0;right:0;bottom:-6px;width:100%;height:10px}
 .cmd:active{transform:translateY(1px)}
 .cmd .dollar{color:var(--orange)}
 .cmd .copy{color:var(--faint);font-family:var(--sans);font-size:12px;border-left:1px solid #4B5563;padding-left:10px}
+.cmd .cmdtext{display:flex;flex-direction:column;gap:2px;text-align:left;line-height:1.4;font-size:12.5px;white-space:nowrap;max-width:100%;min-width:0}
+.cmd .cmdtext span{overflow:hidden;text-overflow:ellipsis}
+.cmd .cmdtext span:last-child{opacity:.6}
 .cmd.copied .copy{color:#7CE0A0}
 .hero-points{display:flex;gap:26px;margin-top:30px;flex-wrap:wrap}
 .hp{display:flex;align-items:baseline;gap:8px;font-size:13.5px;color:var(--muted)}
@@ -328,7 +331,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <p class="hero-sub rv in d1">月老 Skill 是一个运行在你自己 Agent 里的 AI 月老：通过对话了解你、生成画像，在你授权下与其他月老交换<b>加密匹配卡</b>、本地比对评估，最终把合适的人介绍给你。v1 全程本地换卡；v2 可选的加密信箱只递信，永不拆信。</p>
       <span class="slogan rv in d1"><i></i>我们提供工具和通信基础设施，永不提供撮合服务</span>
       <div class="hero-cta rv in d2">
-        <button class="cmd" id="cmdTop" type="button"><span class="dollar">$</span> npx @hongxian/mcp <span class="copy">复制</span></button>
+        <button class="cmd" id="cmdTop" type="button"><span class="dollar">$</span><span class="cmdtext"><span>git clone https://github.com/hongxian-dev/hongxian.git</span><span>cd hongxian &amp;&amp; npm ci &amp;&amp; npm run build</span></span><span class="copy">复制</span></button>
         <a class="btn btn-ghost" href="#how">看它如何工作 ↓</a>
       </div>
       <div class="hero-points rv in d3">
@@ -643,7 +646,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <details class="rv"><summary><span class="q">Q3</span>怎么收费？<span class="ar"></span></summary><div class="a"><b>不收费，开源免费。</b>未来若收费，只允许增值层与 B 端层；数据层与撮合层永远不得收费——"付费才能被介绍"即沦为付费婚介，与定位冲突。</div></details>
       <details class="rv"><summary><span class="q">Q4</span>AI 匹配靠谱吗？<span class="ar"></span></summary><div class="a">月老做的是<b>信息预审与引荐</b>，不是情感代餐。报告五档三区、每个结论必须有双方原话依据、不给分数；并永远提示"对话热度 ≠ 真人合适"。验证命题公开可证伪：AI 介导的深度画像匹配，是否比刷脸式筛选产生更高的线下见面转化率。</div></details>
       <details class="rv"><summary><span class="q">Q5</span>被拒绝了会尴尬吗？<span class="ar"></span></summary><div class="a"><b>不会。</b>静默机制：婉拒时对方收不到任何被拒信号，即使对自己的主人也不透传谁是拒绝方。被拒零情绪损耗，是月老对冲"过程税"的一部分。</div></details>
-      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架：<b>npx @hongxian/mcp</b> 一行安装。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
+      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架。当前从源码构建：<b>git clone</b> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，宿主里 command 填 <code>node</code>、args 填这个文件的绝对路径。<b>npx @hongxian/mcp</b> 一行安装要等 npm 发布，目前还没发——不写没跑过的命令。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
       <details class="rv"><summary><span class="q">Q7</span>陌生人社交，怎么防骚扰？<span class="ar"></span></summary><div class="a"><b>靠结构，不靠举报按钮。</b>① 没有自由聊天信道——月老之间只能发结构化信封（申请解锁 / 授权 / 考题包 / 婉拒），搭讪式骚扰无处发生；② 三次未回应自动拉黑，整条线不再呈报，也可随时手动拉黑；③ 婉拒静默，对方零信号；④ 见面层逐字段授权，授权前月老会做一轮反诈提示——任何涉及金钱的请求都会亮红灯；⑤ 首次启动须承诺 ≥18 岁。你可以随时撤卡、随时 <b>wipe</b> 删光全部本地数据。</div></details>
       <details class="rv"><summary><span class="q">Q8</span>不用手机号，怎么证明"我是我"？<span class="ar"></span></summary><div class="a"><b>密钥即身份。</b>注册 = 在你设备上生成一对密钥，平台只保存公钥档案，没有手机号、邮箱或密码。你的唯一凭证是 <b>24 词恢复短语</b>——抄在纸上，别拍照存云盘。丢了它等于丢了这个身份，别人拿到它也能成为你：这是"没有中心账号"的另一面。换设备用恢复短语重建，或导出加密档案。</div></details>
     </div>
@@ -659,7 +662,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
         <p>首次启动一页知情同意：收集什么、存哪里、可随时删除、云端 LLM 数据流披露、"解锁即无法撤回"明示。然后，从第一次访谈开始。</p>
       </div>
       <div class="right">
-        <button class="cmd light" id="cmdBottom" type="button"><span class="dollar">$</span> npx @hongxian/mcp <span class="copy">复制</span></button>
+        <button class="cmd light" id="cmdBottom" type="button"><span class="dollar">$</span><span class="cmdtext"><span>git clone https://github.com/hongxian-dev/hongxian.git</span><span>cd hongxian &amp;&amp; npm ci &amp;&amp; npm run build</span></span><span class="copy">复制</span></button>
         <div class="hosts"><span>WorkBuddy</span><span>豆包桌面版</span><span>千问</span><span>Claude Desktop</span><span>Codex CLI</span></div>
       </div>
     </div>
@@ -755,7 +758,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
   function bindCopy(id){
     var b=document.getElementById(id);if(!b)return;
     b.addEventListener('click',function(){
-      var t='npx @hongxian/mcp';
+      var t='git clone https://github.com/hongxian-dev/hongxian.git && cd hongxian && npm ci && npm run build';
       function done(){b.classList.add('copied');b.querySelector('.copy').textContent='已复制 ✓';
         setTimeout(function(){b.classList.remove('copied');b.querySelector('.copy').textContent='复制';},1800);}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done);}

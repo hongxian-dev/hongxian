@@ -15,26 +15,33 @@
 
 ## 三步开始（≤15 分钟，从零到第一张匹配卡）
 
-**1. 安装**（任选其一，看你用什么宿主）
+**1. 安装**（Node 20+）
+
+> `@hongxian/mcp` **尚未发布到 npm**，所以现在没有一行安装。请从源码构建——顺带这也最符合本项目的信任原则：编译过程你自己跑一遍。
 
 ```bash
-# 通用：npx 直接跑（Node 20+）
-npx @hongxian/mcp
+git clone https://github.com/hongxian-dev/hongxian.git
+cd hongxian
+npm ci          # 严格按 lockfile 安装
+npm run build   # 一步 tsc，无打包器
+npm run verify  # 283 单测 + 123 MCP E2E + 21 server E2E + 20 宿主冒烟
 ```
 
-宿主配置示例（把月老接进你的 Agent）：
+宿主配置示例（把月老接进你的 Agent，`args` 填**绝对路径**）：
 
 ```jsonc
 // Claude Desktop / WorkBuddy / 其他标准 MCP 宿主 —— mcpServers 配置
 {
   "mcpServers": {
     "yuelao": {
-      "command": "npx",
-      "args": ["-y", "@hongxian/mcp"]
+      "command": "node",
+      "args": ["/绝对路径/hongxian/packages/mcp/dist/index.js"]
     }
   }
 }
 ```
+
+> 包发布到 npm 后，这段会简化成 `npx @hongxian/mcp` 一行。首发未定日期，见 [Issues](https://github.com/hongxian-dev/hongxian/issues)。
 
 **2. 和月老聊三次**（每次 15–20 分钟，可跨天）
 

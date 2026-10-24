@@ -15,26 +15,33 @@ It does not matchmake, rank, evaluate, or recommend. No servers, no accounts, no
 
 ## Get started in three steps (≤ 15 minutes, from zero to your first match card)
 
-**1. Install** (pick whichever fits your host)
+**1. Install** (Node 20+)
+
+> `@hongxian/mcp` **is not on npm yet**, so there is no one-line install today. Build from source — which also happens to match this project's trust model: you run the compiler yourself.
 
 ```bash
-# Generic: run via npx (Node 20+)
-npx @hongxian/mcp
+git clone https://github.com/hongxian-dev/hongxian.git
+cd hongxian
+npm ci          # strict install from lockfile
+npm run build   # single tsc pass, no bundler
+npm run verify  # 283 unit + 123 MCP E2E + 21 server E2E + 20 host smoke
 ```
 
-Host configuration example (wiring Yuelao into your Agent):
+Host configuration example (wiring Yuelao into your Agent — `args` takes an **absolute path**):
 
 ```jsonc
 // Claude Desktop / WorkBuddy / any standard MCP host — mcpServers config
 {
   "mcpServers": {
     "yuelao": {
-      "command": "npx",
-      "args": ["-y", "@hongxian/mcp"]
+      "command": "node",
+      "args": ["/absolute/path/to/hongxian/packages/mcp/dist/index.js"]
     }
   }
 }
 ```
+
+> Once the package is published, this collapses to `npx @hongxian/mcp`. No date yet — see [Issues](https://github.com/hongxian-dev/hongxian/issues).
 
 **2. Talk with Yuelao three times** (15–20 minutes each, spread over days is fine)
 

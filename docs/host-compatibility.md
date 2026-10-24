@@ -30,6 +30,16 @@
 
 ## 2. 各宿主接入步骤
 
+> **当前统一用「node + 绝对路径」接入**：`@hongxian/mcp` 尚未发布到 npm，`npx` 与全局安装暂不可用。
+> 先按 [安装与信任指南](install-and-trust.md) §2 方式 A 从源码构建，记下 `packages/mcp/dist/index.js` 的绝对路径。
+>
+> ```
+> command: node
+> args:    /绝对路径/hongxian/packages/mcp/dist/index.js
+> ```
+>
+> 下面各宿主讲的只是"这条命令填到哪个入口"的差异。包发布后再统一换成 `npx -y @hongxian/mcp`。
+
 ### 2.1 Claude Desktop / Claude Code
 
 编辑配置文件（macOS：`~/Library/Application Support/Claude/claude_desktop_config.json`；Windows：`%APPDATA%\Claude\claude_desktop_config.json`）：
@@ -38,8 +48,8 @@
 {
   "mcpServers": {
     "yuelao": {
-      "command": "npx",
-      "args": ["-y", "@hongxian/mcp"]
+      "command": "node",
+      "args": ["/绝对路径/hongxian/packages/mcp/dist/index.js"]
     }
   }
 }
@@ -50,22 +60,22 @@
 ### 2.2 Codex CLI
 
 ```bash
-codex mcp add yuelao -- npx -y @hongxian/mcp
+codex mcp add yuelao -- node /绝对路径/hongxian/packages/mcp/dist/index.js
 ```
 
 验证：`codex mcp list` 应列出 `yuelao`。
 
 ### 2.3 WorkBuddy
 
-连接器管理 → 自定义 MCP → 新增，命令 `npx`，参数 `-y @hongxian/mcp`。
+连接器管理 → 自定义 MCP → 新增，命令 `node`，参数 `/绝对路径/hongxian/packages/mcp/dist/index.js`。
 
 ### 2.4 豆包桌面版 / 千问 / Cursor / Cline / Cherry Studio
 
 均走"自定义 MCP / 标准 MCP"入口，命令统一为：
 
 ```
-command: npx
-args:    -y @hongxian/mcp
+command: node
+args:    /绝对路径/hongxian/packages/mcp/dist/index.js
 ```
 
 差异只在入口路径（见 §1 表）。若宿主要求填"服务器 URL"而不支持命令型 MCP，该宿主当前不兼容——请换 P0/P1 列表内的宿主。
@@ -75,8 +85,8 @@ args:    -y @hongxian/mcp
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | 宿主里看不到工具 | 配置未生效 / 未重启 | 保存后退出宿主进程重开；确认 JSON 无注释错位（`jsonc` 仅供人看，正式配置去掉注释） |
-| `spawn npx ENOENT` | Node 不在 PATH | 改用绝对路径：`command: "C:\\Program Files\\nodejs\\node.exe"` 或 `which node` 的结果；或先全局装：`npm i -g @hongxian/mcp`，然后 command 填 `hongxian-mcp`（包 bin 名） |
-| 首次调用超时 | npx 冷启动下载依赖 | 首跑 `npx -y @hongxian/mcp --version` 预热缓存；宿主调用超时阈值短的，改全局安装 |
+| `spawn node ENOENT` | Node 不在 PATH | 用 node 的绝对路径：`command` 填 `which node` / `where node` 的输出，如 `C:\\Program Files\\nodejs\\node.exe` |
+| 首次调用超时 | 首次加载或宿主探测期偏短 | 先在终端手动跑一次 `node /绝对路径/hongxian/packages/mcp/dist/index.js`，确认能启动（Ctrl+C 退出），再交给宿主 |
 | 工具报"未初始化" | 月老要求先完成知情同意与解锁 | 对 Agent 说"打开月老"，走完 consent → 恢复短语 → unlock（见 [安装与信任指南](install-and-trust.md)） |
 | 提示词不显示人格 | 宿主不支持 MCP prompts | 已做降级：人格与流程指引会以工具返回文本形式给出（技术详设 §9 风险对策） |
 | Windows 中文路径异常 | 用户名含非 ASCII 字符 | 已知并在 v1 处理范围内（数据目录 `%USERPROFILE%\.hongxian`，全程 path API + NFC 归一化）；若仍复现请提 issue 并附 `echo %USERPROFILE%` 输出 |
