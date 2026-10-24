@@ -19,7 +19,8 @@ dist/
 .env.local
 packages/server/data/
 
-# 设计文档与品牌源文件：仅本地保留，不同步到公开仓库（2026-10-24 起）
+# 设计文档、品牌源文件与设计配图：仅本地保留，不同步到公开仓库（2026-10-24 起）
 # 本地文件不受影响，仍可用 npm run prd 等本地脚本
 docs/
 brand/
+diagrams/
