@@ -12,8 +12,10 @@ services:
     build:
       context: ../..
       dockerfile: packages/server/Dockerfile
+    # 只绑回环地址：默认不暴露公网（前置反代/证书由运营者自决）
+    # 需要公网访问时再显式改成 "8787:8787" 或加反代，别默认开着
     ports:
-      - "8787:8787"
+      - "127.0.0.1:8787:8787"
     volumes:
       - ./data:/data
     environment:
@@ -21,5 +23,3 @@ services:
       HONGXIAN_INSTANCE: ${HONGXIAN_INSTANCE:-localhost}
       PORT: "8787"
     restart: unless-stopped
-    # 只绑定本地+内网：默认不直接暴露公网（前置反代/证书由运营者自决）
-    # 如需公网：自行加反代（Caddy/nginx）与 TLS，并知悉你将成为运营者
