@@ -61,10 +61,11 @@ node verify.mjs                   # 静态验收（36 项）
 `hongxian.dev` / `www.hongxian.dev` 均在证书内，HTTP 一律 301 到 HTTPS。
 迁移目的是国内加载提速（Pages 1–3 秒 → 数百毫秒）。
 
-更新流程：把 `index.html` / `og-cover.png` / `sponsor-qr.png` / `404.html` 四个文件
+更新流程：把 `index.html` / `og-cover.png` / `sponsor-qr.png` / `404.html` / `publish-verify/index.html` 五个文件
 打包上传到服务器 `/var/www/hongxian/`（无需构建）。完整命令与坑见内部《部署与运维手册》§3（不随仓库分发）。
 
-> 只发这 4 个文件：`README.md` 与 `verify.mjs` 是开发文件，不上线。
+> 只发这 5 个文件：`README.md` 与 `verify.mjs` 是开发文件，不上线。
+> `publish-verify/index.html` 是 C17 发布许可的邮箱验证落地页（D9 载体），漏发它 = 广场贴卡的验证链接 404（2026-10-24 已补发）。
 
 GitHub Pages 仓库（`hongxian-dev/hongxian-dev.github.io`）保留未动，作为回滚路径：
 把 apex 的 A 记录改回四条 Pages IP 即可（详见手册 §5）。
