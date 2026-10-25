@@ -1,6 +1,6 @@
 {
   "name": "@hongxian/server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "红线平台服务参考实现：加密信箱 + 广场哑管道（Hono，零知识，AGPL-3.0，docker 一键自托管）",
   "license": "AGPL-3.0-only",
   "author": "Hongxian contributors (https://hongxian.dev)",
@@ -35,7 +35,7 @@
     "prepublishOnly": "node ../../scripts/guard-publish.mjs"
   },
   "dependencies": {
-    "@hongxian/schema": "0.1.0",
+    "@hongxian/schema": "0.1.1",
     "@hono/node-server": "^1.13.0",
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.8.0",
