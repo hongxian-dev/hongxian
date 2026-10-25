@@ -80,10 +80,10 @@ if (!fs.existsSync(SRC)) {
         font-weight="700" fill="${INK}">把<tspan fill="${RED}">红线</tspan>交给 AI，</text>
   <text x="470" y="302" font-family="Microsoft YaHei,PingFang SC,sans-serif" font-size="60"
         font-weight="700" fill="${INK}">把心动留给<tspan fill="${RED}">你。</tspan></text>
-  <text x="470" y="378" font-family="Microsoft YaHei,PingFang SC,sans-serif" font-size="27"
-        fill="${MUTED}">AI 月老跑在你自己的 Agent 里，</text>
-  <text x="470" y="418" font-family="Microsoft YaHei,PingFang SC,sans-serif" font-size="27"
-        fill="${MUTED}">替你找到对的人。</text>
+  <text x="470" y="378" font-family="Microsoft YaHei,PingFang SC,sans-serif" font-size="26"
+        fill="${MUTED}">开源、免费的 AI Agent 婚恋匹配工具，</text>
+  <text x="470" y="418" font-family="Microsoft YaHei,PingFang SC,sans-serif" font-size="26"
+        fill="${MUTED}">用最新的 AI 帮你找到对的人。</text>
   <circle cx="478" cy="470" r="5" fill="${ORANGE}"/>
   <text x="494" y="477" font-family="Microsoft YaHei,PingFang SC,sans-serif" font-size="19"
         font-weight="700" fill="${INK}">红线开源工具</text>

@@ -64,7 +64,10 @@ ok(
     html.includes('id="repGrid" role="tabpanel"'),
 );
 ok('五档各有判据与三区样例（无 JS 时默认档可读）', (html.match(/\{why:'/g) || []).length === 5);
-ok('含 v1/v2 路线区分', html.includes('v2 · 参考实现已完成'));
+ok(
+  '含三条边界（不反向追踪 / 不打分 / 不留存）',
+  ['不反向追踪', '不打分', '不留存'].every((t) => html.includes(t)),
+);
 
 /* ---------- 5. 透明数据区：键名与 Worker 契约一致 ---------- */
 const keys = [...html.matchAll(/data-k="([a-z_]+)"/g)].map((m) => m[1]);
@@ -166,8 +169,11 @@ ok(
 ok('发布验证页未勾选前不发验证码（sendBtn.disabled）', pv.includes("sendBtn.disabled = true"));
 
 /* ---------- 12. 体积 ---------- */
+// 阈值 80KB → 100KB（2026-10-25 v2 改版）：新增痛点/价值/差异化三屏与 5 张手绘
+// 字图，raw 91.6KB；nginx gzip 后实际传输 26.7KB，远低于一张普通 JPG 封面。
+// 上限仍保留，防止有人往单文件里塞库或大段 base64。
 const kb = statSync(join(here, 'index.html')).size / 1024;
-ok('首页 < 80KB（单文件 + 一张赞赏码）', kb < 80, `${kb.toFixed(1)}KB`);
+ok('首页 < 100KB（单文件 + 一张赞赏码）', kb < 100, `${kb.toFixed(1)}KB`);
 
 console.log(failed === 0 ? '\n全部通过' : `\n${failed} 项失败`);
 process.exit(failed === 0 ? 0 : 1);
