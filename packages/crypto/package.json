@@ -1,6 +1,6 @@
 {
   "name": "@hongxian/crypto",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "红线密钥体系：BIP39 恢复短语 → Argon2id → 身份/协商/层密钥；Ed25519 签名、X25519 封装、AES-256-GCM",
   "license": "Apache-2.0",
   "author": "Hongxian contributors (https://hongxian.dev)",

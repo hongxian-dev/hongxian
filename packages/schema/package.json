@@ -1,6 +1,6 @@
 {
   "name": "@hongxian/schema",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "红线协议 v0 的机器可读形态：三层匹配卡信封、九类消息、受控词表（Zod）",
   "license": "Apache-2.0",
   "author": "Hongxian contributors (https://hongxian.dev)",

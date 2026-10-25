@@ -1,6 +1,6 @@
 {
   "name": "@hongxian/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "红线领域核心（纯函数，零 IO）：画像状态机、信封工厂、粗筛、轮次、手账、出站过滤、防注入",
   "license": "Apache-2.0",
   "author": "Hongxian contributors (https://hongxian.dev)",
@@ -31,8 +31,8 @@
     "prepublishOnly": "node ../../scripts/guard-publish.mjs"
   },
   "dependencies": {
-    "@hongxian/crypto": "0.1.1",
-    "@hongxian/schema": "0.1.1"
+    "@hongxian/crypto": "0.1.2",
+    "@hongxian/schema": "0.1.2"
   },
   "engines": {
     "node": ">=20"

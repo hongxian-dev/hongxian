@@ -55,6 +55,10 @@ function run(args: string[], opts: { stdin?: string; tty?: boolean; timeoutMs?: 
 }
 
 describe('CLI 入口：终端直跑必须开口', () => {
+  // 超时必须显式给出，且要大于 run() 自己的 timeoutMs（15000）。
+  // 曾经的坑：vitest 默认 5000ms 比被测逻辑的超时还短，spawn node + 加载整条
+  // MCP 链路在并行跑测试时被拖过 5s，于是「进程正常 458ms 退出」被报成失败。
+  // 手测：node -e 'process.stdin.isTTY=true; import("./dist/index.js")' → exit 0 / 458ms。
   it('stdin 是终端 → 打印说明并退出，不静默挂住', async () => {
     const r = await run([], { tty: true });
     expect(r.timedOut).toBe(false);
@@ -64,7 +68,7 @@ describe('CLI 入口：终端直跑必须开口', () => {
     expect(r.stdout).toContain('@hongxian/mcp');
     // 真正的坑：一字不吐地等输入
     expect(r.stdout.length).toBeGreaterThan(200);
-  });
+  }, 20000);
 
   it('--print-config 输出合法且可直接粘贴', async () => {
     const r = await run(['--print-config']);
@@ -96,7 +100,7 @@ describe('CLI 入口：终端直跑必须开口', () => {
     expect(msg.result.serverInfo.name).toBe('yuelao');
     // serverInfo.version 必须等于包版本（此前写死 0.1.0，发一版就错一版）
     expect(msg.result.serverInfo.version).toBe(PKG.version);
-  });
+  }, 25000);
 });
 
 describe('--print-config 覆盖四种配置载体', () => {
