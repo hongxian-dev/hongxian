@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hongxian": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@hongxian/mcp@0.1.2"],
+      "runtime": {
+        "type": "node",
+        "version": "20"
+      },
+      "npmRegistries": [
+        "https://registry.npmmirror.com",
+        "https://registry.npmjs.org"
+      ],
+      "timeout": 60000
+    }
+  }
+}

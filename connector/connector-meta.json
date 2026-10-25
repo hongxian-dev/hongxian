@@ -1,0 +1,26 @@
+{
+  "name": "红线月老",
+  "name_zh": "红线月老",
+  "name_en": "Hongxian Yuelao",
+  "description": "开源、免费的 AI 匹配工具。在你的电脑上帮你想清楚要找什么样的人，生成加密名片，再把彼此都合适的人介绍给你。画像和密钥只在本机，不上传。",
+  "description_zh": "开源、免费的 AI 匹配工具。在你的电脑上帮你想清楚要找什么样的人，生成加密名片，再把彼此都合适的人介绍给你。画像和密钥只在本机，不上传。",
+  "description_en": "An open-source, free AI matching tool. It helps you clarify who you are looking for, builds an encrypted introduction card on your own machine, and connects you with people who genuinely fit. Your profile and keys never leave your device.",
+  "source": "hongxian",
+  "type": "mcp",
+  "version": "0.1.2",
+  "examples_zh": [
+    "我想认真找一个人，从哪儿开始？",
+    "广场上有没有跟我合得来的人？",
+    "把这张卡里对方的介绍讲给我听",
+    "下一轮我该问他什么？",
+    "下周要见面了，帮我准备一份锦囊"
+  ],
+  "examples_en": [
+    "I'm serious about finding someone — where do I start?",
+    "Is there anyone on the plaza who might fit me?",
+    "Walk me through this person's profile",
+    "What should I ask them in the next round?",
+    "We're meeting next week — help me prepare"
+  ],
+  "minWorkbuddyVersion": "5.0.0"
+}
