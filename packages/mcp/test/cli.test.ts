@@ -99,6 +99,53 @@ describe('CLI 入口：终端直跑必须开口', () => {
   });
 });
 
+describe('--print-config 覆盖四种配置载体', () => {
+  it('不带目标仍是标准 JSON，提示只走 stderr（不污染可重定向的 stdout）', async () => {
+    const r = await run(['--print-config']);
+    expect(r.code).toBe(0);
+    expect(() => JSON.parse(r.stdout)).not.toThrow();
+    expect(r.stderr).toContain('--print-config list');
+  });
+
+  it('openclaw 是带 transport 的合法 JSON（漏了这个字段不生效）', async () => {
+    const r = await run(['--print-config', 'openclaw']);
+    const j = JSON.parse(r.stdout) as { mcpServers: Record<string, { transport?: string }> };
+    expect(j.mcpServers.hongxian.transport).toBe('stdio');
+  });
+
+  it('panel 给字段表；宿主别名 doubao 能路由到它', async () => {
+    const r = await run(['--print-config', 'doubao']);
+    expect(r.stdout).toContain('STDIO');
+    expect(r.stdout).toContain('连接器');
+    expect(r.stdout).toContain('hongxian');
+    // 云桌面不是宿主这件事必须写在物料里，否则会被当成"装在云端也能用"
+    expect(r.stdout).toContain('不是 MCP 宿主');
+  });
+
+  it('code 给命令行，dsh 给 YAML patch（两者都不是 mcpServers）', async () => {
+    const c = await run(['--print-config', 'code']);
+    expect(c.stdout).toContain('claude mcp add --transport stdio');
+    const d = await run(['--print-config', 'dsh']);
+    expect(d.stdout).toContain('cordis.patch.yml');
+    expect(d.stdout).toContain('transport: stdio');
+  });
+
+  it('list 列出全部目标，未知目标明确拒绝', async () => {
+    const l = await run(['--print-config', 'list']);
+    for (const k of ['claude', 'openclaw', 'panel', 'code', 'dsh']) expect(l.stdout).toContain(k);
+    const bad = await run(['--print-config', 'nope']);
+    expect(bad.code).toBe(2);
+  });
+
+  it('所有模板都不许出现 @// 双斜杠（2026-10-25 真实安装失败的根因）', async () => {
+    for (const t of ['claude', 'openclaw', 'panel', 'code', 'dsh']) {
+      const r = await run(['--print-config', t]);
+      expect(r.stdout, `${t} 里出现了双斜杠`).not.toContain('@//');
+      expect(r.stdout).toContain('@hongxian/mcp');
+    }
+  });
+});
+
 describe('发布物一致性', () => {
   it('dist 里不再出现写死的 0.1.0', () => {
     const dist = readFileSync(DIST, 'utf8');

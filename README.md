@@ -17,19 +17,24 @@
 
 **1. 安装**（Node 20+）
 
-一行，不需要克隆仓库：
+> `npx -y @hongxian/mcp` 是**运行**命令，不是安装命令。它是 STDIO 服务，得由宿主拉起——直接粘进终端只会安静等输入，看起来像卡住。第一次接入请用下面任一条。
+
+按你的宿主类型取物料（四类覆盖全部，详见 [宿主兼容性矩阵](spec/host-compatibility.md)）。**以下目标参数需要 0.1.2 及以上**；0.1.1 只支持不带参数的 `--print-config`（输出标准 JSON）：
 
 ```bash
-npx -y @hongxian/mcp
+npx -y @hongxian/mcp --print-config panel    # 界面式：豆包桌面版 / 千问 / WorkBuddy / ChatGPT
+npx -y @hongxian/mcp --print-config claude   # 文件式：Claude Desktop / Cursor / Cline / Cherry
+npx -y @hongxian/mcp --print-config openclaw # OpenClaw（要多一个 transport 字段）
+npx -y @hongxian/mcp --print-config code     # 命令行：Claude Code / Codex
+npx -y @hongxian/mcp --print-config dsh      # DeepSeek Harness（YAML patch，不是 JSON）
 ```
 
-接进你的 Agent（Claude Desktop / WorkBuddy / 任何标准 MCP 宿主）：
+文件式宿主直接改配置：
 
 ```jsonc
-// mcpServers 配置
 {
   "mcpServers": {
-    "yuelao": {
+    "hongxian": {
       "command": "npx",
       "args": ["-y", "@hongxian/mcp"]
     }

@@ -1048,21 +1048,48 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     <details class="peek rv" id="peek">
       <summary>复制前先看一眼：原文是什么，你的宿主在哪加</summary>
       <h4>① 给 AI 的安装指令（推荐，按钮复制的是这段）</h4>
-<pre id="promptSrc">请帮我在这台机器上安装「月老」这个 MCP 工具（@hongxian/mcp），装好之后用它开始。
+<pre id="promptSrc">请帮我在这台机器上装「月老」这个 MCP 工具（npm 包 @hongxian/mcp），装好之后用它开始。
 
-它是一个 STDIO MCP 服务，不是要在终端里执行的安装脚本——直接运行它只会挂在那里等输入，什么都不会发生。请按这个顺序做：
+它是 STDIO MCP 服务，不是能在终端里执行的安装脚本——直接跑它只会安静等输入，看起来像卡住。
 
-1. 在宿主 MCP 配置的 mcpServers 下加入这一段：
-   "hongxian": { "command": "npx", "args": ["-y", "@hongxian/mcp"] }
-2. 重启或重连 MCP，确认能看到 21 个工具、8 条指引（yuelao_persona、interview_flow、report_narrative…）。
-3. 先读 prompts 里的 yuelao_persona，确认人格与禁令，再开始。
+第一步：先判断你属于哪一种宿主，再按那一条做，不要套用别的类型。
+
+A 界面式｜设置里有「连接器 / 插件 / MCP」面板（豆包、千问、WorkBuddy、ChatGPT）
+  这类宿主没有可编辑的配置文件，只能照字段点。新建自定义连接器，传输选 STDIO，填三项：
+    名称 hongxian      命令 npx      参数 -y @hongxian/mcp
+  入口：豆包桌面版是「插件·技能·伙伴」→ 连接器 → 右上角「+ 新建」→ 新建自定义连接器（是"连接器"，不是"插件"）；千问办公是「扩展 → 连接器 → + 添加 → 粘贴 JSON」。
+  注意：「豆包工作」云桌面不是 MCP 宿主，装在那儿对我没用——遇到这种直接说做不到。
+
+B 文件式｜配置在磁盘的 mcpServers 里（Claude Desktop、Cursor、Cline、Cherry Studio）
+  加这一段：
+    "hongxian": { "command": "npx", "args": ["-y", "@hongxian/mcp"] }
+  OpenClaw 例外：写在 ~/.openclaw/openclaw.json，且必须多加 "transport": "stdio"，漏了不生效。
+
+C 命令行式｜Claude Code / Codex / OpenClaw
+  claude mcp add --transport stdio hongxian npx -y @hongxian/mcp
+  codex mcp add hongxian -- npx -y @hongxian/mcp
+
+D DeepSeek Harness｜它不是 mcpServers 格式，走 ~/.dsh/profiles/你的profile名/cordis.patch.yml 的 patch：
+  - insert:
+    - id: hongxian
+      name: "@deepseek-ai/dsh-mcp-client"
+      config:
+        serverName: hongxian
+        transport: stdio
+        command: npx
+        args: ["-y", "@hongxian/mcp"]
+
+第二步：装完之后
+完全退出宿主进程再重开（关窗口不算），然后开新会话。核对工具名时注意：有的宿主会加前缀（Claude Code 与 DeepSeek Harness 显示成 mcp__hongxian__interview 这种），只要总数是 21 个工具 + 8 条指引（yuelao_persona、interview_flow…）就是对的。
+若提示连接器启动失败，先到连接器列表点一次「重新启动」，首次启动常是没初始化完。
+若这台机器没有 Node（node -v 报错），npx 跑不起来——直接告诉我，别硬试。
 
 关于它：月老是开源、免费的 AI Agent 婚恋匹配工具。密钥与画像只在这台机器上，平台只转交密文；不做撮合、不推送、不打分，也不替我决定。
 
-先判断一件事：如果你不是 MCP 宿主，或者你改不了宿主的配置文件（比如你只是云端的另一台电脑，装在那里对我没有用），请直接说「这一步我做不到」，并告诉我在哪个文件里改——不要假装装好了，也不要只回我一句"已完成"。
+如果你不是 MCP 宿主、改不了配置、或者只是云端另一台电脑，请直接说「这一步我做不到」并告诉我正确入口——不要假装装好了，也不要只回我一句"已完成"。
 
 装好之后请告诉我你实际连上了几个工具，然后直接问我第一个问题：「我想认真找一个人，从哪儿开始？」</pre>
-      <h4>② 手动填的 MCP 配置（Claude Desktop / Cursor / Cherry Studio 等）</h4>
+      <h4>② 文件式宿主的配置（复制这一段贴进配置文件）</h4>
 <pre id="jsonSrc">{
   "mcpServers": {
     "hongxian": {
@@ -1071,15 +1098,16 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     }
   }
 }</pre>
-      <h4>③ 你打算加进哪个宿主？对应入口在这里</h4>
+      <h4>③ 你的宿主属于哪一类？四类覆盖全部，不用再翻别的教程</h4>
       <ul class="how">
-        <li><b>Claude Desktop</b><span>改文件：Windows <code>%APPDATA%\Claude\claude_desktop_config.json</code>；macOS <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>。保存后要「完全退出进程」再开，关窗口不算。</span></li>
-        <li><b>Cursor / Cline / Cherry Studio</b><span>设置里的 MCP / MCP Servers 面板 → 新增 → 粘贴上面那段 JSON。</span></li>
-        <li><b>WorkBuddy</b><span>连接器管理 → 自定义 MCP → 新增。</span></li>
-        <li><b>豆包桌面版 / 千问</b><span>技能 → 连接器 → 自定义 MCP。注意：这是<b>桌面版客户端</b>的入口；云端电脑里的「豆包工作」不是同一个东西，它没有这个入口，装在那儿你也用不上。</span></li>
-        <li class="warn"><b>一个宿主都没有？</b><span>那就先装一个。月老不是一个能双击打开的 App——它是一个服务，得有宿主来启动它。没有宿主，这一步现在是走不通的，这不是你操作错了。</span></li>
+        <li><b>A 界面式 · 豆包 / 千问 / WorkBuddy / ChatGPT</b><span>这类客户端没有可编辑的配置文件，只能在界面里点「新建自定义连接器」，传输选 STDIO，填三项：名称 <code>hongxian</code>、命令 <code>npx</code>、参数 <code>-y @hongxian/mcp</code>。豆包是「插件·技能·伙伴」→ 连接器 → 右上角「+ 新建」→ <b>新建自定义连接器</b>（是“连接器”，不是“插件”）；千问办公是「扩展 → 连接器 → + 添加 → 粘贴 JSON」。</span></li>
+        <li><b>B 文件式 · Claude Desktop / Cursor / Cline / Cherry Studio</b><span>改磁盘上的 <code>mcpServers</code>，粘贴上面那段 JSON。Windows 在 <code>%APPDATA%\Claude\claude_desktop_config.json</code>，macOS 在 <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>。保存后要「完全退出进程」再开，关窗口不算。</span></li>
+        <li><b>C 命令行式 · Claude Code / Codex / OpenClaw</b><span>一条命令写完：<code>claude mcp add --transport stdio hongxian npx -y @hongxian/mcp</code>；Codex 用 <code>codex mcp add hongxian -- npx -y @hongxian/mcp</code>。</span></li>
+        <li><b>D DeepSeek Harness 与 OpenClaw（各有一个坑）</b><span>DeepSeek Harness <b>不是</b> mcpServers 格式，要在 <code>~/.dsh/profiles/你的profile名/cordis.patch.yml</code> 里加一段 <code>insert</code>，完整片段见上面①的 D 条。OpenClaw 走 JSON，但必须多写一个 <code>"transport": "stdio"</code>，漏了不生效。</span></li>
+        <li class="warn"><b>只有网页版 / 手机 App / 云端电脑？</b><span>那这条路现在走不通——这类环境装不了本地进程。注意云端电脑里的「豆包工作」不是「豆包桌面版」，它没有 MCP 入口，装在那儿你用不上；这不是你操作错了，是产品形态不支持。</span></li>
+        <li class="warn"><b>一个宿主都没有？</b><span>那就先装一个。月老不是一个能双击打开的 App——它是一个服务，得有宿主来启动它。没有宿主，这一步现在是走不通的。</span></li>
       </ul>
-      <p class="peek-tail">还有第四条路：不想跑一个自己没编译过的二进制，就从源码构建——<b>git clone github.com/hongxian-dev/hongxian</b> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径。两条路产物相同。</p>
+      <p class="peek-tail">另一条路：不想跑一个自己没编译过的二进制，就从源码构建——<b>git clone github.com/hongxian-dev/hongxian</b> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径。两条路产物相同。</p>
     </details>
   </div>
 </section>

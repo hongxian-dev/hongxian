@@ -14,79 +14,109 @@
 
 **协议层 ✅ 意味着**：任何正确实现 MCP 的宿主都能驱动月老。宿主层 🟡 只影响"体验细节"（连接器菜单位置、重启时机、错误提示文案），不影响功能与安全。
 
-## 1. 接入方式速查
+## 1. 只有四种配置载体
 
-| 宿主 | 接入方式 | 状态 | 备注 |
+宿主很多，**配置方式只有四种**。按载体找，别按宿主名找。
+
+| 载体 | 谁在用 | 要给的东西 | 宿主层状态 |
 |---|---|---|---|
-| WorkBuddy | 自定义 MCP 连接器 | 🟡 P0 | 本仓库开发环境；协议层已验证 |
-| Claude Desktop / Claude Code | `mcpServers` 配置 | 🟡 P0 | 见下方配置示例 |
-| Codex CLI | `codex mcp add` | 🟡 P0 | 见下方命令 |
-| 豆包桌面版 | 技能 → 连接器 → 自定义 MCP | 🟡 P1 | |
-| 千问 | 技能 → 连接器 → 自定义 MCP | 🟡 P1 | |
-| Cursor | 标准 MCP（Settings → MCP） | 🟡 P1 | |
-| Cline | 标准 MCP（MCP Servers 面板） | 🟡 P1 | |
-| Cherry Studio | 标准 MCP（设置 → MCP 服务器） | 🟡 P1 | |
-| 手机 App 端 | — | ❌ | D14 决策：App 无本地文件系统、不开放自装 MCP，v1 明确不追 |
+| **A · 界面表单** | 豆包桌面版、千问办公、WorkBuddy、ChatGPT、DeepSeek Harness（另装 dsh-mcp-servers 后） | 三个字段：名称 `hongxian`／命令 `npx`／参数 `-y @hongxian/mcp` | 🟡 P0（豆包、千问、WorkBuddy）· 🟡 P1（ChatGPT） |
+| **B · mcpServers JSON** | Claude Desktop、Cursor、Cline、Cherry Studio、**OpenClaw** | 一段 JSON；OpenClaw 必须多一个 `transport` 字段 | 🟡 P0（Claude Desktop）· 🟡 P1（其余） |
+| **C · CLI 命令** | Claude Code、Codex、OpenClaw | 一行 `xxx mcp add` | 🟡 P0 |
+| **D · YAML patch** | DeepSeek Harness（原生，非 mcpServers 格式） | 一段 `insert` 片段 | 🟡 P1 |
+| — | 手机 App 端、网页版 AI、云端电脑 | ❌ 不兼容 | ❌ D14：无本地文件系统、不开放自装 MCP，v1 明确不追 |
 
-> **别搞混的两个「豆包」**：本表指的是**豆包桌面版客户端**（有「技能 → 连接器 → 自定义 MCP」入口）。「豆包工作」/云桌面是另一类产品——一台跑任务的云端电脑，不是 MCP 宿主，在里面装月老对你本机没有用。2026-10-25 用它做新用户模拟时踩过这个歧义。
+> **为什么不按宿主列**：按宿主写，每来一个客户端就要加一套说明，文档线性膨胀且互相矛盾。2026-10-25 已经发生过——同一段"在 mcpServers 下加入这段"的说明，在豆包工作云桌面和自己本机的豆包客户端上**连续两次**把 AI 引向"去找配置文件"，然后失败。按载体写，新增宿主只是加一行别名。
 
-## 2. 各宿主接入步骤
+### 取物料：让工具输出，别抄文档
 
-> **推荐统一用 `npx -y @hongxian/mcp` 接入**——不用克隆仓库：
->
-> ```
-> command: npx
-> args:    -y  @hongxian/mcp
-> ```
->
-> 不想跑一个自己没编译过的二进制，就按 [安装与信任指南](install-and-trust.md) §2 方式 C 从源码构建，改成：
->
-> ```
-> command: node
-> args:    /绝对路径/hongxian/packages/mcp/dist/index.js
-> ```
->
-> 两条路产物相同。下面各宿主讲的只是"这条命令填到哪个入口"的差异。
+> 需要 0.1.2 及以上。0.1.1 只支持不带参数的 `--print-config`（输出标准 JSON），传目标会被当作未知参数拒绝。
 
-### 2.1 Claude Desktop / Claude Code
+```bash
+npx -y @hongxian/mcp --print-config claude     # B 载体标准 JSON
+npx -y @hongxian/mcp --print-config openclaw   # B 载体 + transport
+npx -y @hongxian/mcp --print-config panel      # A 载体字段表（含各家入口）
+npx -y @hongxian/mcp --print-config code       # C 载体三行命令
+npx -y @hongxian/mcp --print-config dsh        # D 载体 YAML patch
+npx -y @hongxian/mcp --print-config list       # 列出全部目标
+```
 
-编辑配置文件（macOS：`~/Library/Application Support/Claude/claude_desktop_config.json`；Windows：`%APPDATA%\Claude\claude_desktop_config.json`）：
+不带目标时输出标准 JSON（等价 `claude`），保持旧脚本可用；提示走 stderr，所以 `--print-config > mcp.json` 拿到的仍是干净 JSON。
+
+## 2. 各载体接入步骤
+
+> 所有载体最终都是同一个东西：`command: npx`、`args: ["-y", "@hongxian/mcp"]`。
+> 不想跑一个自己没编译过的二进制，就按 [安装与信任指南](install-and-trust.md) §2 方式 C 从源码构建，改成 `command: node` + `args: [该文件绝对路径]`。两条路产物相同。
+
+### 2.1 A · 界面表单
+
+这类客户端把配置存在自己的数据库里（有的是二进制 leveldb），**没有可手改的 JSON 文件**——去找文件会浪费一轮。
+
+统一填法：新建「自定义连接器」→ 传输类型选 **STDIO** → 三个字段。
+
+| 宿主 | 入口 |
+|---|---|
+| 豆包桌面版 | 左侧「插件·技能·伙伴」→ **连接器** → 右上角「+ 新建」→ **新建自定义连接器**。注意是"连接器"不是"插件" |
+| 千问办公 | 扩展 → 连接器 →「+ 添加」→ 粘贴 JSON |
+| WorkBuddy | 连接器管理 → 自定义 MCP → 新增 |
+| ChatGPT | Settings → Connected apps → Add MCP server（走 OAuth） |
+
+保存后**完全退出宿主进程**再重开（关窗口不算），再开新会话才会加载。若提示连接器启动失败，先到连接器列表点一次「重新启动」——首次启动常是没初始化完。
+
+> **别搞混的两个「豆包」**：上表指**豆包桌面版客户端**。「豆包工作」/云桌面是另一类产品——一台跑任务的云端电脑，**不是 MCP 宿主，没有 MCP 入口**，在里面装月老对你本机没有任何用。2026-10-25 用云端和本机各做一次新用户模拟，两次都撞在这个歧义上。
+
+### 2.2 B · mcpServers JSON
+
+| 宿主 | 配置文件 |
+|---|---|
+| Claude Desktop（Windows） | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Claude Desktop（macOS） | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Cursor | 设置里的 MCP / MCP Servers 面板 → 新增 → 粘贴 JSON |
+| Cline | MCP Servers 面板 |
+| Cherry Studio | 设置 → MCP 服务器 |
+| **OpenClaw** | `~/.openclaw/openclaw.json`，**必须加 `"transport": "stdio"`**，漏了不生效 |
 
 ```jsonc
 {
   "mcpServers": {
-    "yuelao": {
-      "command": "node",
-      "args": ["/绝对路径/hongxian/packages/mcp/dist/index.js"]
+    "hongxian": {
+      "command": "npx",
+      "args": ["-y", "@hongxian/mcp"]
+      // OpenClaw 额外要这一行：
+      // "transport": "stdio"
     }
   }
 }
 ```
 
-保存后**完全退出并重启** Claude Desktop（不是关窗口，是退出进程）。
+保存后**完全退出并重启**（不是关窗口，是退出进程）。OpenClaw 多数改动热重载，但新增服务器或改传输类型需要 `openclaw gateway restart`。
 
-### 2.2 Codex CLI
+### 2.3 C · CLI 命令
 
 ```bash
-codex mcp add yuelao -- node /绝对路径/hongxian/packages/mcp/dist/index.js
+claude mcp add --transport stdio hongxian npx -y @hongxian/mcp
+codex  mcp add hongxian -- npx -y @hongxian/mcp
+openclaw mcp add --transport stdio hongxian npx -y @hongxian/mcp
 ```
 
-验证：`codex mcp list` 应列出 `yuelao`。
+验证：`claude mcp list` / `codex mcp list` / `openclaw mcp list` 里应出现 `hongxian`。
 
-### 2.3 WorkBuddy
+### 2.4 D · DeepSeek Harness
 
-连接器管理 → 自定义 MCP → 新增，命令 `node`，参数 `/绝对路径/hongxian/packages/mcp/dist/index.js`。
+它不是 mcpServers 格式，走 patch 文件：`~/.dsh/profiles/<profile>/cordis.patch.yml` 追加
 
-### 2.4 豆包桌面版 / 千问 / Cursor / Cline / Cherry Studio
-
-均走"自定义 MCP / 标准 MCP"入口，命令统一为：
-
+```yaml
+- insert:
+  - id: hongxian
+    name: "@deepseek-ai/dsh-mcp-client"
+    config:
+      serverName: hongxian
+      transport: stdio
+      command: npx
+      args: ["-y", "@hongxian/mcp"]
 ```
-command: node
-args:    /绝对路径/hongxian/packages/mcp/dist/index.js
-```
 
-差异只在入口路径（见 §1 表）。若宿主要求填"服务器 URL"而不支持命令型 MCP，该宿主当前不兼容——请换 P0/P1 列表内的宿主。
+`serverName` 决定工具前缀，模型侧看到的是 `mcp__hongxian__interview` 这类名字。嫌改 YAML 麻烦可装社区插件 `dsh-mcp-servers`，换成「Settings → MCP Servers → 添加 → Test → Save」的图形界面。
 
 ## 3. 通用排错
 
@@ -98,18 +128,23 @@ args:    /绝对路径/hongxian/packages/mcp/dist/index.js
 | 工具报"未初始化" | 月老要求先完成知情同意与解锁 | 对 Agent 说"打开月老"，走完 consent → 恢复短语 → unlock（见 [安装与信任指南](install-and-trust.md)） |
 | 提示词不显示人格 | 宿主不支持 MCP prompts | 已做降级：人格与流程指引会以工具返回文本形式给出（技术详设 §9 风险对策） |
 | Windows 中文路径异常 | 用户名含非 ASCII 字符 | 已知并在 v1 处理范围内（数据目录 `%USERPROFILE%\.hongxian`，全程 path API + NFC 归一化）；若仍复现请提 issue 并附 `echo %USERPROFILE%` 输出 |
+| 工具名对不上（显示成 `mcp__hongxian__interview`） | Claude Code、DeepSeek Harness 等宿主会给工具加 `<serverName>` 前缀 | **正常现象**，不是装错。核对总数（21 工具 + 8 指引）即可，别核名字 |
+| `404 Not Found` / 包拉不下来 | 包名被写成 `@//hongxian/mcp`（多一个斜杠），或聊天框把 `@` 当提及转义 | 正解只有 `@hongxian/mcp`。终端里自查：`npm view @hongxian/mcp version` 应返回版本号 |
+| `npx: command not found` / 连接器启动即失败 | 这台机器没装 Node | 装 Node 20+ 再试；若宿主不继承系统 PATH，`command` 填 `npx` 的绝对路径（如 `C:\Program Files\nodejs\npx.cmd`）。**这是国内非技术用户最常见的墙** |
+| `serverInfo` 报的版本比实际装的旧 | 0.1.1 及更早的包把 `serverInfo.version` 写死成 `0.1.0` | 已在 0.1.2 修复（改为读 package.json）。在 0.1.2 之前，以 `npm view @hongxian/mcp version` 为准 |
 
 ## 4. 回归方法与提交你的结果
 
-每家宿管的回归跑同一套冒烟脚本（协议层已验证，宿主层只需确认"能连上、能调通、异常不崩"）：
+每家宿主的回归跑同一套冒烟脚本（协议层已验证，宿主层只需确认"能连上、能调通、异常不崩"）：
 
 ```bash
-# 1. 按 §2 配好宿主
+# 1. 按 §2 对应载体配好宿主
 # 2. 对宿主 Agent 说：
 打开月老
 # 3. 依次确认：
 #    - 出现知情同意页（consent 工具被调起）
 #    - 列出 21 个工具、8 个提示词（问宿主"列出月老的工具"）
+#      注意：部分宿主会加前缀，如 mcp__hongxian__interview —— 核总数，不核名字
 #    - 说"删除我的全部数据"能触发 wipe 并无残留
 ```
 
