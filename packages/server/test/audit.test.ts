@@ -155,7 +155,7 @@ describe('零知识审计（server）', () => {
   });
 
   it('数据目录 secret 仅 store 持有：其他源码文件不得引用', () => {
-    const referencing = sources.filter((s) => codeOf(s.text).includes("'secret'")).map((s) => s.name.split('\\').pop());
+    const referencing = sources.filter((s) => codeOf(s.text).includes("'secret'")).map((s) => basename(s.name));
     expect(referencing).toEqual(['store.ts']);
   });
 });
