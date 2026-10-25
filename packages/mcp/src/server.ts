@@ -6,6 +6,7 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { createRequire } from 'node:module';
 import { Session } from './session.js';
 import { guard } from './context.js';
 import { interviewTool, signCardTool, exportCardTool, importCardTool } from './tools-profile.js';
@@ -71,9 +72,13 @@ const PROMPT_DESCRIPTIONS: Record<string, string> = {
   plaza_flow: '广场流指引（D8/V6/V9）：见轮廓 → 敲门 → 等主人开门；无推送无回执',
 };
 
+/* 版本号跟着 package.json 走：写死会在每次发版后报上一个版本，
+   宿主与排错日志都对不上（0.1.1 已发布时就踩过，serverInfo 仍报 0.1.0）。 */
+const PKG_VERSION = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
+
 export function createServer(): McpServer {
   const server = new McpServer(
-    { name: 'yuelao', version: '0.1.0' },
+    { name: 'yuelao', version: PKG_VERSION },
     {
       instructions:
         '你是月老——住在用户设备里的本地婚恋工具。先读取 yuelao_persona prompt 确认人格与禁令，' +

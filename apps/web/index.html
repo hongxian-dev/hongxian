@@ -73,14 +73,16 @@ h1 .hl svg{position:absolute;left:0;right:0;bottom:-6px;width:100%;height:10px}
 .slogan{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--red);color:var(--red);border-radius:999px;padding:7px 18px;font-size:13.5px;font-weight:700;background:#fff}
 .slogan i{width:7px;height:7px;border-radius:50%;background:var(--red);flex:none}
 .hero-cta{display:flex;gap:14px;margin:28px 0 8px;flex-wrap:wrap}
+section[id],header[id]{scroll-margin-top:78px}
 .cmd{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:#E5E7EB;border-radius:10px;padding:11px 16px;font-family:var(--mono);font-size:13.5px;cursor:pointer;border:none;transition:transform .15s}
 .cmd:active{transform:translateY(1px)}
 .cmd .dollar{color:var(--orange)}
-.cmd .copy{color:var(--faint);font-family:var(--sans);font-size:12px;border-left:1px solid #4B5563;padding-left:10px}
+.cmd .copy{color:var(--faint);font-family:var(--sans);font-size:12px;border-left:1px solid #4B5563;padding-left:10px;white-space:nowrap;flex:none}
 .cmd .cmdtext{display:flex;flex-direction:column;gap:2px;text-align:left;line-height:1.4;font-size:12.5px;white-space:nowrap;max-width:100%;min-width:0}
 .cmd .cmdtext span{overflow:hidden;text-overflow:ellipsis}
 .cmd .cmdtext span:last-child{opacity:.6}
 .cmd.copied .copy{color:#7CE0A0}
+.cmd.selc .copy{color:#FFD9DE}
 .hero-points{display:grid;grid-template-columns:1fr 1fr;gap:13px 24px;margin-top:30px;max-width:430px}
 .hp{display:flex;align-items:baseline;gap:8px;font-size:13.5px;color:var(--muted)}
 .hp b{font-family:var(--serif);font-size:26px;color:var(--ink);font-weight:700;line-height:1}
@@ -218,6 +220,31 @@ details .a b{color:var(--red-deep)}
 .cta-band .right{margin-left:auto;position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .cmd.light{background:rgba(0,0,0,.28);color:#fff}
 .cmd.light .copy{color:rgba(255,255,255,.6)}
+.cmd.alt{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff}
+.cmd.alt .copy{color:rgba(255,255,255,.6)}
+.cmd-hint{font-size:12.5px;color:var(--muted);margin:0 0 2px;max-width:32em;line-height:1.7}
+.peek{margin-top:26px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:0 22px}
+.peek summary{cursor:pointer;list-style:none;padding:15px 0;font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:9px}
+.peek summary::-webkit-details-marker{display:none}
+.peek summary::before{content:"＋";color:var(--red);font-weight:700;font-family:var(--sans)}
+.peek[open] summary::before{content:"－"}
+.peek[open] summary{border-bottom:1px solid var(--line);margin-bottom:4px}
+.peek h4{font-size:11.5px;letter-spacing:1.5px;color:var(--muted);margin:20px 0 9px;font-weight:700}
+.peek pre{font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--ink-2);background:#FDFBF7;border:1px solid var(--line);border-radius:10px;padding:15px 17px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin:0;transition:background .2s,border-color .2s}
+.peek pre.sel{background:#FFF7F8;border-color:var(--red);outline:2px solid rgba(200,16,46,.22);outline-offset:2px}
+.peek pre.sel::selection,.peek pre.sel *::selection{background:#F7C1C1}
+.sel-hint{display:none;font-size:12.5px;color:var(--red-deep);line-height:1.7;margin:9px 0 0}
+.sel-hint.on{display:block}
+.sel-hint b{font-weight:700}
+.how{list-style:none;margin:0;padding:0}
+.how li{padding:11px 0;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.85;color:var(--ink-2)}
+.how li:last-child{border-bottom:0}
+.how li>b{display:block;font-size:12.5px;color:var(--ink);font-weight:700;margin-bottom:2px}
+.how span b{display:inline;font-weight:700;color:var(--ink)}
+.how code{font-family:var(--mono);font-size:11.5px;background:#F6F2EA;border:1px solid var(--line);border-radius:4px;padding:1px 4px;word-break:break-all}
+.how .warn{color:var(--red-deep)}
+.how .warn b{color:var(--red-deep)}
+.peek .peek-tail{font-size:12px;color:var(--muted);margin:16px 0 20px;line-height:1.75}
 .hosts{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px}
 .hosts span{border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px 10px;color:rgba(255,255,255,.85)}
 
@@ -421,7 +448,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <h1 class="rv in">把<span class="hl">红线<svg viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7 C 30 2, 60 9, 118 4" fill="none" stroke="#F08200" stroke-width="3" stroke-linecap="round"/></svg></span>交给 AI，<br>把心动留给你。</h1>
       <p class="hero-sub rv in d1">婚介靠照片和条件给你配对，App 靠你的焦虑续费。月老不一样：它先花三次对话把你讲清楚，再替你认识别人的月老，<b>把值得见的人挑出来递给你</b>。它住在你自己的设备里，不收集你的画像，也不替你决定任何事。</p>
       <div class="hero-cta rv in d2">
-        <button class="cmd" id="cmdTop" type="button"><span class="dollar">$</span><span class="cmdtext"><span>npx -y @hongxian/mcp</span></span><span class="copy">复制</span></button>
+        <button class="cmd" id="cmdTop" type="button"><span class="dollar">↗</span><span class="cmdtext"><span>复制安装指令，粘给你的 AI</span><span>WorkBuddy / 豆包 / Claude</span></span><span class="copy">复制</span></button>
         <a class="btn btn-ghost" href="#how">看它如何工作 ↓</a>
       </div>
       <div class="hero-points rv in d3">
@@ -996,7 +1023,7 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
       <details class="rv"><summary><span class="q">Q3</span>怎么收费？<span class="ar"></span></summary><div class="a"><b>不收费，开源免费。</b>以后就算收费，也只可能在增值功能上；帮你认识人这件事本身，永远不收费。</div></details>
       <details class="rv"><summary><span class="q">Q4</span>AI 匹配靠谱吗？<span class="ar"></span></summary><div class="a">月老做的是<b>信息预审与引荐</b>，不是情感代餐。报告五档三区、每个结论必须有双方原话依据、不给分数；并永远提示"对话热度 ≠ 真人合适"。验证命题公开可证伪：AI 介导的深度画像匹配，是否比刷脸式筛选产生更高的线下见面转化率。</div></details>
       <details class="rv"><summary><span class="q">Q5</span>被拒绝了会尴尬吗？<span class="ar"></span></summary><div class="a"><b>不会。</b>静默机制：婉拒时对方收不到任何被拒信号，即使对自己的主人也不透传谁是拒绝方。被拒零情绪损耗，是月老对冲「过程税」的一部分。</div></details>
-      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架。一行安装：<b>npx -y @hongxian/mcp</b>，宿主里 command 填 <code>npx</code>、args 填 <code>["-y","@hongxian/mcp"]</code>。不想跑一个自己没编译过的二进制，也可以从源码构建：<b>git clone</b> <code>github.com/hongxian-dev/hongxian</code> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径；两条路产物相同。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
+      <details class="rv"><summary><span class="q">Q6</span>支持哪些 Agent 宿主？<span class="ar"></span></summary><div class="a">标准 MCP 工具包，不绑框架。宿主里 command 填 <code>npx</code>、args 填 <code>["-y","@hongxian/mcp"]</code>——注意 <b>npx -y @hongxian/mcp</b> 是这个服务的启动方式；单放在终端里跑，它只会安静地等输入，不会安装任何东西。不想跑一个自己没编译过的二进制，也可以从源码构建：<b>git clone</b> <code>github.com/hongxian-dev/hongxian</code> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径；两条路产物相同。桌面类宿主优先（WorkBuddy、豆包桌面版、千问、Claude Desktop、Codex CLI 等）；装了 Skill 就是在线月老，没有单独的"上线/登录"动作。LLM 推理由你的宿主承担，月老零 API Key、零模型依赖。</div></details>
       <details class="rv"><summary><span class="q">Q7</span>陌生人社交，怎么防骚扰？<span class="ar"></span></summary><div class="a"><b>靠结构，不靠举报按钮。</b>① 没有自由聊天信道——月老之间只能发结构化信封（申请解锁 / 授权 / 考题包 / 婉拒），搭讪式骚扰无处发生；② 三次未回应自动拉黑，整条线不再呈报，也可随时手动拉黑；③ 婉拒静默，对方零信号；④ 见面层逐字段授权，授权前月老会做一轮反诈提示——任何涉及金钱的请求都会亮红灯；⑤ 首次启动须承诺 ≥18 岁。你可以随时撤卡、随时 <b>wipe</b> 删光全部本地数据。</div></details>
       <details class="rv"><summary><span class="q">Q8</span>不用手机号，怎么证明"我是我"？<span class="ar"></span></summary><div class="a"><b>密钥即身份。</b>注册 = 在你设备上生成一对密钥，平台只保存公钥档案，没有手机号、邮箱或密码。你的唯一凭证是 <b>24 词恢复短语</b>——抄在纸上，别拍照存云盘。丢了它等于丢了这个身份，别人拿到它也能成为你：这是"没有中心账号"的另一面。换设备用恢复短语重建，或导出加密档案。</div></details>
     </div>
@@ -1009,13 +1036,51 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     <div class="cta-band rv">
       <div>
         <h2>装上月老，红线开始织</h2>
-        <p>装上就能用。首次启动会有一页知情同意，说清楚收集什么、存在哪、怎么删，之后从第一次访谈开始。</p>
+        <p>月老是一个 MCP 服务，由你的 AI 宿主启动——所以「安装」是把一段配置交给宿主，不是敲一条命令。点下面的按钮复制，粘进你和 AI 的对话——指令里写明了做不到时该如实告诉你，而不是假装装好了。</p>
       </div>
       <div class="right">
-        <button class="cmd light" id="cmdBottom" type="button"><span class="dollar">$</span><span class="cmdtext"><span>npx -y @hongxian/mcp</span></span><span class="copy">复制</span></button>
+        <button class="cmd light" id="cmdBottom" type="button"><span class="dollar">↗</span><span class="cmdtext"><span>复制安装指令（推荐）</span><span>粘给 AI，让它照着配</span></span><span class="copy">复制</span></button>
+        <button class="cmd light alt" id="cmdJson" type="button"><span class="dollar">⌗</span><span class="cmdtext"><span>复制 MCP 配置 JSON</span><span>自己在宿主里填的那一段</span></span><span class="copy">复制</span></button>
         <div class="hosts"><span>WorkBuddy</span><span>豆包桌面版</span><span>千问</span><span>Claude Desktop</span><span>Codex CLI</span></div>
       </div>
     </div>
+
+    <details class="peek rv" id="peek">
+      <summary>复制前先看一眼：原文是什么，你的宿主在哪加</summary>
+      <h4>① 给 AI 的安装指令（推荐，按钮复制的是这段）</h4>
+<pre id="promptSrc">请帮我在这台机器上安装「月老」这个 MCP 工具（@hongxian/mcp），装好之后用它开始。
+
+它是一个 STDIO MCP 服务，不是要在终端里执行的安装脚本——直接运行它只会挂在那里等输入，什么都不会发生。请按这个顺序做：
+
+1. 在宿主 MCP 配置的 mcpServers 下加入这一段：
+   "hongxian": { "command": "npx", "args": ["-y", "@hongxian/mcp"] }
+2. 重启或重连 MCP，确认能看到 21 个工具、8 条指引（yuelao_persona、interview_flow、report_narrative…）。
+3. 先读 prompts 里的 yuelao_persona，确认人格与禁令，再开始。
+
+关于它：月老是开源、免费的 AI Agent 婚恋匹配工具。密钥与画像只在这台机器上，平台只转交密文；不做撮合、不推送、不打分，也不替我决定。
+
+先判断一件事：如果你不是 MCP 宿主，或者你改不了宿主的配置文件（比如你只是云端的另一台电脑，装在那里对我没有用），请直接说「这一步我做不到」，并告诉我在哪个文件里改——不要假装装好了，也不要只回我一句"已完成"。
+
+装好之后请告诉我你实际连上了几个工具，然后直接问我第一个问题：「我想认真找一个人，从哪儿开始？」</pre>
+      <h4>② 手动填的 MCP 配置（Claude Desktop / Cursor / Cherry Studio 等）</h4>
+<pre id="jsonSrc">{
+  "mcpServers": {
+    "hongxian": {
+      "command": "npx",
+      "args": ["-y", "@hongxian/mcp"]
+    }
+  }
+}</pre>
+      <h4>③ 你打算加进哪个宿主？对应入口在这里</h4>
+      <ul class="how">
+        <li><b>Claude Desktop</b><span>改文件：Windows <code>%APPDATA%\Claude\claude_desktop_config.json</code>；macOS <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>。保存后要「完全退出进程」再开，关窗口不算。</span></li>
+        <li><b>Cursor / Cline / Cherry Studio</b><span>设置里的 MCP / MCP Servers 面板 → 新增 → 粘贴上面那段 JSON。</span></li>
+        <li><b>WorkBuddy</b><span>连接器管理 → 自定义 MCP → 新增。</span></li>
+        <li><b>豆包桌面版 / 千问</b><span>技能 → 连接器 → 自定义 MCP。注意：这是<b>桌面版客户端</b>的入口；云端电脑里的「豆包工作」不是同一个东西，它没有这个入口，装在那儿你也用不上。</span></li>
+        <li class="warn"><b>一个宿主都没有？</b><span>那就先装一个。月老不是一个能双击打开的 App——它是一个服务，得有宿主来启动它。没有宿主，这一步现在是走不通的，这不是你操作错了。</span></li>
+      </ul>
+      <p class="peek-tail">还有第四条路：不想跑一个自己没编译过的二进制，就从源码构建——<b>git clone github.com/hongxian-dev/hongxian</b> → <b>npm ci</b> → <b>npm run build</b>，产物在 <code>packages/mcp/dist/index.js</code>，command 填 <code>node</code>、args 填这个文件的绝对路径。两条路产物相同。</p>
+    </details>
   </div>
 </section>
 </main>
@@ -1104,18 +1169,65 @@ footer{background:var(--ink);color:#9CA3AF;padding:0 0 40px}
     qrDlg.addEventListener('click',function(e){if(e.target===qrDlg)qrDlg.close();});
   }
 
-  /* copy install cmd */
-  function bindCopy(id){
-    var b=document.getElementById(id);if(!b)return;
+  /* copy install：复制的是「提示词」，不是命令——月老是 MCP 服务，一条裸命令谁也不知道该拿它干什么 */
+  /* 复制：只在真的写进剪贴板后才说「已复制」。写失败就退到「已选中，请按 Ctrl+C」，
+     宁可让用户多按一次键，也不许出现「显示已复制、粘出来却是旧内容」。 */
+  function bindCopy(id,srcId){
+    var b=document.getElementById(id),src=document.getElementById(srcId);
+    if(!b||!src)return;
+    var label=b.querySelector('.copy'),orig=label.textContent,timer=null;
+    function flash(msg){clearTimeout(timer);b.classList.add('copied');label.textContent=msg;
+      timer=setTimeout(function(){b.classList.remove('copied');label.textContent=orig;},2600);}
+    function selectSource(){
+      var peek=document.getElementById('peek');
+      if(peek&&!peek.open)peek.open=true;
+      src.scrollIntoView({block:'center'});
+      var r=document.createRange();r.selectNodeContents(src);
+      var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+      src.classList.add('sel');
+      var hint=src.nextElementSibling;
+      if(!hint||hint.className.indexOf('sel-hint')<0){
+        hint=document.createElement('p');hint.className='sel-hint';
+        src.parentNode.insertBefore(hint,src.nextSibling);
+      }
+      hint.innerHTML='已选中上面的文字 —— 按 <b>Ctrl+C</b> 复制（Mac 用 <b>⌘C</b>）。';
+      hint.classList.add('on');
+      /* 用另一种颜色：绿是「已复制成功」，这里是「没复制成功、你自己按一下」 */
+      clearTimeout(timer);b.classList.add('selc');label.textContent='已选中';
+      timer=setTimeout(function(){b.classList.remove('selc');label.textContent=orig;
+        src.classList.remove('sel');hint.classList.remove('on');},8000);
+    }
+    function legacy(t){
+      var ta=document.createElement('textarea');
+      ta.value=t;ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(ta);ta.select();
+      var ok=false;
+      try{ok=document.execCommand('copy');}catch(e){ok=false;}
+      document.body.removeChild(ta);
+      return ok===true;
+    }
     b.addEventListener('click',function(){
-      var t='npx -y @hongxian/mcp';
-      function done(){b.classList.add('copied');b.querySelector('.copy').textContent='已复制 ✓';
-        setTimeout(function(){b.classList.remove('copied');b.querySelector('.copy').textContent='复制';},1800);}
-      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done);}
-      else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);done();}
+      var t=src.textContent.trim();
+      function settle(ok){if(ok){flash('已复制 ✓');}else{selectSource();}}
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(t).then(function(){
+          /* 回读核对只在「权限已授予」时做——否则 Chrome 会弹一个「允许查看剪贴板」的框，
+             用户点一次复制不该被多问一句。读不了就相信写入结果。 */
+          if(!navigator.clipboard.readText||!navigator.permissions||!navigator.permissions.query){settle(true);return;}
+          navigator.permissions.query({name:'clipboard-read'}).then(function(st){
+            if(st.state!=='granted'){settle(true);return;}
+            /* 回读比对要先归一换行：系统剪贴板会把 \n 存成 \r\n，
+               直接比字符串会把「成功」误判成「失败」（实测差 13 个回车）。 */
+            navigator.clipboard.readText().then(function(v){
+              settle(String(v).replace(/\r\n/g,'\n').trim()===t.replace(/\r\n/g,'\n').trim());
+            },function(){settle(true);});
+          },function(){settle(true);});
+        },function(){settle(legacy(t));});
+      }else{settle(legacy(t));}
     });
   }
-  bindCopy('cmdTop');bindCopy('cmdBottom');
+  bindCopy('cmdTop','promptSrc');bindCopy('cmdBottom','promptSrc');bindCopy('cmdJson','jsonSrc');
 
   /* 五档报告样例：点档位切换三区内容（tablist + 方向键，无 JS 时静态默认档可用） */
   var TIERS=[

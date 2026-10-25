@@ -10,6 +10,7 @@
  */
 
 import { readFileSync, statSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,8 +52,14 @@ ok('og-cover.png 文件存在且 >20KB', statSync(join(here, 'og-cover.png')).si
 for (const a of ['#top', '#how', '#demo', '#trust', '#stats', '#faq', '#install']) {
   ok(`锚点存在 ${a}`, html.includes(`id="${a.slice(1)}"`));
 }
+/* FAQ 的折叠块单独数：全页 <details> 计数会被别处的折叠块带偏（安装区「复制前先看一眼」也是 details）。
+   断言的本意是「FAQ 恰好八问」，所以只数 FAQ 区间内的。 */
+const faqStart = html.indexOf('id="faq"');
+const faqEnd = html.indexOf('</section>', faqStart);
+const faqHtml = faqStart >= 0 && faqEnd > faqStart ? html.slice(faqStart, faqEnd) : '';
 const details = (html.match(/<details/g) || []).length;
-ok('FAQ 八问', details === 8, `实际 ${details}`);
+const faqCount = (faqHtml.match(/<details/g) || []).length;
+ok('FAQ 八问', faqCount === 8, `实际 ${faqCount}（全页 details 共 ${details}）`);
 ok('含陌生人安全问答（防骚扰）', html.includes('怎么防骚扰'));
 ok('含密钥即身份问答（无手机号）', html.includes('怎么证明'));
 ok('含五档报告样例', html.includes('比对报告样例') && html.includes('值得认识'));
@@ -169,11 +176,15 @@ ok(
 ok('发布验证页未勾选前不发验证码（sendBtn.disabled）', pv.includes("sendBtn.disabled = true"));
 
 /* ---------- 12. 体积 ---------- */
-// 阈值 80KB → 100KB（2026-10-25 v2 改版）：新增痛点/价值/差异化三屏与 5 张手绘
-// 字图，raw 91.6KB；nginx gzip 后实际传输 26.7KB，远低于一张普通 JPG 封面。
-// 上限仍保留，防止有人往单文件里塞库或大段 base64。
-const kb = statSync(join(here, 'index.html')).size / 1024;
-ok('首页 < 100KB（单文件 + 一张赞赏码）', kb < 100, `${kb.toFixed(1)}KB`);
+// 80KB → 100KB（2026-10-25 v2 改版）→ 110KB（安装区改「复制提示词」）：
+// 页面已有 8 屏 + 17 处自绘 SVG，raw 98KB。真正被下载的是 gzip 后 29KB，
+// 所以运输体积另立一条 gzip 断言（这才是用户实际付的流量）；
+// raw 上限只防「往单文件里塞库或大段 base64」，不承担性能判断。
+const rawBuf = readFileSync(join(here, 'index.html'));
+const kb = rawBuf.length / 1024;
+ok('首页 raw < 110KB（单文件 + 一张赞赏码）', kb < 110, `${kb.toFixed(1)}KB`);
+const gzKb = gzipSync(rawBuf, { level: 9 }).length / 1024;
+ok('首页 gzip < 40KB（实际传输体积）', gzKb < 40, `${gzKb.toFixed(1)}KB`);
 
 console.log(failed === 0 ? '\n全部通过' : `\n${failed} 项失败`);
 process.exit(failed === 0 ? 0 : 1);
